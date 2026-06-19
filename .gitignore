@@ -1,0 +1,8 @@
+node_modules/
+build/
+lib/
+.DS_Store
+*.tar.gz
+*.zip
+*.love
+*.log

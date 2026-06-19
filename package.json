@@ -1,0 +1,25 @@
+{
+	"name": "@ratskullmedia/rat-scratch-common",
+	"version": "0.0.1",
+	"main": "index.js",
+	"scripts": {
+		"prepare": "husky"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/erinmaus/rat-scratch-common.git"
+	},
+	"author": "Rat Skull Media",
+	"license": "MPL-2.0",
+	"bugs": {
+		"url": "https://github.com/erinmaus/rat-scratch-common/issues"
+	},
+	"homepage": "https://github.com/erinmaus/rat-scratch-common#readme",
+	"description": "",
+	"devDependencies": {
+		"@johnnymorganz/stylua-bin": "2.5.2",
+		"husky": "9.1.7",
+		"lint-staged": "16.4.0",
+		"prettier": "3.8.4"
+	}
+}
