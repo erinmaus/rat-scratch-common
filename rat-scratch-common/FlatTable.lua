@@ -17,10 +17,10 @@ local FlatTableMetatable = { __index = FlatTable }
 function FlatTable.wrap(t, stride, value)
 	local array, length
 	if type(t) == "number" then
-		array = Table.new(t, 0)
+		local n = t * stride
+		array = Table.new(n, 0)
 		length = t
 
-		local n = t * stride
 		value = value or 0
 		for i = 1, n do
 			array[i] = value
@@ -56,6 +56,32 @@ function FlatTable.copy(source, destination)
 	destination.length = math.ceil(#source / destination.stride)
 
 	return destination
+end
+
+--- @generic T
+--- @param self? RatScratch.Common.FlatTable<T>
+--- @param t T[]
+--- @param length? integer
+--- @param stride? number
+--- @return RatScratch.Common.FlatTable<T>
+function FlatTable:intrude(t, length, stride)
+	if not self then
+		Debug.assert(stride and stride >= 1, "stride must be >= 1; got %d", stride)
+
+		return setmetatable({
+			stride = stride,
+			length = length,
+			array = t,
+		}, FlatTableMetatable)
+	end
+
+	Debug.assert(not length or (#t % (stride or self.stride) == 0), "table length (%d) must be multiple of stride (%d)", #t, stride or self.stride)
+
+	self.stride = stride or self.stride
+	self.length = length or math.ceil(#t / self.stride)
+	self.array = t
+
+	return self
 end
 
 --- @return integer
