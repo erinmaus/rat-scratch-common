@@ -23,7 +23,7 @@ tag="$(rat-scratch get --meta=${rs_meta} name)-v${version}"
 
 set -e
 
-if [ -z "RAT_SCRATCH_DRY_RUN" ]; then
+if [ ! -z "RAT_SCRATCH_DRY_RUN" ]; then
     git fetch
     git checkout main
     git pull
@@ -50,7 +50,7 @@ tar -czvf "../$tar_file" .
 
 popd
 
-if [ -z "RAT_SCRATCH_DRY_RUN" ]; then
+if [ ! -z "RAT_SCRATCH_DRY_RUN" ]; then
     gh release create --draft --verify-tag -t "$(rat-scratch get --meta=${rs_meta} name) v${version}" "$tag" "./$zip_file" "./$tar_file"
 else
     echo "Dry run - not creating GitHub release."
