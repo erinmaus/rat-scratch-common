@@ -1,3 +1,5 @@
+local Module = require "lib.rat-scratch-module"
+
 --- @class RatScratch.Common.Object
 local Object = {}
 
@@ -6,6 +8,7 @@ local Object = {}
 ---   filename: string,
 ---   shortName: string,
 ---   requireName: string,
+---   module: string,
 --- }
 
 --- @generic T
@@ -120,13 +123,14 @@ local function __call(self, parent, stack)
 
 		local info = debug.getinfo(2 + (stack or 0), "Sl")
 		if info then
-			local shortObjectName = (info.source:match("^@(.*).lua$") or info.source):gsub("/", ".")
+			local shortObjectName = (info.source:match("^@(.-)%.[^.]*") or info.source):gsub("/", ".")
 			local lineNumber = info.currentline
 
 			Object._DEBUG.lineNumber = lineNumber
 			Object._DEBUG.filename = info.source
 			Object._DEBUG.shortName = string.format("%s@%d", shortObjectName, lineNumber)
 			Object._DEBUG.requireName = shortObjectName
+			Object._DEBUG.module = Module.getSelfRequire(shortObjectName)
 		end
 	end
 
