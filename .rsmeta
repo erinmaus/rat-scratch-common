@@ -1,0 +1,19 @@
+name = rat-scratch-samples
+version = 1.0.0
+source = samples
+directory.build = ./build/rat-scratch-main
+
+[rat-scratch-common]
+version = *
+source = rat-scratch-common
+url = rat-scratch-common.rsmeta
+
+[rat-scratch-graphics]
+version = *
+source = rat-scratch-math
+url = rat-scratch-graphics.rsmeta
+
+[rat-scratch-math]
+version = *
+source = rat-scratch-math
+url = rat-scratch-math.rsmeta
