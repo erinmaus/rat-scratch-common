@@ -1,3 +1,8 @@
 name = rat-scratch-math
 version = 1.0.0
 source = rat-scratch-math
+
+[rat-scratch-common]
+version = *
+source = rat-scratch-common
+url = rat-scratch-common.rsmeta
