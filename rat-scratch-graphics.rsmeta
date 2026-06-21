@@ -1,6 +1,6 @@
 name = rat-scratch-graphics
 version = 1.0.0
-source = rat-scratch-math
+source = rat-scratch-graphics
 
 [rat-scratch-common]
 version = *
