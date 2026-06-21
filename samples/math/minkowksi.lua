@@ -1,10 +1,7 @@
 local Math = require("rat-scratch-math")
-local Table = require("rat-scratch-common").Table
-local Point2D = Math.Geometry2D.Point
-local Polygon2D = Math.Geometry2D.Polygon
 local Minkowski2D = Math.Geometry2D.Minkowski
 
-local demo = require("samples.math.polygon")
+local demo = love.filesystem.load("samples/math/polygon.lua")()
 
 function demo.draw()
 	local isCollision, nx, ny, distance = Minkowski2D.difference(demo.polygons[1], demo.polygons[2], demo.transforms[1], demo.transforms[2])

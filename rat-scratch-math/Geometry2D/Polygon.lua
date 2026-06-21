@@ -55,6 +55,27 @@ end
 do
 	local wrappedPolygon = FlatTable.wrap(0, 2)
 
+	--- @param points number[]
+	--- @param length? number
+	function Polygon.center(points, length)
+		length = length or math.ceil(#points / 2)
+
+		local polygon = wrappedPolygon:intrude(points, length)
+
+		local centerX, centerY = polygon:get(1)
+		for i = 2, polygon:getLength() do
+			local x, y = polygon:get(i)
+			centerX, centerY = centerX + x, centerY + y
+		end
+		local lengthInverse = 1 / polygon:getLength()
+
+		return centerX * lengthInverse, centerY * lengthInverse
+	end
+end
+
+do
+	local wrappedPolygon = FlatTable.wrap(0, 2)
+
 	--- @param px number
 	--- @param py number
 	--- @param points number[]

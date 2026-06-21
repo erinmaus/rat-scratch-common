@@ -9,16 +9,16 @@ function demo.draw()
 
     love.graphics.push("all")
 
-	if isCollision then
-		local halfDistance = distance / 2
+	if isCollision and meta then
+		local halfDistance = math.abs(distance) / 2
 
 		love.graphics.push()
-		love.graphics.translate(nx * -halfDistance, ny * -halfDistance)
+		love.graphics.translate(nx * halfDistance, ny * halfDistance)
 		demo.drawPolygon(1)
 		love.graphics.pop()
 		
 		love.graphics.push()
-		love.graphics.translate(nx * halfDistance, ny * halfDistance)
+		love.graphics.translate(nx * -halfDistance, ny * -halfDistance)
 		demo.drawPolygon(2)
 		love.graphics.pop()
 	end
@@ -26,7 +26,7 @@ function demo.draw()
 	love.graphics.setLineWidth(2)
 
 	demo.drawPolygon(1)
-    demo.drawPolygon(2)
+	demo.drawPolygon(2)
 
 	if isCollision and meta then
 		love.graphics.setLineWidth(1)
@@ -49,7 +49,7 @@ function demo.draw()
 		love.graphics.line(otherPolygon[oi1], otherPolygon[oj1], otherPolygon[oi2], otherPolygon[oj2])
 	end
 
-    love.graphics.print(string.format("normal: (%f, %f), depth: %f", nx, ny, distance), 10, 10)
+	love.graphics.print(string.format("normal: (%f, %f), depth: %f", nx, ny, distance), 10, 10)
 	love.graphics.pop()
 end
 

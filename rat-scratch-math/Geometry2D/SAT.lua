@@ -2,6 +2,7 @@ local Table = require("rat-scratch-common").Table
 local FlatTable = require("rat-scratch-common").FlatTable
 local Point = require("rat-scratch-math.Geometry2D.Point")
 local Polygon = require("rat-scratch-math.Geometry2D.Polygon")
+local Common  = require("rat-scratch-math.Common")
 
 local SAT = {}
 local SATImpl = {}
@@ -146,6 +147,14 @@ do
 		local collision, distance, nx, ny, polygon, edgeA, edgeB = SATImpl._projectPolygons(ra, rb, al, bl)
 		if collision then
 			distance = -distance
+		end
+
+		local acx, acy = Polygon.center(ra, al)
+		local bcx, bcy = Polygon.center(rb, bl)
+
+		local sign = Common.sign(Point.dot(nx, ny, acx - bcx, acy - bcy))
+		if sign <= 0 then
+			nx, ny = -nx, -ny
 		end
 
 		if meta then
