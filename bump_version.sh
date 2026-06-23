@@ -52,7 +52,7 @@ if [ "$has_release_branch" ]; then
     exit 1
 fi
 
-if [ -z "RAT_SCRATCH_DRY_RUN" ]; then
+if [ ! -z "RAT_SCRATCH_DRY_RUN" ]; then
     git checkout main
     git pull origin
 fi
@@ -73,7 +73,7 @@ npm ci
 
 git commit -m "Bump version to ${version}."
 
-if [ -z "RAT_SCRATCH_DRY_RUN" ]; then
+if [ ! -z "RAT_SCRATCH_DRY_RUN" ]; then
     git push origin
     github_pr_url=$(gh pr create --fill)
 else
