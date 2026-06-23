@@ -1,8 +1,8 @@
-local Point = require("rat-scratch-math.Geometry2D.Point")
 local Line = require("rat-scratch-math.Geometry2D.Line")
+local Point = require("rat-scratch-math.Geometry2D.Point")
 local Debug = require("rat-scratch-common").Debug
-local Common= require("rat-scratch-math.Common")
-local FlatTable = require("rat-scratch-common.FlatTable")
+local Common = require("rat-scratch-math.Common")
+local FlatTable = require("rat-scratch-common").FlatTable
 
 local Polygon = {}
 local PolygonImpl = {}
@@ -98,7 +98,10 @@ do
 			if not (cross > -Common.EPSILON and cross < Common.EPSILON) then
 				if not winding then
 					winding = cross
-				elseif (winding < 0) and (cross > 0) or (winding > 0) and (cross < 0) then
+				elseif
+					(winding < 0) and (cross > 0)
+					or (winding > 0) and (cross < 0)
+				then
 					return false
 				end
 			end
@@ -129,7 +132,8 @@ do
 			local ax, ay = polygon:get(i)
 			local bx, by = polygon:get(i + 1)
 
-			local distance = Line.pointDistanceSquaredFromLineSegment(px, py, ax, ay, bx, by)
+			local distance =
+				Line.pointDistanceSquaredFromLineSegment(px, py, ax, ay, bx, by)
 			if distance < minDistance then
 				minDistance = distance
 
@@ -176,7 +180,11 @@ do
 	function Polygon.isClockwise(points, length)
 		length = length or math.ceil(#points / 2)
 
-		Debug.assert(length >= 3, "polygon must have at least 3 points, got %d", length)
+		Debug.assert(
+			length >= 3,
+			"polygon must have at least 3 points, got %d",
+			length
+		)
 
 		local polygon = wrappedPolygon:intrude(points, length)
 		local p1x, p1y = polygon:get(1)
@@ -197,7 +205,11 @@ do
 	function Polygon.isCounterClockwise(points, length)
 		length = length or math.ceil(#points / 2)
 
-		Debug.assert(length >= 3, "polygon must have at least 3 points, got %d", length)
+		Debug.assert(
+			length >= 3,
+			"polygon must have at least 3 points, got %d",
+			length
+		)
 
 		local polygon = wrappedPolygon:intrude(points, length)
 		local p1x, p1y = polygon:get(1)
@@ -218,7 +230,11 @@ do
 	function Polygon.isConcave(points, length)
 		length = length or math.ceil(#points / 2)
 
-		Debug.assert(length >= 3, "polygon must have at least 3 points, got %d", length)
+		Debug.assert(
+			length >= 3,
+			"polygon must have at least 3 points, got %d",
+			length
+		)
 
 		local polygon = wrappedPolygon:intrude(points, length)
 		local side
@@ -253,7 +269,11 @@ do
 	function Polygon.reverseOrder(points, length)
 		length = length or math.ceil(#points / 2)
 
-		Debug.assert(length >= 3, "polygon must have at least 3 points, got %d", length)
+		Debug.assert(
+			length >= 3,
+			"polygon must have at least 3 points, got %d",
+			length
+		)
 
 		local polygon = wrappedPolygon:intrude(points, length)
 		local length = polygon:getLength()
