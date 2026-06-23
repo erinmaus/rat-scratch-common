@@ -2,10 +2,11 @@ local Debug = require("rat-scratch-common").Debug
 local Path = require("rat-scratch-common").Path
 
 --- @alias RatScratch.Graphics.ShaderPreprocessOptions {
----   warnings: boolean | nil,
----   errors: boolean | nil,
----   safe: boolean | nil,
----   dependencies: boolean | nil,
+---   warnings?: boolean,
+---   errors?: boolean,
+---   safe?: boolean,
+---   dependencies?: boolean,
+---   rootPath?: string | false,
 --- }
 
 local DEFAULT_OPTIONS = {
@@ -13,12 +14,13 @@ local DEFAULT_OPTIONS = {
 	errors = true,
 	safe = true,
 	dependencies = false,
+	rootPath = false
 }
 
 --- @alias RatScratch.Graphics.ShaderPreprocessResult {
----   warnings: string[] | nil,
----   errors: string[] | nil,
----   dependencies: string[] | nil,
+---   warnings?: string[],
+---   errors?: string[],
+---   dependencies?: string[],
 --- }
 
 --- @alias RatScratch.Graphics.impl.ShaderHoistedOption {
@@ -33,7 +35,7 @@ local DEFAULT_OPTIONS = {
 --- }
 
 --- @alias RatScratch.Graphics.impl.ShaderProcessFile {
----   parent: RatScratch.Graphics.impl.ShaderProcessFile | nil,
+---   parent?: RatScratch.Graphics.impl.ShaderProcessFile,
 ---   filename: string,
 ---   currentLineNumber: number,
 --- }
@@ -47,9 +49,9 @@ local DEFAULT_OPTIONS = {
 --- }
 
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
---- @param parent RatScratch.Graphics.impl.ShaderProcessFile | nil
+--- @param? parent RatScratch.Graphics.impl.ShaderProcessFile
 --- @param filename string
---- @return RatScratch.Graphics.impl.ShaderProcessFile | nil
+--- @return? RatScratch.Graphics.impl.ShaderProcessFile
 local function beginVisit(state, parent, filename)
 	if state.visited[filename] then
 		local errorMessage = string.format(
@@ -109,10 +111,11 @@ local function readContent(state, currentFile)
 end
 
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
---- @param parent RatScratch.Graphics.impl.ShaderProcessFile | nil
+--- @param parent? RatScratch.Graphics.impl.ShaderProcessFile
 --- @param filename string
+--- @param rootPath? string
 --- @return string
-local function process(state, parent, filename)
+local function process(state, parent, filename, rootPath)
 	local currentFile = beginVisit(state, parent, filename)
 	if not currentFile then
 		return string.format('// file "%s" is recursively included', filename)
@@ -129,10 +132,10 @@ local function process(state, parent, filename)
 		local optionName, optionValue = trimmedLine:match(PRAGMA_OPTION_PATTERN)
 
 		if includeFilename then
-			local resolvedPath = Path.resolve(filename, includeFilename)
+			local resolvedPath = Path.resolve(filename, includeFilename, rootPath)
 
 			table.insert(lines, string.format("// %s", line))
-			local includedContent = process(state, currentFile, resolvedPath)
+			local includedContent = process(state, currentFile, resolvedPath, rootPath)
 
 			table.insert(lines, "#line 1")
 			table.insert(lines, includedContent)
@@ -215,6 +218,7 @@ local ShaderPreprocessor = {}
 function ShaderPreprocessor.preprocess(filename, options)
 	options = options or {}
 
+	--- @type RatScratch.Graphics.ShaderPreprocessOptions
 	local mergedOptions = {}
 	for optionKey, defaultOptionValue in pairs(DEFAULT_OPTIONS) do
 		if options[optionKey] == nil then
@@ -245,7 +249,8 @@ function ShaderPreprocessor.preprocess(filename, options)
 		dependencies = dependencies,
 	}
 
-	local processedContent = process(processedState, nil, filename)
+	local absoluteFilename = Path.resolve("", filename, mergedOptions.rootPath)
+	local processedContent = process(processedState, nil, absoluteFilename, mergedOptions.rootPath)
 
 	local finalOutput = {}
 	tryHoistOptions(processedState, finalOutput)
@@ -299,9 +304,10 @@ function ShaderPreprocessor.validateResult(shader, result, strict)
 end
 
 --- @param filename string
+--- @param options? RatScratch.Graphics.ShaderPreprocessOptions
 --- @return love.Shader
-function ShaderPreprocessor.newComputeShader(filename)
-	local source, result = ShaderPreprocessor.preprocess(filename)
+function ShaderPreprocessor.newComputeShader(filename, options)
+	local source, result = ShaderPreprocessor.preprocess(filename, options)
 	local message = ShaderPreprocessor.validateResult(source, result)
 	if message then
 		error(message)
@@ -315,13 +321,14 @@ end
 
 --- @param pixelFilename string
 --- @param vertexFilename string
+--- @param options? RatScratch.Graphics.ShaderPreprocessOptions
 --- @return love.Shader
-function ShaderPreprocessor.newShader(pixelFilename, vertexFilename)
+function ShaderPreprocessor.newShader(pixelFilename, vertexFilename, options)
 	Debug.assert(pixelFilename, "expected shader filename or vertex/pixel shader filenames")
 
 	local pixelSource
 	do
-		local s, r = ShaderPreprocessor.preprocess(pixelFilename)
+		local s, r = ShaderPreprocessor.preprocess(pixelFilename, options)
 		local m = ShaderPreprocessor.validateResult(s, r)
 		if m then
 			error(m)
@@ -332,7 +339,7 @@ function ShaderPreprocessor.newShader(pixelFilename, vertexFilename)
 
 	local vertexSource
 	if vertexFilename then
-		local s, r = ShaderPreprocessor.preprocess(vertexFilename)
+		local s, r = ShaderPreprocessor.preprocess(vertexFilename, options)
 		local m = ShaderPreprocessor.validateResult(s, r)
 		if m then
 			error(m)

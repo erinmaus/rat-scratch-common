@@ -65,15 +65,15 @@ function Transform.makeRotationTransform(rotation, transform)
     local qwz = rotation.w * rotation.z
 
     m11 = 1 - 2 * (qyy + qzz)
-    m12 = 2 * (qxy + qwz)
-    m13 = 2 * (qxz - qwy)
+    m21 = 2 * (qxy + qwz)
+    m31 = 2 * (qxz - qwy)
 
-    m21 = 2 * (qxy - qwz)
+    m12 = 2 * (qxy - qwz)
     m22 = 1 - 2 * (qxx + qzz)
-    m23 = 2 * (qyz + qwx)
+    m32 = 2 * (qyz + qwx)
 
-    m31 = 2 * (qxz + qwy)
-    m32 = 2 * (qyz - qwx)
+    m13 = 2 * (qxz + qwy)
+    m23 = 2 * (qyz - qwx)
     m33 = 1 - 2 * (qxx + qyy)
 
     transform:setMatrix(
@@ -160,6 +160,50 @@ function Transform.makePerspectiveTransform(fieldOfView, aspectRatio, near, far,
     return transform
 end
 
+do
+    local F = Vector3()
+    local U = Vector3()
+    local f = Vector3()
+    local s = Vector3()
+    local u = Vector3()
+    local negatedEye = Vector3()
+    local translation = love.math.newTransform()
+
+    --- @param eye RatScratch.Math.Vector3
+    --- @param center RatScratch.Math.Vector3
+    --- @param up? RatScratch.Math.Vector3
+    --- @param transform? love.Transform
+    function Transform.lookAt(eye, center, up, transform)
+        transform = transform or love.math.newTransform()
+
+        up = up or Vector3.UNIT_Y
+
+        center:subtract(eye, F):normalize(f)
+        up:normalize(U)
+
+        f:cross(U, s):normalize(s)
+        s:cross(f, u):normalize(u)
+
+        local m11, m12, m13, m14 = s.x, s.y, s.z, 0
+        local m21, m22, m23, m24 = u.x, u.y, u.z, 0
+        local m31, m32, m33, m34 = -f.x, -f.y, -f.z, 0
+        local m41, m42, m43, m44 = 0, 0, 0, 1
+
+        transform:setMatrix(
+            m11, m12, m13, m14,
+            m21, m22, m23, m24,
+            m31, m32, m33, m34,
+            m41, m42, m43, m44)
+
+        eye:negate(negatedEye)
+        Transform.makeTranslationTransform(negatedEye, translation)
+
+        transform:apply(translation)
+
+        return transform
+    end
+end
+
 --- @param projectionView love.Transform
 --- @param point RatScratch.Math.Vector3
 --- @param viewportX number
@@ -204,8 +248,8 @@ do
         transform = transform or love.math.newTransform()
         transform:reset()
 
-        if scale then
-            Transform.makeScaleTransform(scale, workingTransform)
+        if translation then
+            Transform.makeTranslationTransform(translation, workingTransform)
             transform:apply(workingTransform)
         end
 
@@ -214,8 +258,8 @@ do
             transform:apply(workingTransform)
         end
 
-        if translation then
-            Transform.makeTranslationTransform(translation, workingTransform)
+        if scale then
+            Transform.makeScaleTransform(scale, workingTransform)
             transform:apply(workingTransform)
         end
 

@@ -309,9 +309,9 @@ end
 --- @return RatScratch.Math.Vector3
 function Vector3:scale(scale, result)
 	result = result or Vector3()
-	result.x = result.x * scale
-	result.y = result.y * scale
-	result.z = result.z * scale
+	result.x = self.x * scale
+	result.y = self.y * scale
+	result.z = self.z * scale
 	return result
 end
 
