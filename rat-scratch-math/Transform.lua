@@ -130,6 +130,42 @@ function Transform.makeOrthoTransform(left, right, bottom, top, near, far, trans
     return transform
 end
 
+--- @param left number
+--- @param right number
+--- @param bottom number
+--- @param top number
+--- @param near number
+--- @param far number
+--- @param transform love.Transform?
+--- @return love.Transform
+function Transform.makeFrustumTransform(left, right, bottom, top, near, far, transform)
+    transform = transform or love.math.newTransform()
+
+    local xRange = right - left
+    local yRange = top - bottom
+    local zRange = near - far
+
+    local m11 = (2 * near) / xRange
+    local m13 = (right + left) / zRange
+    local m14 = (2 * right * near) / zRange
+
+    local m22 = (2 * near) / yRange
+    local m23 = (top + bottom) / zRange
+    local m24 = (2 * top * near) / zRange
+
+    local m33 = (far + near) / zRange
+    local m34 = (2 * far * near) / zRange
+    local m43 = -1
+
+    transform:setMatrix(
+        m11, 0, m13, m14,
+        0, m22, m23, m24,
+        0, 0, m33, m34,
+        0, 0, m43, 0)
+
+    return transform
+end
+
 --- @param fieldOfView number
 --- @param aspectRatio number
 --- @param near number
@@ -137,6 +173,7 @@ end
 --- @param transform love.Transform?
 --- @return love.Transform
 function Transform.makePerspectiveTransform(fieldOfView, aspectRatio, near, far, transform)
+
     local f = 1 / math.tan(fieldOfView / 2)
 
     local m11, m12, m13, m14 = 0, 0, 0, 0
@@ -166,8 +203,6 @@ do
     local f = Vector3()
     local s = Vector3()
     local u = Vector3()
-    local negatedEye = Vector3()
-    local translation = love.math.newTransform()
 
     --- @param eye RatScratch.Math.Vector3
     --- @param center RatScratch.Math.Vector3
@@ -184,21 +219,15 @@ do
         f:cross(U, s):normalize(s)
         s:cross(f, u):normalize(u)
 
-        local m11, m12, m13, m14 = s.x, s.y, s.z, 0
-        local m21, m22, m23, m24 = u.x, u.y, u.z, 0
-        local m31, m32, m33, m34 = -f.x, -f.y, -f.z, 0
-        local m41, m42, m43, m44 = 0, 0, 0, 1
+        local m14 = -(s.x * eye.x + s.y * eye.y + s.z * eye.z)
+        local m24 = -(u.x * eye.x + u.y * eye.y + u.z * eye.z)
+        local m34 = (f.x * eye.x + f.y * eye.y + f.z * eye.z)
 
         transform:setMatrix(
-            m11, m12, m13, m14,
-            m21, m22, m23, m24,
-            m31, m32, m33, m34,
-            m41, m42, m43, m44)
-
-        eye:negate(negatedEye)
-        Transform.makeTranslationTransform(negatedEye, translation)
-
-        transform:apply(translation)
+            s.x, s.y, s.z, m14,
+            u.x, u.y, u.z, m24,
+            -f.x, -f.y, -f.z, m34,
+            0, 0, 0, 1)
 
         return transform
     end
@@ -241,30 +270,54 @@ function Transform.unproject(inverseProjectionView, point, result)
     return result
 end
 
-do
-    local workingTransform = love.math.newTransform()
+function Transform.compose(translation, rotation, scale, transform)
+    transform = transform or love.math.newTransform()
 
-    function Transform.compose(translation, rotation, scale, transform)
-        transform = transform or love.math.newTransform()
-        transform:reset()
-
-        if translation then
-            Transform.makeTranslationTransform(translation, workingTransform)
-            transform:apply(workingTransform)
-        end
-
-        if rotation then
-            Transform.makeRotationTransform(rotation, workingTransform)
-            transform:apply(workingTransform)
-        end
-
-        if scale then
-            Transform.makeScaleTransform(scale, workingTransform)
-            transform:apply(workingTransform)
-        end
-
-        return transform
+    local tx, ty, tz = 0, 0, 0
+    if translation then
+        tx, ty, tz = translation.x, translation.y, translation.z
     end
+
+    local sx, sy, sz = 1, 1, 1
+    if scale then
+        sx, sy, sz = scale.x, scale.y, scale.z
+    end
+
+    local r11, r12, r13 = 1, 0, 0
+    local r21, r22, r23 = 0, 1, 0
+    local r31, r32, r33 = 0, 0, 1
+
+    if rotation then
+        local qxx = rotation.x * rotation.x
+        local qyy = rotation.y * rotation.y
+        local qzz = rotation.z * rotation.z
+        local qxz = rotation.x * rotation.z
+        local qxy = rotation.x * rotation.y
+        local qyz = rotation.y * rotation.z
+        local qwx = rotation.w * rotation.x
+        local qwy = rotation.w * rotation.y
+        local qwz = rotation.w * rotation.z
+
+        r11 = 1 - 2 * (qyy + qzz)
+        r21 = 2 * (qxy + qwz)
+        r31 = 2 * (qxz - qwy)
+
+        r12 = 2 * (qxy - qwz)
+        r22 = 1 - 2 * (qxx + qzz)
+        r32 = 2 * (qyz + qwx)
+
+        r13 = 2 * (qxz + qwy)
+        r23 = 2 * (qyz - qwx)
+        r33 = 1 - 2 * (qxx + qyy)
+    end
+
+    transform:setMatrix(
+        r11 * sx, r12 * sy, r13 * sz, tx,
+        r21 * sx, r22 * sy, r23 * sz, ty,
+        r31 * sx, r32 * sy, r33 * sz, tz,
+        0, 0, 0, 1)
+
+    return transform
 end
 
 return Transform

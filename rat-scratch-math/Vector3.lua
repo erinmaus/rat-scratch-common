@@ -1,7 +1,7 @@
 local Object = require("rat-scratch-common").Object
 local Common = require("rat-scratch-math.Common")
 
---- @class RatScratch.Math.Vector3
+--- @class RatScratch.Math.Vector3 : RatScratch.Common.BaseObject
 --- @overload fun(x?: number, y?: number, z?: number): RatScratch.Math.Vector3
 --- @field public x number
 --- @field public y number

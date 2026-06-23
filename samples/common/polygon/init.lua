@@ -3,7 +3,7 @@ local Table = require("rat-scratch-common").Table
 local Point2D = Math.Geometry2D.Point
 local Polygon2D = Math.Geometry2D.Polygon
 
-local demo = {}
+local demo = require("samples.common.demo").new()
 
 demo.polygons = {
 	{ 100, 100, 200, 100, 200, 200, 100, 200 },

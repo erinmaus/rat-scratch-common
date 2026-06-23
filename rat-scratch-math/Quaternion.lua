@@ -2,7 +2,7 @@ local Object = require("rat-scratch-common").Object
 local Vector3 = require "rat-scratch-math.Vector3"
 local Common = require "rat-scratch-math.Common"
 
---- @class RatScratch.Math.Quaternion
+--- @class RatScratch.Math.Quaternion : RatScratch.Common.BaseObject
 --- @overload fun(x?: number, y?: number, z?: number, w?: number): RatScratch.Math.Quaternion
 --- @field public x number
 --- @field public y number
