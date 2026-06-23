@@ -15,8 +15,7 @@ function update_rsmeta_version() {
     filename=$1
     version=$2
 
-    sed -i .bak "s/version$spaces_pattern=$spaces_pattern.*/version = $(escape_version $version)/g" $filename
-    rm $filename.bak
+    rat-scratch set --meta=$filename version $version
     git add $filename
 }
 
