@@ -22,6 +22,7 @@ root = staging/module/build
 
 [json]
 version = 0.1.2
+source = json.lua
 url = https://github.com/rxi/json.lua/archive/refs/tags/v0.1.2.zip
 hash = sha512:2d3e56fadd5e41086e6a8e4d63a5a547aea87edaaa384f6a2e47edd47cf2055b8a8bbd31d678ae980e3e5cc112012ba928814d728ddcfe1f89158e6fbfdc4eb9
 root = ^json%.lua%-v?0%.1%.2$
