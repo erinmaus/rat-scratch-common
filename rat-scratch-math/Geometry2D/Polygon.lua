@@ -290,6 +290,8 @@ do
 			i = i - 1
 			j = j + 1
 		end
+
+		return points
 	end
 end
 
