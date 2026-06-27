@@ -37,6 +37,14 @@ function Point.normal(x, y)
 	return x * d, y * d
 end
 
+function Point.direction(fromX, fromY, toX, toY)
+	return toX - fromX, toY - fromY
+end
+
+function Point.directionNormal(fromX, fromY, toX, toY)
+	return Point.normal(Point.direction(fromX, fromY, toX, toY))
+end
+
 --- @param x1 number
 --- @param y1 number
 --- @param x2 number
@@ -58,14 +66,14 @@ end
 --- @param x number
 --- @param y number
 --- @return number, number
-function Point.left(x, y)
+function Point.right(x, y)
 	return y, -x
 end
 
 --- @param x number
 --- @param y number
 --- @return number, number
-function Point.right(x, y)
+function Point.left(x, y)
 	return -y, x
 end
 
