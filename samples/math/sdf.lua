@@ -26,8 +26,6 @@ function demo.update()
 	local inputChannel = love.thread.getChannel("::sdf")
 	local e = inputChannel:pop()
 
-	print("E?", e and e.id, e and e.time)
-
 	if e and (not demo.current or e.id >= demo.current.id) then
 		demo.current = {
 			id = e.id,
