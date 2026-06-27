@@ -82,4 +82,14 @@ function Common.zerosign(value)
 	return 0
 end
 
+--- @param a number
+--- @param b number
+--- @param E? number
+--- @return boolean
+function Common.equal(a, b, E)
+	E = E or Common.EPSILON
+
+	return math.abs(a - b) < E
+end
+
 return Common
