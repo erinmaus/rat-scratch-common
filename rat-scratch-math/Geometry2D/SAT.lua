@@ -55,7 +55,7 @@ function SATImpl._projectPolygon(polygonA, polygonB)
 		local x2, y2 = polygonA:get(i1 + 1)
 
 		local nx, ny = Point.normal(x2 - x1, y2 - y1)
-		local ax, ay = Point.left(nx, ny)
+		local ax, ay = Point.right(nx, ny)
 
 		local minA, maxA = SATImpl._projectPolygonToAxis(polygonA, ax, ay)
 		local minB, maxB = SATImpl._projectPolygonToAxis(polygonB, ax, ay)

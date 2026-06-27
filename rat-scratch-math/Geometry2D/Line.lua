@@ -153,15 +153,8 @@ end
 function Line.intersection(ax, ay, bx, by, cx, cy, dx, dy)
 	local acdSign = Line.sideOfLineSegment(ax, ay, cx, cy, dx, dy)
 	local bcdSign = Line.sideOfLineSegment(bx, by, cx, cy, dx, dy)
-	if (acdSign < 0 and bcdSign < 0) or (acdSign > 0 and bcdSign > 0) then
-		return false
-	end
-
 	local cabSign = Line.sideOfLineSegment(cx, cy, ax, ay, bx, by)
 	local dabSign = Line.sideOfLineSegment(dx, dy, ax, ay, bx, by)
-	if (cabSign < 0 and dabSign < 0) or (cabSign > 0 and dabSign > 0) then
-		return false
-	end
 
 	if acdSign == 0 and bcdSign == 0 and cabSign == 0 and dabSign == 0 then
 		return Line.isCollinear(ax, ay, bx, by, cx, cy, dx, dy)
@@ -189,12 +182,12 @@ function Line.intersection(ax, ay, bx, by, cx, cy, dx, dy)
 	local u = dcCrossAC / baCrossDC
 	local v = baCrossCA / dcCrossBA
 
-	if u < 0 or u > 1 or v < 0 or v > 1 then
-		return false
-	end
-
 	local rx = ax + bax * u
 	local ry = ay + bay * u
+
+	if u < 0 or u > 1 or v < 0 or v > 1 then
+		return false, rx, ry, u, v
+	end
 
 	return true, rx, ry, u, v
 end

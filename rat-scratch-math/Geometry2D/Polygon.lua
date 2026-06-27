@@ -144,7 +144,7 @@ do
 		end
 
 		local nx, ny = Line.getNormal(x1, y1, x2, y2)
-		local rnx, rny = Point.left(nx, ny)
+		local rnx, rny = Point.right(nx, ny)
 
 		return rnx, rny, math.sqrt(minDistance), index
 	end
@@ -276,7 +276,6 @@ do
 		)
 
 		local polygon = wrappedPolygon:intrude(points, length)
-		local length = polygon:getLength()
 		local i = length
 		local j = 1
 
@@ -292,6 +291,85 @@ do
 		end
 
 		return points
+	end
+end
+
+do
+	local wrappedPolygon = FlatTable.wrap(0, 2)
+
+	function Polygon.bounds(points, length)
+		length = length or math.ceil(#points / 2)
+
+		Debug.assert(
+			length >= 3,
+			"polygon must have at least 3 points, got %d",
+			length
+		)
+
+		local polygon = wrappedPolygon:intrude(points, length)
+
+		local left, top = polygon:get(1)
+		local right, bottom = left, top
+		for i = 2, polygon:getLength() do
+			local x, y = polygon:get(i)
+
+			left = math.min(left, x)
+			right = math.max(right, x)
+			top = math.min(top, y)
+			bottom = math.max(bottom, y)
+		end
+
+		return left, top, right, bottom
+	end
+end
+
+do
+	local wrappedPolygon = FlatTable.wrap(0, 2)
+
+	--- @param ax number
+	--- @param ay number
+	--- @param bx number
+	--- @param by number
+	--- @param points number[]
+	--- @param length? integer
+	--- @param left? number[]
+	--- @param right? number[]
+	--- @return boolean, number[], number[]
+	function Polygon.split(ax, ay, bx, by, points, length, left, right)
+		length = length or math.ceil(#points / 2)
+		left = left or {}
+		right = right or {}
+
+		local polygon = wrappedPolygon:intrude(points, length)
+		for i = 1, length do
+			local x1, y1 = polygon:get(i)
+			local x2, y2 = polygon:get(i + 1)
+
+			local side1 = Line.sideOfLineSegment(ax, ay, bx, by, x1, y1)
+			local side2 = Line.sideOfLineSegment(ax, ay, bx, by, x2, y2)
+
+			if side1 >= 0 then
+				table.insert(left, x1)
+				table.insert(left, y1)
+			end
+
+			if side1 <= 0 then
+				table.insert(right, x1)
+				table.insert(right, y1)
+			end
+
+			if (side1 > 0 and side2 < 0) or (side1 < 0 and side2 > 0) then
+				local _, rx, ry, u, v = Line.intersection(ax, ay, bx, by, x1, y1, x2, y2)
+				if rx and ry and u and v and (v >= 0 and v <= 1) then
+					table.insert(left, rx)
+					table.insert(left, ry)
+					table.insert(right, rx)
+					table.insert(right, ry)
+				end
+			end
+		end
+
+		return #left >= 6 and #right >= 6, left, right
 	end
 end
 
