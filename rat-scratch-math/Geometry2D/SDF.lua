@@ -33,7 +33,7 @@ end
 --- @param radius number
 --- @return number
 function SDF.distanceFromCircle(px, py, x, y, radius)
-	local distance = Point.distance(px, x, py, y)
+	local distance = Point.distance(px, py, x, y)
 	return distance - radius
 end
 

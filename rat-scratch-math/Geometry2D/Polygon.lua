@@ -144,7 +144,7 @@ do
 		end
 
 		local nx, ny = Line.getNormal(x1, y1, x2, y2)
-		local rnx, rny = Point.right(nx, ny)
+		local rnx, rny = Point.left(nx, ny)
 
 		return rnx, rny, math.sqrt(minDistance), index
 	end
@@ -153,11 +153,14 @@ end
 do
 	local wrappedPolygon = FlatTable.wrap(0, 2)
 
-	--- @param points number[]
-	--- @param length? integer
-	--- @return number
-	function Polygon.area(points, length)
+	function Polygon.shoelace(points, length)
 		length = length or math.ceil(#points / 2)
+
+		Debug.assert(
+			length >= 3,
+			"polygon must have at least 3 points, got %d",
+			length
+		)
 
 		local polygon = wrappedPolygon:intrude(points, length)
 		local sum = 0
@@ -167,58 +170,31 @@ do
 
 			sum = sum + (x1 * y2) - (y1 * x2)
 		end
-		return math.abs(sum / 2)
+
+		return sum
 	end
 end
 
-do
-	local wrappedPolygon = FlatTable.wrap(0, 2)
-
-	--- @param points number[]
-	--- @param length? integer
-	--- @return boolean
-	function Polygon.isClockwise(points, length)
-		length = length or math.ceil(#points / 2)
-
-		Debug.assert(
-			length >= 3,
-			"polygon must have at least 3 points, got %d",
-			length
-		)
-
-		local polygon = wrappedPolygon:intrude(points, length)
-		local p1x, p1y = polygon:get(1)
-		local p2x, p2y = polygon:get(2)
-		local p3x, p3y = polygon:get(3)
-
-		local side = Line.sideOfLineSegment(p1x, p1y, p2x, p2y, p3x, p3y)
-		return side < 0
-	end
+--- @param points number[]
+--- @param length? integer
+--- @return number
+function Polygon.area(points, length)
+	local sum = Polygon.shoelace(points, length)
+	return math.abs(sum / 2)
 end
 
-do
-	local wrappedPolygon = FlatTable.wrap(0, 2)
+--- @param points number[]
+--- @param length? integer
+--- @return boolean
+function Polygon.isClockwise(points, length)
+	return Polygon.shoelace(points, length) < 0
+end
 
-	--- @param points number[]
-	--- @param length? integer
-	--- @return boolean
-	function Polygon.isCounterClockwise(points, length)
-		length = length or math.ceil(#points / 2)
-
-		Debug.assert(
-			length >= 3,
-			"polygon must have at least 3 points, got %d",
-			length
-		)
-
-		local polygon = wrappedPolygon:intrude(points, length)
-		local p1x, p1y = polygon:get(1)
-		local p2x, p2y = polygon:get(2)
-		local p3x, p3y = polygon:get(3)
-
-		local side = Line.sideOfLineSegment(p1x, p1y, p2x, p2y, p3x, p3y)
-		return side > 0
-	end
+--- @param points number[]
+--- @param length? integer
+--- @return boolean
+function Polygon.isCounterClockwise(points, length)
+	return Polygon.shoelace(points, length) > 0
 end
 
 do
