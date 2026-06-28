@@ -3,6 +3,7 @@ local SDF = require("rat-scratch-math").Geometry2D.SDF
 local Polygon = require("rat-scratch-math").Geometry2D.Polygon
 local MarchingSquares = require("rat-scratch-math").MarchingSquares
 local DualContour = require("rat-scratch-math").DualContour
+local Contour = require("rat-scratch-math").Geometry2D.Contour
 
 local demo =
 	require("samples.common.demo").new("samples/common/polygon/init.lua")
@@ -48,6 +49,12 @@ function demo.keypressed(_, scan, isRepeat)
 		local after = love.timer.getTime()
 
 		demo.time = (after - before) * 1000
+
+		if demo.contours then
+			for i, contour in ipairs(demo.contours) do
+				demo.contours[i] = Contour.simplify(contour)
+			end
+		end
 	end
 end
 
