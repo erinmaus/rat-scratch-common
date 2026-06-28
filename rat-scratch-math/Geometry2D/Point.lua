@@ -1,3 +1,4 @@
+local Common = require "rat-scratch-math.Common"
 local Point = {}
 
 --- @param x1 number
@@ -75,6 +76,35 @@ end
 --- @return number, number
 function Point.left(x, y)
 	return -y, x
+end
+
+
+--- @param x1 number
+--- @param y1 number
+--- @param x2 number
+--- @param y2 number
+--- @return -1 | 0 | 1
+function Point.compare(x1, y1, x2, y2, E)
+	local s = y1 - y2
+	if Common.equal(s, 0, E) then
+		local t = x1 - x2
+		if Common.equal(t, 0, E) then
+			return 0
+		end
+
+		return Common.sign(t)
+	end
+
+	return Common.sign(s)
+end
+
+--- @param x1 number
+--- @param y1 number
+--- @param x2 number
+--- @param y2 number
+--- @return boolean
+function Point.less(x1, y1, x2, y2)
+	return Point.compare(x1, y1, x2, y2) < 0
 end
 
 return Point

@@ -6,7 +6,7 @@ local Polygon2D = Math.Geometry2D.Polygon
 local demo = require("samples.common.demo").new()
 
 demo.polygons = {
-	{ 100, 100, 200, 100, 200, 200, 100, 200 },
+	{ 100, 100, 200, 100, 250, 250, 100, 200 },
 	{ 300, 300, 500, 300, 500, 500, 300, 500 },
 }
 
