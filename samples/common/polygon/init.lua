@@ -12,7 +12,7 @@ demo.polygons = {
 
 demo.transforms = {
 	love.math.newTransform(),
-	love.math.newTransform()
+	love.math.newTransform(),
 }
 
 demo.polygonIndex = 1
@@ -28,7 +28,8 @@ function demo.mousepressed(x, y, button)
 	local bestPolygonDistance = math.huge
 
 	for i, polygon in ipairs(demo.polygons) do
-		local transformedPolygon = Polygon2D.transform(polygon, demo.transforms[i])
+		local transformedPolygon =
+			Polygon2D.transform(polygon, demo.transforms[i])
 
 		for j = 1, #transformedPolygon, 2 do
 			local px, py = transformedPolygon[j], transformedPolygon[j + 1]
@@ -45,10 +46,12 @@ function demo.mousepressed(x, y, button)
 		bestPolygonDistance = -math.huge
 
 		for i, polygon in ipairs(demo.polygons) do
-			local transformedPolygon = Polygon2D.transform(polygon, demo.transforms[i])
+			local transformedPolygon =
+				Polygon2D.transform(polygon, demo.transforms[i])
 
 			if Polygon2D.isPointInside(x, y, transformedPolygon) then
-				local _, _, _, distanceToPolygon = Polygon2D.pointDistance(x, y, transformedPolygon)
+				local _, _, _, distanceToPolygon =
+					Polygon2D.pointDistance(x, y, transformedPolygon)
 
 				if distanceToPolygon > bestPolygonDistance then
 					bestPolygonDistance = distanceToPolygon
@@ -68,8 +71,11 @@ function demo.mousemoved(x, y, dx, dy)
 	if demo.isPolygonGrabbed then
 		local polygon = demo.polygons[demo.polygonIndex]
 		local numPoints = math.ceil(#polygon / 2)
-		
-		if demo.polygonPointIndex >= 1 and demo.polygonPointIndex <= numPoints then
+
+		if
+			demo.polygonPointIndex >= 1
+			and demo.polygonPointIndex <= numPoints
+		then
 			local i = Table.indexToStride(demo.polygonPointIndex, 2)
 			local px, py = polygon[i], polygon[i + 1]
 
@@ -80,7 +86,8 @@ function demo.mousemoved(x, y, dx, dy)
 			end
 		else
 			for i = 1, #polygon, 2 do
-				polygon[i], polygon[i + 1] = polygon[i] + dx, polygon[i + 1] + dy
+				polygon[i], polygon[i + 1] =
+					polygon[i] + dx, polygon[i + 1] + dy
 			end
 		end
 	end
@@ -99,7 +106,7 @@ function demo.update(deltaTime)
 		if love.keyboard.isDown("left") then
 			rotation = rotation - math.pi
 		end
-		
+
 		if love.keyboard.isDown("right") then
 			rotation = rotation + math.pi
 		end
@@ -117,15 +124,16 @@ function demo.update(deltaTime)
 		transform:rotate(rotation * deltaTime)
 		transform:translate(-centerX, -centerY)
 
-		demo.polygons[demo.polygonIndex] = Polygon2D.transform(polygon, transform)
+		demo.polygons[demo.polygonIndex] =
+			Polygon2D.transform(polygon, transform)
 	end
 end
 
 function demo.drawPolygon(index)
-    love.graphics.push()
-    love.graphics.applyTransform(demo.transforms[index])
-    love.graphics.polygon("line", demo.polygons[index])
-    love.graphics.pop()
+	love.graphics.push()
+	love.graphics.applyTransform(demo.transforms[index])
+	love.graphics.polygon("line", demo.polygons[index])
+	love.graphics.pop()
 end
 
 function demo.draw()

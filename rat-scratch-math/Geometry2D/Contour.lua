@@ -1,5 +1,10 @@
-local PointAdjacencyCache = require "rat-scratch-math.Geometry2D.impl.PointAdjacencyCache"
-local IndexedAdjacencyCache = require "rat-scratch-math.Geometry2D.impl.IndexedAdjacencyCache"
+local IndexedAdjacencyCache =
+	require("rat-scratch-math.Geometry2D.impl.IndexedAdjacencyCache")
+local Point = require("rat-scratch-math.Geometry2D.Point")
+local PointAdjacencyCache =
+	require("rat-scratch-math.Geometry2D.impl.PointAdjacencyCache")
+local Table = require("rat-scratch-common.Table")
+local FlatTable = require("rat-scratch-common").FlatTable
 
 local Contour = {}
 

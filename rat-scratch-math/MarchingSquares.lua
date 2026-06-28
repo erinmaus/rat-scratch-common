@@ -3,9 +3,10 @@ local Point = require("rat-scratch-math.Geometry2D.Point")
 local bit = require("bit")
 local Search = require("rat-scratch-common").Search
 local Table = require("rat-scratch-common").Table
-local SortedPointsList = require("rat-scratch-math.Geometry2D.impl.SortedPointsList")
-local Contour          = require("rat-scratch-math.Geometry2D.Contour")
-local Isosurface       = require("rat-scratch-math.Geometry2D.Isosurface")
+local Contour = require("rat-scratch-math.Geometry2D.Contour")
+local Isosurface = require("rat-scratch-math.Geometry2D.Isosurface")
+local SortedPointsList =
+	require("rat-scratch-math.Geometry2D.impl.SortedPointsList")
 
 local MarchingSquares = {}
 local MarchingSquaresImpl = {}
@@ -103,7 +104,15 @@ do
 	--- @param sampleFunc RatScratch.Math.IsosurfaceSampleFunc<T>
 	--- @param points RatScratch.Math.Geometry2D.impl.SortedPointsList
 	--- @param results number[][]
-	function MarchingSquaresImpl.sample(x, y, step, image, sampleFunc, points, results)
+	function MarchingSquaresImpl.sample(
+		x,
+		y,
+		step,
+		image,
+		sampleFunc,
+		points,
+		results
+	)
 		local left = x
 		local right = x + step
 		local top = y

@@ -1,6 +1,6 @@
 local Polygon = require("rat-scratch-math.Geometry2D.Polygon")
 local FlatTable = require("rat-scratch-common").FlatTable
-local Table     = require("rat-scratch-common").Table
+local Table = require("rat-scratch-common").Table
 
 local Minkowski = {}
 local MinkowskiImpl = {}
@@ -14,7 +14,7 @@ do
 	--- @param result number[]
 	--- @param t love.Transform?
 	--- @param points number[]
-	--- @param length? integer 
+	--- @param length? integer
 	--- @param sign 1 | -1
 	function MinkowskiImpl._reorderPoints(result, t, points, length, sign)
 		length = length or math.ceil(#points / 2)
@@ -84,7 +84,7 @@ do
 
 			local nax, nay = a:get(aPointer + 1)
 			local nbx, nby = b:get(bPointer + 1)
-			
+
 			local adx, ady = nax - ax, nay - ay
 			local bdx, bdy = nbx - bx, nby - by
 			local cross = adx * bdy - ady * bdx

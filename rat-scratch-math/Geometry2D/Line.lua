@@ -1,4 +1,4 @@
-local Common = require "rat-scratch-math.Common"
+local Common = require("rat-scratch-math.Common")
 
 local Line = {}
 local LineImpl = {}
@@ -45,7 +45,9 @@ end
 --- @param y2 number
 --- @return number
 function Line.pointDistanceFromLineSegment(px, py, x1, y1, x2, y2)
-	return math.sqrt(Line.pointDistanceSquaredFromLineSegment(px, py, x1, y1, x2, y2))
+	return math.sqrt(
+		Line.pointDistanceSquaredFromLineSegment(px, py, x1, y1, x2, y2)
+	)
 end
 
 --- @param x1 number
@@ -135,7 +137,8 @@ function Line.isCollinear(ax, ay, bx, by, cx, cy, dx, dy)
 	local dabSign = Line.sideOfLineSegment(dx, dy, ax, ay, bx, by)
 
 	if acdSign == 0 and bcdSign == 0 and cabSign == 0 and dabSign == 0 then
-		return LineImpl._isCollinear(ax, bx, cx, dx) and LineImpl._isCollinear(ay, by, cy, dy)
+		return LineImpl._isCollinear(ax, bx, cx, dx)
+			and LineImpl._isCollinear(ay, by, cy, dy)
 	end
 
 	return false

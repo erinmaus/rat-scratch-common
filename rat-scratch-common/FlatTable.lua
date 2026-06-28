@@ -1,5 +1,5 @@
-local Table = require("rat-scratch-common.Table")
 local Debug = require("rat-scratch-common.Debug")
+local Table = require("rat-scratch-common.Table")
 
 --- @generic T
 --- @class RatScratch.Common.FlatTable<T>
@@ -66,7 +66,11 @@ end
 --- @return RatScratch.Common.FlatTable<T>
 function FlatTable:intrude(t, length, stride)
 	if not self then
-		Debug.assert(stride and stride >= 1, "stride must be >= 1; got %d", stride)
+		Debug.assert(
+			stride and stride >= 1,
+			"stride must be >= 1; got %d",
+			stride
+		)
 
 		return setmetatable({
 			stride = stride,
@@ -75,7 +79,12 @@ function FlatTable:intrude(t, length, stride)
 		}, FlatTableMetatable)
 	end
 
-	Debug.assert(not length or (#t % (stride or self.stride) == 0), "table length (%d) must be multiple of stride (%d)", #t, stride or self.stride)
+	Debug.assert(
+		not length or (#t % (stride or self.stride) == 0),
+		"table length (%d) must be multiple of stride (%d)",
+		#t,
+		stride or self.stride
+	)
 
 	self.stride = stride or self.stride
 	self.length = length or math.ceil(#t / self.stride)

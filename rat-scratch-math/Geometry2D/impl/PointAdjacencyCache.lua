@@ -2,7 +2,8 @@ local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
 local Point = require("rat-scratch-math.Geometry2D.Point")
 local PointsCache = require("rat-scratch-math.Geometry2D.impl.PointsCache")
-local SortedPointsList = require("rat-scratch-math.Geometry2D.impl.SortedPointsList")
+local SortedPointsList =
+	require("rat-scratch-math.Geometry2D.impl.SortedPointsList")
 
 --- @alias RatScratch.Math.Geometry2D.impl.PositionAdjacencyList table<number[], RatScratch.Math.Geometry2D.impl.SortedPointsList>
 
@@ -28,7 +29,8 @@ function PointAdjacencyCache:new()
 end
 
 function PointAdjacencyCache:reset()
-	self.freeAdjacencyLists, self.usedAdjacencyLists = self.usedAdjacencyLists, self.freeAdjacencyLists
+	self.freeAdjacencyLists, self.usedAdjacencyLists =
+		self.usedAdjacencyLists, self.freeAdjacencyLists
 
 	self.points:reset()
 	self.vertices:reset()
@@ -144,7 +146,12 @@ function PointAdjacencyCache:resolve()
 				local maxDot = -math.huge
 				for _, otherVertex in ipairs(adjacentVertices) do
 					if not self.visited[otherVertex] then
-						local nx2, ny2 = Point.directionNormal(cx, cy, otherVertex[1], otherVertex[2])
+						local nx2, ny2 = Point.directionNormal(
+							cx,
+							cy,
+							otherVertex[1],
+							otherVertex[2]
+						)
 
 						local dot = Point.dot(nx1, ny1, nx2, ny2)
 						if dot > maxDot then

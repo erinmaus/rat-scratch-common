@@ -1,8 +1,8 @@
 local Table = require("rat-scratch-common").Table
 local FlatTable = require("rat-scratch-common").FlatTable
+local Common = require("rat-scratch-math.Common")
 local Point = require("rat-scratch-math.Geometry2D.Point")
 local Polygon = require("rat-scratch-math.Geometry2D.Polygon")
-local Common  = require("rat-scratch-math.Common")
 
 local SAT = {}
 local SATImpl = {}
@@ -63,11 +63,17 @@ function SATImpl._projectPolygon(polygonA, polygonB)
 		local depth = SATImpl._intervalDistance(minA, maxA, minB, maxB)
 		collision = collision and depth < 0
 
-		if depth >= 0 and (not positiveMinDistance or depth < positiveMinDistance) then
+		if
+			depth >= 0
+			and (not positiveMinDistance or depth < positiveMinDistance)
+		then
 			positiveMinDistance = depth
 			pnx, pny = ax, ay
 			pi = i1
-		elseif depth <= 0 and (not negativeMinDistance or depth > negativeMinDistance) then
+		elseif
+			depth <= 0
+			and (not negativeMinDistance or depth > negativeMinDistance)
+		then
 			negativeMinDistance = depth
 			nnx, nny = ax, ay
 			ni = i1
@@ -102,8 +108,10 @@ do
 		local polygonA = wrappedPolygonA:intrude(a, al)
 		local polygonB = wrappedPolygonB:intrude(b, bl)
 
-		local collisionA, minA, anx, any, indexA = SATImpl._projectPolygon(polygonA, polygonB)
-		local collisionB, minB, bnx, bny, indexB = SATImpl._projectPolygon(polygonB, polygonA)
+		local collisionA, minA, anx, any, indexA =
+			SATImpl._projectPolygon(polygonA, polygonB)
+		local collisionB, minB, bnx, bny, indexB =
+			SATImpl._projectPolygon(polygonB, polygonA)
 		local collision = collisionA and collisionB
 
 		if collisionA ~= collisionB then
@@ -144,7 +152,8 @@ do
 		Polygon.transform(a, at, al, ra)
 		Polygon.transform(b, bt, bl, rb)
 
-		local collision, distance, nx, ny, polygon, edgeA, edgeB = SATImpl._projectPolygons(ra, rb, al, bl)
+		local collision, distance, nx, ny, polygon, edgeA, edgeB =
+			SATImpl._projectPolygons(ra, rb, al, bl)
 		if collision then
 			distance = -distance
 		end

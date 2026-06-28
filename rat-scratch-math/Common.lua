@@ -7,7 +7,7 @@ Common.EPSILON = 0.0001
 --- @param delta number
 --- @return number
 function Common.lerp(from, to, delta)
-    return from * (1 - delta) + to * delta
+	return from * (1 - delta) + to * delta
 end
 
 --- @param from number

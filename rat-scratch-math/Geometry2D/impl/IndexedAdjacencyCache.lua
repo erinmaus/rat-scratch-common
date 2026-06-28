@@ -2,8 +2,8 @@ local FlatTable = require("rat-scratch-common").FlatTable
 local Object = require("rat-scratch-common").Object
 local Search = require("rat-scratch-common").Search
 local Table = require("rat-scratch-common").Table
+local Common = require("rat-scratch-math.Common")
 local Point = require("rat-scratch-math.Geometry2D.Point")
-local Common      = require("rat-scratch-math.Common")
 
 --- @class RatScratch.Math.Geometry2D.impl.IndexedAdjacencyCache : RatScratch.Common.BaseObject
 --- @overload fun(): RatScratch.Math.Geometry2D.impl.IndexedAdjacencyCache
@@ -95,7 +95,8 @@ end
 function IndexedAdjacencyCache:_add(a, b)
 	local list = self:_getAdjacencyList(a)
 
-	local index = Search.lessThanEqual(list, b, IndexedAdjacencyCache.compareIndex)
+	local index =
+		Search.lessThanEqual(list, b, IndexedAdjacencyCache.compareIndex)
 	if not (index >= 1 and index <= #list and list[index] == b) then
 		table.insert(list, index + 1, a)
 	end
@@ -154,7 +155,8 @@ function IndexedAdjacencyCache:resolve()
 				local maxDot = -math.huge
 				for _, otherVertexIndex in ipairs(adjacentVertices) do
 					if not self.visited[otherVertexIndex] then
-						local ox, oy = self.wrappedVertices:get(otherVertexIndex)
+						local ox, oy =
+							self.wrappedVertices:get(otherVertexIndex)
 						local nx2, ny2 = Point.directionNormal(cx, cy, ox, oy)
 
 						local dot = Point.dot(nx1, ny1, nx2, ny2)

@@ -24,5 +24,5 @@ local outputChannel = love.thread.getChannel("::sdf")
 outputChannel:push({
 	id = id,
 	image = imageData,
-	time = (after - before) * 1000
+	time = (after - before) * 1000,
 })

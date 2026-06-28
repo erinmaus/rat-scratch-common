@@ -8,7 +8,7 @@ local Vector3 = require("rat-scratch-math").Vector3
 local Common = require("rat-scratch-math").Common
 local Quaternion = require("rat-scratch-math").Quaternion
 local Object = require("rat-scratch-common").Object
-local Table  = require("rat-scratch-common").Table
+local Table = require("rat-scratch-common").Table
 
 local list = require("samples.common.list")
 local demo = {}
@@ -34,7 +34,7 @@ function demo.mousepressed(x, y, button)
 			local model = scene:getModel(1)
 
 			demo.gltf = { scene = scene, model = model }
-			if Object.isDerived(SkinnedModel, model:getType()) then 
+			if Object.isDerived(SkinnedModel, model:getType()) then
 				--- @cast model RatScratch.Graphics.Graphics3D.SkinnedModel
 				demo.gltf.animator = Animator(model)
 				demo.gltf.processor = ModelProcessor(model)
@@ -42,7 +42,10 @@ function demo.mousepressed(x, y, button)
 				demo.gltf.animations = {}
 				for i = 1, model:getAnimationCount() do
 					local animation = model:getAnimation(i)
-					table.insert(demo.gltf.animations, animation:getName() ~= "" and animation:getName() or i)
+					table.insert(
+						demo.gltf.animations,
+						animation:getName() ~= "" and animation:getName() or i
+					)
 				end
 			end
 		elseif demo.gltf.animations then
@@ -54,8 +57,11 @@ function demo.mousepressed(x, y, button)
 					demo.gltf.animator:stop(demo.gltf.animationPlayback)
 				end
 
-				demo.gltf.animationPlayback =
-					demo.gltf.animator:play(animation, "main", { looping = true })
+				demo.gltf.animationPlayback = demo.gltf.animator:play(
+					animation,
+					"main",
+					{ looping = true }
+				)
 			end
 		end
 	end
@@ -95,13 +101,14 @@ function demo.drawGLTF()
 		end
 
 		local projection = Transform.makePerspectiveTransform(
-				math.rad(45),
-				love.graphics.getWidth() / love.graphics.getHeight(),
-				0.1,
-				1000
-			)
+			math.rad(45),
+			love.graphics.getWidth() / love.graphics.getHeight(),
+			0.1,
+			1000
+		)
 
-		camera = Transform.makeTranslationTransform(Vector3(0, 0, -scale)) * camera
+		camera = Transform.makeTranslationTransform(Vector3(0, 0, -scale))
+			* camera
 
 		love.graphics.setDepthMode("lequal", true)
 		love.graphics.setProjection(projection)

@@ -46,7 +46,8 @@ do
 	---   inverseStep: number,
 	---   cells: number[][],
 	--- }
-	local grid = { x = 0, y = 0, width = 0, height = 0, inverseStep = 0, cells = {} }
+	local grid =
+		{ x = 0, y = 0, width = 0, height = 0, inverseStep = 0, cells = {} }
 
 	--- @param x1 number
 	--- @param y1 number
@@ -177,31 +178,38 @@ do
 			local delta = Isosurface.calculateDelta(topLeftValue, topRightValue)
 			local px = Common.lerp(left, right, delta)
 			local py = top
-			local nx, ny = Isosurface.calculateGradient(px, py, image, sampleFunc)
+			local nx, ny =
+				Isosurface.calculateGradient(px, py, image, sampleFunc)
 			table.insert(points, DualContourImpl.newPoint(px, py, nx, ny))
 		end
 
 		if Isosurface.didCross(bottomLeftValue, bottomRightValue) then
-			local delta = Isosurface.calculateDelta(bottomLeftValue, bottomRightValue)
+			local delta =
+				Isosurface.calculateDelta(bottomLeftValue, bottomRightValue)
 			local px = Common.lerp(left, right, delta)
 			local py = bottom
-			local nx, ny = Isosurface.calculateGradient(px, py, image, sampleFunc)
+			local nx, ny =
+				Isosurface.calculateGradient(px, py, image, sampleFunc)
 			table.insert(points, DualContourImpl.newPoint(px, py, nx, ny))
 		end
 
 		if Isosurface.didCross(topLeftValue, bottomLeftValue) then
-			local delta = Isosurface.calculateDelta(topLeftValue, bottomLeftValue)
+			local delta =
+				Isosurface.calculateDelta(topLeftValue, bottomLeftValue)
 			local px = left
 			local py = Common.lerp(top, bottom, delta)
-			local nx, ny = Isosurface.calculateGradient(px, py, image, sampleFunc)
+			local nx, ny =
+				Isosurface.calculateGradient(px, py, image, sampleFunc)
 			table.insert(points, DualContourImpl.newPoint(px, py, nx, ny))
 		end
 
 		if Isosurface.didCross(topRightValue, bottomRightValue) then
-			local delta = Isosurface.calculateDelta(topRightValue, bottomRightValue)
+			local delta =
+				Isosurface.calculateDelta(topRightValue, bottomRightValue)
 			local px = right
 			local py = Common.lerp(top, bottom, delta)
-			local nx, ny = Isosurface.calculateGradient(px, py, image, sampleFunc)
+			local nx, ny =
+				Isosurface.calculateGradient(px, py, image, sampleFunc)
 			table.insert(points, DualContourImpl.newPoint(px, py, nx, ny))
 		end
 
@@ -219,16 +227,18 @@ do
 	--- @param step number
 	--- @param image T
 	--- @param sampleFunc RatScratch.Math.IsosurfaceSampleFunc<T>
-	function DualContourImpl.generateSamples(x1, y1, x2, y2, step, image, sampleFunc)
+	function DualContourImpl.generateSamples(
+		x1,
+		y1,
+		x2,
+		y2,
+		step,
+		image,
+		sampleFunc
+	)
 		for x = x1, x2, step do
 			for y = y1, y2, step do
-				DualContourImpl.sample(
-					x,
-					y,
-					step,
-					image,
-					sampleFunc
-				)
+				DualContourImpl.sample(x, y, step, image, sampleFunc)
 			end
 		end
 	end
@@ -285,9 +295,8 @@ do
 			table.insert(cachedEdges, cell2[2])
 		end
 
-		
 		return Contour.fromEdges(cachedEdges)
-	end		
+	end
 end
 
 --- @generic T

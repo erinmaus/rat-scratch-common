@@ -3,7 +3,7 @@ local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
 local Module = require("lib.rat-scratch-module")
 local ShaderPreprocessor = require("rat-scratch-graphics.ShaderPreprocessor")
-local Transform          = require("rat-scratch-math").Transform
+local Transform = require("rat-scratch-math").Transform
 
 --- @class RatScratch.Graphics.Graphics3D.ModelProcessor : RatScratch.Common.BaseObject
 --- @overload fun(model: RatScratch.Graphics.Graphics3D.SkinnedModel): RatScratch.Graphics.Graphics3D.ModelProcessor
@@ -13,7 +13,7 @@ local Transform          = require("rat-scratch-math").Transform
 local ModelProcessor = Object()
 
 ModelProcessor.BONE_FORMAT = {
-	{ location = 0, name = "bone", format = "floatmat4x4" }
+	{ location = 0, name = "bone", format = "floatmat4x4" },
 }
 
 --- @private
@@ -26,7 +26,10 @@ function ModelProcessor.getSkinShader()
 	if not shader then
 		local modulePath = Module.getSelfPath()
 		local shaderRootPath = ("%s/Shaders"):format(modulePath)
-		shader = ShaderPreprocessor.newComputeShader("@/SkinnedModel/Skin.compute.glsl", { rootPath = shaderRootPath })
+		shader = ShaderPreprocessor.newComputeShader(
+			"@/SkinnedModel/Skin.compute.glsl",
+			{ rootPath = shaderRootPath }
+		)
 
 		ModelProcessor._SKIN_SHADER = shader
 	end
@@ -47,14 +50,30 @@ function ModelProcessor:_initBones()
 	local skeleton = self.model:getSkeleton()
 	for i = 1, skeleton:getBoneCount() do
 		table.insert(self.bonesData, {
-			1, 0, 0, 0,
-			0, 1, 0, 0,
-			0, 0, 1, 0,
-			0, 0, 0, 1,
+			1,
+			0,
+			0,
+			0,
+			0,
+			1,
+			0,
+			0,
+			0,
+			0,
+			1,
+			0,
+			0,
+			0,
+			0,
+			1,
 		})
 	end
 
-	self.bonesBuffer = love.graphics.newBuffer(ModelProcessor.BONE_FORMAT, #self.bonesData, { shaderstorage = true })
+	self.bonesBuffer = love.graphics.newBuffer(
+		ModelProcessor.BONE_FORMAT,
+		#self.bonesData,
+		{ shaderstorage = true }
+	)
 end
 
 do
@@ -75,10 +94,8 @@ do
 
 				Transform.transposeTransform(boneTransform)
 
-				boneData[1], boneData[2], boneData[3], boneData[4],
-				boneData[5], boneData[6], boneData[7], boneData[8],
-				boneData[9], boneData[10], boneData[11], boneData[12],
-				boneData[13], boneData[14], boneData[15], boneData[16] = boneTransform:getMatrix()
+				boneData[1], boneData[2], boneData[3], boneData[4], boneData[5], boneData[6], boneData[7], boneData[8], boneData[9], boneData[10], boneData[11], boneData[12], boneData[13], boneData[14], boneData[15], boneData[16] =
+					boneTransform:getMatrix()
 			end
 		end
 
@@ -98,7 +115,12 @@ do
 
 				local threadGroupSize = shader:getLocalThreadgroupSize()
 
-				love.graphics.dispatchThreadgroups(shader, math.max(math.ceil(count / threadGroupSize), 1), 1, 1)
+				love.graphics.dispatchThreadgroups(
+					shader,
+					math.max(math.ceil(count / threadGroupSize), 1),
+					1,
+					1
+				)
 			end
 		end
 	end

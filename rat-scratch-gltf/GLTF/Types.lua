@@ -9,12 +9,12 @@ local NamedObject = {}
 
 --- @enum RatScratch.GLTF.AccessorComponentType
 local AccessorComponentType = {
-    BYTE = 5120,
-    UNSIGNED_BYTE = 5121,
-    SHORT = 5122,
-    UNSIGNED_SHORT = 5123,
-    UNSIGNED_INT = 5125,
-    FLOAT = 5126,
+	BYTE = 5120,
+	UNSIGNED_BYTE = 5121,
+	SHORT = 5122,
+	UNSIGNED_SHORT = 5123,
+	UNSIGNED_INT = 5125,
+	FLOAT = 5126,
 }
 
 --- @alias RatScratch.GLTF.AccessorElementType "SCALAR" | "VEC2" | "VEC3" | "VEC4" | "MAT2" | "MAT3" | "MAT4"
@@ -39,9 +39,9 @@ local SparseAccessor = {}
 
 --- @enum RatScratch.GLTF.SparseAccessorIndicesComponentType
 local SparseAccessorIndicesComponentType = {
-    UNSIGNED_BYTE = 5121,
-    UNSIGNED_SHORT = 5123,
-    UNSIGNED_INT = 5125,
+	UNSIGNED_BYTE = 5121,
+	UNSIGNED_SHORT = 5123,
+	UNSIGNED_INT = 5125,
 }
 
 --- @class RatScratch.GLTF.SparseAccessorIndices : RatScratch.GLTF.Object
@@ -94,8 +94,8 @@ local Buffer = {}
 
 --- @enum RatScratch.GLTF.BufferViewTarget
 local BufferViewTarget = {
-    ARRAY_BUFFER = 34962,
-    ELEMENT_ARRAY_BUFFER = 34963
+	ARRAY_BUFFER = 34962,
+	ELEMENT_ARRAY_BUFFER = 34963,
 }
 
 --- @class RatScratch.GLTF.BufferView : RatScratch.GLTF.NamedObject
@@ -196,13 +196,13 @@ local Mesh = {}
 
 --- @enum RatScratch.GLTF.MeshPrimitiveMode
 local MeshPrimitiveMode = {
-    POINTS = 0,
-    LINES = 1,
-    LINE_LOOP = 2,
-    LINE_STRIP = 3,
-    TRIANGLES = 4,
-    TRIANGLE_STRIP = 5,
-    TRIANGLE_FAN = 6
+	POINTS = 0,
+	LINES = 1,
+	LINE_LOOP = 2,
+	LINE_STRIP = 3,
+	TRIANGLES = 4,
+	TRIANGLE_STRIP = 5,
+	TRIANGLE_FAN = 6,
 }
 
 --- @alias RatScratch.GLTF.MeshPrimitiveMorphTarget "POSITION" | "NORMAL" | "TANGENT"
@@ -229,25 +229,25 @@ local Node = {}
 
 --- @enum RatScratch.GLTF.SamplerMagFilter
 local SamplerMagFilter = {
-    NEAREST = 9728,
-    LINEAR = 9729
+	NEAREST = 9728,
+	LINEAR = 9729,
 }
 
 --- @enum RatScratch.GLTF.SamplerMinFilter
 local SamplerMinFilter = {
-    NEAREST = 9728,
-    LINEAR = 9729,
-    NEAREST_MIPMAP_NEAREST = 9984,
-    LINEAR_MIPMAP_NEAREST = 9985,
-    NEAREST_MIPMAP_LINEAR = 9986,
-    LINEAR_MIPMAP_LINEAR = 9987
+	NEAREST = 9728,
+	LINEAR = 9729,
+	NEAREST_MIPMAP_NEAREST = 9984,
+	LINEAR_MIPMAP_NEAREST = 9985,
+	NEAREST_MIPMAP_LINEAR = 9986,
+	LINEAR_MIPMAP_LINEAR = 9987,
 }
 
 --- @enum RatScratch.GLTF.SamplerWrap
 local SamplerWrap = {
-    CLAMP_TO_EDGE = 33071,
-    MIRRORED_REPEAT = 33648,
-    REPEAT = 10497
+	CLAMP_TO_EDGE = 33071,
+	MIRRORED_REPEAT = 33648,
+	REPEAT = 10497,
 }
 
 --- @class RatScratch.GLTF.Sampler : RatScratch.GLTF.NamedObject
@@ -279,53 +279,53 @@ local TextureInfo = {}
 
 --- @enum RatScratch.GLTF.GLBChunkTypes
 local GLBChunkTypes = {
-    [0x4E4F534A] = "json",
-    [0x004E4942] = "bin",
-    json = 0x4E4F534A,
-    bin = 0x004E4942
+	[0x4E4F534A] = "json",
+	[0x004E4942] = "bin",
+	json = 0x4E4F534A,
+	bin = 0x004E4942,
 }
 
 return {
-    Object = Object,
-    NamedObject = NamedObject,
-    AccessorComponentType = AccessorComponentType,
-    Accessor = Accessor,
-    SparseAccessor = SparseAccessor,
-    SparseAccessorIndicesComponentType = SparseAccessorIndicesComponentType,
-    SparseAccessorIndices = SparseAccessorIndices,
-    SparseAccessorValues = SparseAccessorValues,
-    Animation = Animation,
-    AnimationChannel = AnimationChannel,
-    AnimationChannelTarget = AnimationChannelTarget,
-    AnimationChannelSampler = AnimationChannelSampler,
-    Asset = Asset,
-    Buffer = Buffer,
-    BufferViewTarget = BufferViewTarget,
-    BufferView = BufferView,
-    OrthographicCamera = OrthographicCamera,
-    OrthographicCameraProperties = OrthographicCameraProperties,
-    PerspectiveCamera = PerspectiveCamera,
-    PerspectiveCameraProperties = PerspectiveCameraProperties,
-    GLTF = GLTF,
-    Image = Image,
-    Material = Material,
-    MaterialPBRMetallicRoughness = MaterialPBRMetallicRoughness,
-    MaterialNormalTextureInfo = MaterialNormalTextureInfo,
-    MaterialOcclusionTextureInfo = MaterialOcclusionTextureInfo,
-    Mesh = Mesh,
-    MeshPrimitiveMode = MeshPrimitiveMode,
-    MeshPrimitive = MeshPrimitive,
-    Node = Node,
-    SamplerMagFilter = SamplerMagFilter,
-    SamplerMinFilter = SamplerMinFilter,
-    SamplerWrap = SamplerWrap,
-    Sampler = Sampler,
-    Scene = Scene,
-    Skin = Skin,
-    Texture = Texture,
-    TextureInfo = TextureInfo,
+	Object = Object,
+	NamedObject = NamedObject,
+	AccessorComponentType = AccessorComponentType,
+	Accessor = Accessor,
+	SparseAccessor = SparseAccessor,
+	SparseAccessorIndicesComponentType = SparseAccessorIndicesComponentType,
+	SparseAccessorIndices = SparseAccessorIndices,
+	SparseAccessorValues = SparseAccessorValues,
+	Animation = Animation,
+	AnimationChannel = AnimationChannel,
+	AnimationChannelTarget = AnimationChannelTarget,
+	AnimationChannelSampler = AnimationChannelSampler,
+	Asset = Asset,
+	Buffer = Buffer,
+	BufferViewTarget = BufferViewTarget,
+	BufferView = BufferView,
+	OrthographicCamera = OrthographicCamera,
+	OrthographicCameraProperties = OrthographicCameraProperties,
+	PerspectiveCamera = PerspectiveCamera,
+	PerspectiveCameraProperties = PerspectiveCameraProperties,
+	GLTF = GLTF,
+	Image = Image,
+	Material = Material,
+	MaterialPBRMetallicRoughness = MaterialPBRMetallicRoughness,
+	MaterialNormalTextureInfo = MaterialNormalTextureInfo,
+	MaterialOcclusionTextureInfo = MaterialOcclusionTextureInfo,
+	Mesh = Mesh,
+	MeshPrimitiveMode = MeshPrimitiveMode,
+	MeshPrimitive = MeshPrimitive,
+	Node = Node,
+	SamplerMagFilter = SamplerMagFilter,
+	SamplerMinFilter = SamplerMinFilter,
+	SamplerWrap = SamplerWrap,
+	Sampler = Sampler,
+	Scene = Scene,
+	Skin = Skin,
+	Texture = Texture,
+	TextureInfo = TextureInfo,
 
-    GLB_VERSION = 2,
-    GLTF_VERSION = "2.0",
-    GLBChunkTypes = GLBChunkTypes,
+	GLB_VERSION = 2,
+	GLTF_VERSION = "2.0",
+	GLBChunkTypes = GLBChunkTypes,
 }

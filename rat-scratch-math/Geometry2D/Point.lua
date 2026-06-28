@@ -1,4 +1,4 @@
-local Common = require "rat-scratch-math.Common"
+local Common = require("rat-scratch-math.Common")
 local Point = {}
 
 --- @param x1 number
@@ -77,7 +77,6 @@ end
 function Point.left(x, y)
 	return -y, x
 end
-
 
 --- @param x1 number
 --- @param y1 number
