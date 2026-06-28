@@ -335,7 +335,8 @@ do
 			end
 
 			if (side1 > 0 and side2 < 0) or (side1 < 0 and side2 > 0) then
-				local _, rx, ry, u, v = Line.intersection(ax, ay, bx, by, x1, y1, x2, y2)
+				local _, rx, ry, u, v =
+					Line.intersection(ax, ay, bx, by, x1, y1, x2, y2)
 				if rx and ry and u and v and (v >= 0 and v <= 1) then
 					table.insert(left, rx)
 					table.insert(left, ry)

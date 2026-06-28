@@ -17,11 +17,27 @@ function demo.mousepressed(x, y, button)
 			table.insert(demo.pendingSplit, y)
 
 			if #demo.pendingSplit == 4 then
-				local node = demo.bsp:find(demo.pendingSplit[1], demo.pendingSplit[2]) or demo.bsp:find(demo.pendingSplit[3], demo.pendingSplit[4])
+				local node = demo.bsp:find(
+					demo.pendingSplit[1],
+					demo.pendingSplit[2]
+				) or demo.bsp:find(
+					demo.pendingSplit[3],
+					demo.pendingSplit[4]
+				)
 				if node then
-					local nx, ny = Point.direction(demo.pendingSplit[1], demo.pendingSplit[2], demo.pendingSplit[3], demo.pendingSplit[4])
+					local nx, ny = Point.direction(
+						demo.pendingSplit[1],
+						demo.pendingSplit[2],
+						demo.pendingSplit[3],
+						demo.pendingSplit[4]
+					)
 
-					node:split(demo.pendingSplit[1], demo.pendingSplit[2], nx, ny)
+					node:split(
+						demo.pendingSplit[1],
+						demo.pendingSplit[2],
+						nx,
+						ny
+					)
 				end
 				Table.clear(demo.pendingSplit)
 			end

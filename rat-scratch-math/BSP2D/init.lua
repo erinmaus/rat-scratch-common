@@ -1,3 +1,3 @@
 return {
-	BSPNode = require "rat-scratch-math.BSP2D.BSPNode"
+	BSPNode = require("rat-scratch-math.BSP2D.BSPNode"),
 }

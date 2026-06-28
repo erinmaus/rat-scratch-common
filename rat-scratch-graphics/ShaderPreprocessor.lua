@@ -14,7 +14,7 @@ local DEFAULT_OPTIONS = {
 	errors = true,
 	safe = true,
 	dependencies = false,
-	rootPath = false
+	rootPath = false,
 }
 
 --- @alias RatScratch.Graphics.ShaderPreprocessResult {
@@ -82,7 +82,10 @@ end
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
 --- @param currentFile RatScratch.Graphics.impl.ShaderProcessFile
 local function endVisit(state, currentFile)
-	assert(state.visited[currentFile.filename] ~= nil, "ending visit, but current file not in visit table")
+	assert(
+		state.visited[currentFile.filename] ~= nil,
+		"ending visit, but current file not in visit table"
+	)
 	state.visited[currentFile.filename] = nil
 end
 
@@ -101,7 +104,8 @@ local function readContent(state, currentFile)
 		return content
 	end
 
-	local errorMessage = string.format("%s:0: failed to read file", currentFile.filename)
+	local errorMessage =
+		string.format("%s:0: failed to read file", currentFile.filename)
 	if state.options.safe then
 		table.insert(state.result.errors, errorMessage)
 		return string.format('// file "%s" not found', currentFile.filename)
@@ -132,15 +136,20 @@ local function process(state, parent, filename, rootPath)
 		local optionName, optionValue = trimmedLine:match(PRAGMA_OPTION_PATTERN)
 
 		if includeFilename then
-			local resolvedPath = Path.resolve(filename, includeFilename, rootPath)
+			local resolvedPath =
+				Path.resolve(filename, includeFilename, rootPath)
 
 			table.insert(lines, string.format("// %s", line))
-			local includedContent = process(state, currentFile, resolvedPath, rootPath)
+			local includedContent =
+				process(state, currentFile, resolvedPath, rootPath)
 
 			table.insert(lines, "#line 1")
 			table.insert(lines, includedContent)
 			table.insert(lines, string.format('// end "%s"', includeFilename))
-			table.insert(lines, string.format("#line %d\n", currentFile.currentLineNumber + 1))
+			table.insert(
+				lines,
+				string.format("#line %d\n", currentFile.currentLineNumber + 1)
+			)
 		elseif optionName and optionValue then
 			if state.hoistedOptions.keys[optionName] then
 				if state.options.warnings then
@@ -188,9 +197,15 @@ local function tryHoistOptions(state, lines)
 		if trimmedValue == "" then
 			table.insert(lines, string.format("#define %s", name))
 		elseif trimmedValue:match(FUNCTION_OPTION_VALUE_PATTERN) then
-			table.insert(lines, string.format("#define %s%s", name, trimmedValue))
+			table.insert(
+				lines,
+				string.format("#define %s%s", name, trimmedValue)
+			)
 		else
-			table.insert(lines, string.format("#define %s %s", name, trimmedValue))
+			table.insert(
+				lines,
+				string.format("#define %s %s", name, trimmedValue)
+			)
 		end
 	end
 end
@@ -228,7 +243,9 @@ function ShaderPreprocessor.preprocess(filename, options)
 		end
 	end
 
-	local hasResult = mergedOptions.safe or mergedOptions.warnings or mergedOptions.dependencies
+	local hasResult = mergedOptions.safe
+		or mergedOptions.warnings
+		or mergedOptions.dependencies
 	local result = hasResult
 			and {
 				warnings = mergedOptions.warnings and {} or nil,
@@ -250,11 +267,13 @@ function ShaderPreprocessor.preprocess(filename, options)
 	}
 
 	local absoluteFilename = Path.resolve("", filename, mergedOptions.rootPath)
-	local processedContent = process(processedState, nil, absoluteFilename, mergedOptions.rootPath)
+	local processedContent =
+		process(processedState, nil, absoluteFilename, mergedOptions.rootPath)
 
 	local finalOutput = {}
 	tryHoistOptions(processedState, finalOutput)
-	processedContent = tryHoistLanguagePragma(processedState, processedContent, finalOutput)
+	processedContent =
+		tryHoistLanguagePragma(processedState, processedContent, finalOutput)
 	table.insert(finalOutput, processedContent)
 
 	if result and mergedOptions.dependencies then
@@ -295,7 +314,10 @@ function ShaderPreprocessor.validateResult(shader, result, strict)
 	end
 
 	if shader and shader ~= "" then
-		table.insert(combinedMessage, string.format("shader source: %s", shader))
+		table.insert(
+			combinedMessage,
+			string.format("shader source: %s", shader)
+		)
 	else
 		table.insert(combinedMessage, "no shader source")
 	end
@@ -324,7 +346,10 @@ end
 --- @param options? RatScratch.Graphics.ShaderPreprocessOptions
 --- @return love.Shader
 function ShaderPreprocessor.newShader(pixelFilename, vertexFilename, options)
-	Debug.assert(pixelFilename, "expected shader filename or vertex/pixel shader filenames")
+	Debug.assert(
+		pixelFilename,
+		"expected shader filename or vertex/pixel shader filenames"
+	)
 
 	local pixelSource
 	do

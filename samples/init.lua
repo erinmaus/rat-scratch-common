@@ -45,7 +45,7 @@ function love.mousereleased(x, y, button, ...)
 
 		if index and samples[index] then
 			currentSample = love.filesystem.load(samples[index])()
-			
+
 			if currentSample and currentSample.load then
 				currentSample.load(arg)
 			end

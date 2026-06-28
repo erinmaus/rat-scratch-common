@@ -1,7 +1,8 @@
 local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
-local AnimationInstance = require("rat-scratch-graphics.Graphics3D.AnimationInstance")
-local Quaternion        = require("rat-scratch-math").Quaternion
+local AnimationInstance =
+	require("rat-scratch-graphics.Graphics3D.AnimationInstance")
+local Quaternion = require("rat-scratch-math").Quaternion
 
 --- @class RatScratch.Graphics.Graphics3D.AnimationPlaybackOptions
 --- @field weight? number
@@ -31,7 +32,11 @@ local AnimationPlayback = {}
 --- @param options? RatScratch.Graphics.Graphics3D.AnimationPlaybackOptions
 --- @return RatScratch.Graphics.Graphics3D.AnimationPlayback
 function AnimationPlayback.new(skeleton, animation, groupKey, options)
-	assert(not (options and options.weight and options.weight <= 0), "weight must be >= 0; got %f", options and options.weight)
+	assert(
+		not (options and options.weight and options.weight <= 0),
+		"weight must be >= 0; got %f",
+		options and options.weight
+	)
 
 	local looping
 	if options and options.looping ~= nil then
@@ -119,7 +124,8 @@ function Animator:play(animationKey, groupKey, options)
 	groupKey = groupKey or Animator.DEFAULT_GROUP
 
 	local animation = self.model:getAnimation(animationKey)
-	local playback = AnimationPlayback.new(self.skeleton, animation, groupKey, options)
+	local playback =
+		AnimationPlayback.new(self.skeleton, animation, groupKey, options)
 	table.insert(self.playbacks, playback)
 
 	local group = self.groupsByKey[groupKey]
@@ -176,14 +182,12 @@ function Animator:stop(playback)
 			end
 		end
 
-
 		for i = 1, self.skeleton:getBoneCount() do
 			local bone = self.skeleton:getBone(i)
 			if playback.animation:hasBone(bone) then
 				group.bones[bone] = group.bones[bone] - 1
 			end
 		end
-
 
 		if #group == 0 then
 			self.groupsByKey[playback.groupKey] = nil
@@ -294,7 +298,9 @@ do
 				playback.transforms[i]:apply(playback.transforms[parentIndex])
 			end
 
-			playback.animationInstance:getBoneInstance(bone):composeTransform(playback.transforms[i])
+			playback.animationInstance
+				:getBoneInstance(bone)
+				:composeTransform(playback.transforms[i])
 		end
 
 		for i = 1, #playback.transforms do
@@ -331,7 +337,11 @@ function Animator:_updateTime(deltaTime)
 		local playback = self.playbacks[i]
 		if not playback.paused then
 			local time = playback.time + deltaTime * playback.speed
-			if time < 0 or time > playback.animation:getDuration() and not playback.looping then
+			if
+				time < 0
+				or time > playback.animation:getDuration()
+					and not playback.looping
+			then
 				self:stop(playback)
 			else
 				local newTime = time % playback.animation:getDuration()
@@ -346,7 +356,10 @@ end
 function Animator:_evaluateAnimations()
 	for _, playback in ipairs(self.playbacks) do
 		if playback.dirty then
-			playback.animation:evaluate(playback.animationInstance, playback.time)
+			playback.animation:evaluate(
+				playback.animationInstance,
+				playback.time
+			)
 			playback.dirty = false
 			playback.updated = true
 		end
@@ -362,7 +375,11 @@ function Animator:_blendAnimations()
 			for _, playback in ipairs(group.playbacks) do
 				local relativeWeight = playback.weight / group.totalWeight
 				if relativeWeight > 0 then
-					playback.animationInstance:blend(relativeWeight, group.animationInstance, playback.animation)
+					playback.animationInstance:blend(
+						relativeWeight,
+						group.animationInstance,
+						playback.animation
+					)
 				end
 			end
 		end
@@ -383,10 +400,14 @@ function Animator:_combineAnimations()
 		for i = 1, self.skeleton:getBoneCount() do
 			local bone = self.skeleton:getBone(i)
 			if group.bones[bone] and group.bones[bone] > 0 then
-				local inputBoneInstance = group.animationInstance:getBoneInstance(bone)
-				local outputBoneInstance = self.animationInstance:getBoneInstance(bone)
+				local inputBoneInstance =
+					group.animationInstance:getBoneInstance(bone)
+				local outputBoneInstance =
+					self.animationInstance:getBoneInstance(bone)
 
-				outputBoneInstance:setTranslation(inputBoneInstance:getTranslation())
+				outputBoneInstance:setTranslation(
+					inputBoneInstance:getTranslation()
+				)
 				outputBoneInstance:setRotation(inputBoneInstance:getRotation())
 				outputBoneInstance:setScale(inputBoneInstance:getScale())
 			end
@@ -407,7 +428,9 @@ function Animator:_composeTransforms()
 			self.blendedTransforms[i]:apply(self.blendedTransforms[parentIndex])
 
 			if self.boneOverrides[i] then
-				self.finalTransforms[i]:setMatrix(self.blendedTransforms[parentIndex]:getMatrix())
+				self.finalTransforms[i]:setMatrix(
+					self.blendedTransforms[parentIndex]:getMatrix()
+				)
 			end
 		end
 
@@ -417,7 +440,9 @@ function Animator:_composeTransforms()
 		if self.boneOverrides[i] then
 			self.finalTransforms[i]:apply(self.boneOverrides[i])
 		else
-			self.finalTransforms[i]:setMatrix(self.blendedTransforms[i]:getMatrix())
+			self.finalTransforms[i]:setMatrix(
+				self.blendedTransforms[i]:getMatrix()
+			)
 		end
 	end
 

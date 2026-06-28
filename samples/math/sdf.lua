@@ -1,7 +1,8 @@
 local SDF = require("rat-scratch-math").Geometry2D.SDF
 local Polygon = require("rat-scratch-math").Geometry2D.Polygon
 
-local demo = require("samples.common.demo").new("samples/common/polygon/init.lua")
+local demo =
+	require("samples.common.demo").new("samples/common/polygon/init.lua")
 
 demo.threads = {}
 demo.waiting = 0
@@ -9,10 +10,17 @@ demo.waiting = 0
 function demo.keypressed(_, scan, isRepeat)
 	local thread = love.thread.newThread("samples/math/sdf/init.lua")
 
-	thread:start(#demo.threads + 1, love.graphics.getWidth(), love.graphics.getHeight(), {
-		Polygon.transform(demo.polygons[1], demo.transforms[1]),
-		Polygon.reverseOrder(Polygon.transform(demo.polygons[2], demo.transforms[2])),
-	})
+	thread:start(
+		#demo.threads + 1,
+		love.graphics.getWidth(),
+		love.graphics.getHeight(),
+		{
+			Polygon.transform(demo.polygons[1], demo.transforms[1]),
+			Polygon.reverseOrder(
+				Polygon.transform(demo.polygons[2], demo.transforms[2])
+			),
+		}
+	)
 
 	table.insert(demo.threads, thread)
 	demo.waiting = demo.waiting + 1
@@ -30,7 +38,7 @@ function demo.update()
 		demo.current = {
 			id = e.id,
 			texture = love.graphics.newTexture(e.image),
-			time = e.time
+			time = e.time,
 		}
 
 		demo.waiting = demo.waiting - 1
@@ -44,7 +52,9 @@ function demo.draw()
 
 	local transformedPolygons = {
 		Polygon.transform(demo.polygons[1], demo.transforms[1]),
-		Polygon.reverseOrder(Polygon.transform(demo.polygons[2], demo.transforms[2])),
+		Polygon.reverseOrder(
+			Polygon.transform(demo.polygons[2], demo.transforms[2])
+		),
 	}
 
 	local mx, my = love.mouse.getPosition()
@@ -66,7 +76,11 @@ function demo.draw()
 	love.graphics.print(("polygon distance: %f"):format(distance), 8, 8)
 
 	if demo.current then
-		love.graphics.print(("- time to generate SDF texture: %f ms"):format(demo.current.time), 8, 32)
+		love.graphics.print(
+			("- time to generate SDF texture: %f ms"):format(demo.current.time),
+			8,
+			32
+		)
 	end
 end
 

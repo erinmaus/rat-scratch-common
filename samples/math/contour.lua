@@ -4,7 +4,8 @@ local Polygon = require("rat-scratch-math").Geometry2D.Polygon
 local MarchingSquares = require("rat-scratch-math").MarchingSquares
 local DualContour = require("rat-scratch-math").DualContour
 
-local demo = require("samples.common.demo").new("samples/common/polygon/init.lua")
+local demo =
+	require("samples.common.demo").new("samples/common/polygon/init.lua")
 
 local function sampleSDF(polygons, x, y)
 	local sample = SDF.distanceFromPolygons(x, y, polygons) + 8
@@ -15,19 +16,37 @@ function demo.keypressed(_, scan, isRepeat)
 	if (scan == "m" or scan == "d") and not isRepeat then
 		local polygons = {
 			Polygon.transform(demo.polygons[1], demo.transforms[1]),
-			Polygon.reverseOrder(Polygon.transform(demo.polygons[2], demo.transforms[2])),
+			Polygon.reverseOrder(
+				Polygon.transform(demo.polygons[2], demo.transforms[2])
+			),
 		}
 
 		local before = love.timer.getTime()
 		if scan == "m" then
-			demo.contours = MarchingSquares.generate(0, 0, love.graphics.getWidth(), love.graphics.getHeight(), 20, polygons, sampleSDF)
+			demo.contours = MarchingSquares.generate(
+				0,
+				0,
+				love.graphics.getWidth(),
+				love.graphics.getHeight(),
+				20,
+				polygons,
+				sampleSDF
+			)
 			demo.type = "marching cubes"
 		elseif scan == "d" then
-			demo.contours = DualContour.generate(0, 0, love.graphics.getWidth(), love.graphics.getHeight(), 20, polygons, sampleSDF)
+			demo.contours = DualContour.generate(
+				0,
+				0,
+				love.graphics.getWidth(),
+				love.graphics.getHeight(),
+				20,
+				polygons,
+				sampleSDF
+			)
 			demo.type = "dual contours"
 		end
 		local after = love.timer.getTime()
-		
+
 		demo.time = (after - before) * 1000
 	end
 end
@@ -39,7 +58,9 @@ function demo.draw()
 
 	local transformedPolygons = {
 		Polygon.transform(demo.polygons[1], demo.transforms[1]),
-		Polygon.reverseOrder(Polygon.transform(demo.polygons[2], demo.transforms[2])),
+		Polygon.reverseOrder(
+			Polygon.transform(demo.polygons[2], demo.transforms[2])
+		),
 	}
 
 	local mx, my = love.mouse.getPosition()
@@ -71,10 +92,22 @@ function demo.draw()
 
 	love.graphics.pop()
 
-	love.graphics.print(("polygon distance: %f (mouse = %d, %d)"):format(distance, mx, my), 8, 8)
+	love.graphics.print(
+		("polygon distance: %f (mouse = %d, %d)"):format(distance, mx, my),
+		8,
+		8
+	)
 
 	if demo.contours then
-		love.graphics.print(("- time to generate %s: %f ms (%d contours)"):format(demo.type, demo.time, #demo.contours), 8, 32)
+		love.graphics.print(
+			("- time to generate %s: %f ms (%d contours)"):format(
+				demo.type,
+				demo.time,
+				#demo.contours
+			),
+			8,
+			32
+		)
 	end
 end
 

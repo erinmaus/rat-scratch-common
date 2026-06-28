@@ -58,7 +58,12 @@ do
 
 	--- @param transform love.Transform
 	function BoneInstance:composeTransform(transform)
-		Transform.compose(self.translation, self.rotation, self.scale, workingTransform)
+		Transform.compose(
+			self.translation,
+			self.rotation,
+			self.scale,
+			workingTransform
+		)
 		transform:apply(workingTransform)
 	end
 end

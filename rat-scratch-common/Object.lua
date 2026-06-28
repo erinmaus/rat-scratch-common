@@ -1,4 +1,4 @@
-local Module = require "lib.rat-scratch-module"
+local Module = require("lib.rat-scratch-module")
 
 --- @class RatScratch.Common.Object
 local Object = {}
@@ -34,7 +34,8 @@ function Object.getType(value)
 	local valueType = metatable and metatable.__type or false
 	local metatableMetatable = valueType and getmetatable(valueType)
 
-	return metatableMetatable and metatableMetatable.__c == Object and valueType or nil
+	return metatableMetatable and metatableMetatable.__c == Object and valueType
+		or nil
 end
 
 --- @generic A
@@ -59,7 +60,9 @@ end
 --- @return ... any
 function Object.ABSTRACT(obj)
 	if obj then
-		local message = ("method is abstract in class %s"):format(obj:getDebugInfo().shortName)
+		local message = ("method is abstract in class %s"):format(
+			obj:getDebugInfo().shortName
+		)
 		error(message)
 	else
 		error("method is abstract")
@@ -123,12 +126,15 @@ local function __call(self, parent, stack)
 
 		local info = debug.getinfo(2 + (stack or 0), "Sl")
 		if info then
-			local shortObjectName = (info.source:match("^@(.-)%.[^.]*") or info.source):gsub("/", ".")
+			local shortObjectName = (
+				info.source:match("^@(.-)%.[^.]*") or info.source
+			):gsub("/", ".")
 			local lineNumber = info.currentline
 
 			Object._DEBUG.lineNumber = lineNumber
 			Object._DEBUG.filename = info.source
-			Object._DEBUG.shortName = string.format("%s@%d", shortObjectName, lineNumber)
+			Object._DEBUG.shortName =
+				string.format("%s@%d", shortObjectName, lineNumber)
 			Object._DEBUG.requireName = shortObjectName
 			Object._DEBUG.module = Module.getSelfRequire(shortObjectName)
 		end

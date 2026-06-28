@@ -21,18 +21,29 @@ local GLTFAccessor = Object()
 --- @param parser RatScratch.GLTF.GLTFParser
 --- @param accessor RatScratch.GLTF.Accessor
 function GLTFAccessor:new(parser, accessor)
-    local bufferView = parser:getBufferView(accessor.bufferView)
-    local bufferData = parser:getBufferData(bufferView.buffer)
-    local componentTypeInfo = parser:getAccessorComponentTypeInfo(accessor.componentType)
-    local elementTypeCount = parser:getAccessorElementTypeCount(accessor.type)
-    local get = parser:getComponentGetter(accessor.componentType)
+	local bufferView = parser:getBufferView(accessor.bufferView)
+	local bufferData = parser:getBufferData(bufferView.buffer)
+	local componentTypeInfo =
+		parser:getAccessorComponentTypeInfo(accessor.componentType)
+	local elementTypeCount = parser:getAccessorElementTypeCount(accessor.type)
+	local get = parser:getComponentGetter(accessor.componentType)
 
-    assert(not accessor.normalized or (componentTypeInfo.integer and componentTypeInfo.positive ~= 0 and componentTypeInfo.negative ~= 0), "only some integer types can be normalized")
+	assert(
+		not accessor.normalized
+			or (
+				componentTypeInfo.integer
+				and componentTypeInfo.positive ~= 0
+				and componentTypeInfo.negative ~= 0
+			),
+		"only some integer types can be normalized"
+	)
 
 	self.data = bufferData
 	self.get = get
-	self.dataOffset = (accessor.byteOffset or 0) + (bufferView and bufferView.byteOffset or 0)
-	self.dataStride = bufferView and bufferView.byteStride or (componentTypeInfo.size * elementTypeCount)
+	self.dataOffset = (accessor.byteOffset or 0)
+		+ (bufferView and bufferView.byteOffset or 0)
+	self.dataStride = bufferView and bufferView.byteStride
+		or (componentTypeInfo.size * elementTypeCount)
 	self.componentType = accessor.componentType
 	self.componentSize = componentTypeInfo.size
 	self.componentCount = elementTypeCount
@@ -44,68 +55,66 @@ function GLTFAccessor:new(parser, accessor)
 end
 
 function GLTFAccessor:getDataOffset()
-    return self.dataOffset
+	return self.dataOffset
 end
 
 function GLTFAccessor:getDataStride()
-    return self.dataStride
+	return self.dataStride
 end
 
 function GLTFAccessor:getComponentType()
-    return self.componentType
+	return self.componentType
 end
 
 function GLTFAccessor:getComponentSize()
-    return self.componentSize
+	return self.componentSize
 end
 
 function GLTFAccessor:getComponentCount()
-    return self.componentCount
+	return self.componentCount
 end
 
 function GLTFAccessor:getElementType()
-    return self.elementType
+	return self.elementType
 end
 
 function GLTFAccessor:getElementCount()
-    return self.elementCount
+	return self.elementCount
 end
 
 function GLTFAccessor:getNormalized()
-    return self.normalized
+	return self.normalized
 end
 
 --- @param index number
 --- @param result number[]
 --- @return number[]
 function GLTFAccessor:read(index, result)
-    Table.clear(result)
+	Table.clear(result)
 
-    local basePosition = self.dataOffset + (index - 1) * self.dataStride
+	local basePosition = self.dataOffset + (index - 1) * self.dataStride
 
-    ---@diagnostic disable: assign-type-mismatch
-    result[1], result[2], result[3], result[4],
-    result[5], result[6], result[7], result[8],
-    result[9], result[10], result[11], result[12],
-    result[13], result[14], result[15], result[16] = self.data[self.get](self.data, basePosition, self.componentCount)
+	---@diagnostic disable: assign-type-mismatch
+	result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9], result[10], result[11], result[12], result[13], result[14], result[15], result[16] =
+		self.data[self.get](self.data, basePosition, self.componentCount)
 
-    if self.normalized then
-        for i = 1, self.elementCount do
-            local value = result[i]
+	if self.normalized then
+		for i = 1, self.elementCount do
+			local value = result[i]
 
-            if value < 0 and self.normalizedNegativeDenominator > 0 then
-                value = value / self.normalizedNegativeDenominator
-            elseif value > 0 and self.normalizedPositiveDenominator > 0 then
-                value = value / self.normalizedPositiveDenominator
-            else
-                error("got normalized integer, but could not normalize")
-            end
+			if value < 0 and self.normalizedNegativeDenominator > 0 then
+				value = value / self.normalizedNegativeDenominator
+			elseif value > 0 and self.normalizedPositiveDenominator > 0 then
+				value = value / self.normalizedPositiveDenominator
+			else
+				error("got normalized integer, but could not normalize")
+			end
 
-            result[i] = value
-        end
-    end
+			result[i] = value
+		end
+	end
 
-    return result
+	return result
 end
 
 return GLTFAccessor

@@ -4,5 +4,5 @@ return {
 	Point = require("rat-scratch-math.Geometry2D.Point"),
 	Polygon = require("rat-scratch-math.Geometry2D.Polygon"),
 	SAT = require("rat-scratch-math.Geometry2D.SAT"),
-	SDF = require("rat-scratch-math.Geometry2D.SDF")
+	SDF = require("rat-scratch-math.Geometry2D.SDF"),
 }

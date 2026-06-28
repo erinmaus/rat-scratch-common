@@ -20,12 +20,16 @@ local Search = {}
 --- @param stop integer?
 --- @return integer?
 function Search.first(array, value, compare, start, stop)
-    local result = Search.lessThanEqual(array, value, compare, start, stop)
-    if result >= (start or 1) and result <= (stop or #array) and compare(array[result], value) == 0 then
-        return result
-    end
+	local result = Search.lessThanEqual(array, value, compare, start, stop)
+	if
+		result >= (start or 1)
+		and result <= (stop or #array)
+		and compare(array[result], value) == 0
+	then
+		return result
+	end
 
-    return nil
+	return nil
 end
 
 --- Finds the last value equal to `value` and returns the index of that value
@@ -38,12 +42,16 @@ end
 --- @param stop integer?
 --- @return integer?
 function Search.last(array, value, compare, start, stop)
-    local result = Search.greaterThanEqual(array, value, compare, start, stop)
-    if result >= (start or 1) and result <= (stop or #array) and compare(array[result], value) == 0 then
-        return result
-    end
+	local result = Search.greaterThanEqual(array, value, compare, start, stop)
+	if
+		result >= (start or 1)
+		and result <= (stop or #array)
+		and compare(array[result], value) == 0
+	then
+		return result
+	end
 
-    return nil
+	return nil
 end
 
 --- Finds the first value less than `value` and returns the index of that value
@@ -56,21 +64,21 @@ end
 --- @param stop integer?
 --- @return integer
 function Search.lessThan(array, value, compare, start, stop)
-    start = start or 1
-    stop = stop or #array
+	start = start or 1
+	stop = stop or #array
 
-    local result = start - 1
-    while start <= stop do
-        local midPoint = math.floor((start + stop + 1) / 2)
-        if compare(array[midPoint], value) < 0 then
-            result = midPoint
-            start = midPoint + 1
-        else
-            stop = midPoint - 1
-        end
-    end
+	local result = start - 1
+	while start <= stop do
+		local midPoint = math.floor((start + stop + 1) / 2)
+		if compare(array[midPoint], value) < 0 then
+			result = midPoint
+			start = midPoint + 1
+		else
+			stop = midPoint - 1
+		end
+	end
 
-    return result
+	return result
 end
 
 --- Finds the first value less than or equal to `value` and returns the index of that value
@@ -83,14 +91,14 @@ end
 --- @param stop integer?
 --- @return integer
 function Search.lessThanEqual(array, value, compare, start, stop)
-    local result = Search.lessThan(array, value, compare, start, stop)
-    if result < (stop or #array) then
-        if compare(array[result + 1], value) == 0 then
-            result = result + 1
-        end
-    end
+	local result = Search.lessThan(array, value, compare, start, stop)
+	if result < (stop or #array) then
+		if compare(array[result + 1], value) == 0 then
+			result = result + 1
+		end
+	end
 
-    return result
+	return result
 end
 
 --- Finds the first value less greater than `value` and returns the index of that value
@@ -103,21 +111,21 @@ end
 --- @param stop integer?
 --- @return integer
 function Search.greaterThan(array, value, compare, start, stop)
-    local start = start or 1
-    local stop = stop or #array
+	local start = start or 1
+	local stop = stop or #array
 
-    local result = stop + 1
-    while start <= stop do
-        local midPoint = math.floor((start + stop + 1) / 2)
-        if compare(array[midPoint], value) > 0 then
-            result = midPoint
-            stop = midPoint - 1
-        else
-            start = midPoint + 1
-        end
-    end
+	local result = stop + 1
+	while start <= stop do
+		local midPoint = math.floor((start + stop + 1) / 2)
+		if compare(array[midPoint], value) > 0 then
+			result = midPoint
+			stop = midPoint - 1
+		else
+			start = midPoint + 1
+		end
+	end
 
-    return result
+	return result
 end
 
 --- Finds the first value greater than or equal to `value` and returns the index of that value
@@ -130,14 +138,14 @@ end
 --- @param stop integer?
 --- @return integer
 function Search.greaterThanEqual(array, value, compare, start, stop)
-    local result = Search.greaterThan(array, value, compare, start, stop)
-    if result > (start or 1) then
-        if compare(array[result - 1], value) == 0 then
-            result = result - 1
-        end
-    end
+	local result = Search.greaterThan(array, value, compare, start, stop)
+	if result > (start or 1) then
+		if compare(array[result - 1], value) == 0 then
+			result = result - 1
+		end
+	end
 
-    return result
+	return result
 end
 
 --- @generic T

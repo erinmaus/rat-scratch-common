@@ -34,7 +34,12 @@ end
 --- @return number[]
 function SortedPointsList:get(point)
 	local index = Search.first(self.points, point, SortedPointsList.compare)
-	assert(index and index >= 1 and index <= #self.points, "point (%f, %f) not is point cache", point[1], point[2])
+	assert(
+		index and index >= 1 and index <= #self.points,
+		"point (%f, %f) not is point cache",
+		point[1],
+		point[2]
+	)
 
 	return self.points[index]
 end
@@ -56,8 +61,7 @@ function SortedPointsList:add(a, b)
 	if
 		index <= 0
 		or index > #self.points
-		or SortedPointsList.compare(point, self.points[index])
-			~= 0
+		or SortedPointsList.compare(point, self.points[index]) ~= 0
 	then
 		table.insert(self.points, index + 1, point)
 		return self.points[index + 1]

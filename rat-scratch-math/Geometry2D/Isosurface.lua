@@ -1,5 +1,5 @@
-local Common = require "rat-scratch-math.Common"
-local Point  = require "rat-scratch-math.Geometry2D.Point"
+local Common = require("rat-scratch-math.Common")
+local Point = require("rat-scratch-math.Geometry2D.Point")
 
 --- @alias RatScratch.Math.IsosurfaceSampleFunc fun<T>(image: T, x: number, y: number): number, boolean
 

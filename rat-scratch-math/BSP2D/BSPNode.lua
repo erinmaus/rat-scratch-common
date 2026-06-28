@@ -88,13 +88,8 @@ end
 function BSPNode:split(x, y, normalX, normalY)
 	assert(self:getIsLeaf(), "BSP node is not leaf; cannot split")
 
-	local success, left, right = Polygon.split(
-		x,
-		y,
-		x + normalX,
-		y + normalY,
-		self.polygon
-	)
+	local success, left, right =
+		Polygon.split(x, y, x + normalX, y + normalY, self.polygon)
 
 	if not success then
 		return false

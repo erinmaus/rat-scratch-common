@@ -1,7 +1,8 @@
 local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
 local Animation = require("rat-scratch-graphics.Graphics3D.Animation")
-local AnimationChannel = require("rat-scratch-graphics.Graphics3D.AnimationChannel")
+local AnimationChannel =
+	require("rat-scratch-graphics.Graphics3D.AnimationChannel")
 local Bone = require("rat-scratch-graphics.Graphics3D.Bone")
 local KeyFrames = require("rat-scratch-graphics.Graphics3D.KeyFrames")
 local Material = require("rat-scratch-graphics.Graphics3D.Material")
@@ -22,14 +23,22 @@ local Scene = Object()
 --- @param inputModels RatScratch.Graphics.Graphics3D.Model[]
 --- @return RatScratch.Graphics.Graphics3D.Model[], table<string, RatScratch.Graphics.Graphics3D.Model>
 function Scene.validateModels(inputModels)
-	assert(#inputModels > 0, "must have one or more models; found %d", #inputModels)
+	assert(
+		#inputModels > 0,
+		"must have one or more models; found %d",
+		#inputModels
+	)
 
 	local models = {}
 	local modelsByName = {}
 	for _, model in ipairs(inputModels) do
 		local name = model:getName()
 		if name ~= "" then
-			assert(not modelsByName[name], "model with duplicate name: %s", name)
+			assert(
+				not modelsByName[name],
+				"model with duplicate name: %s",
+				name
+			)
 			modelsByName[name] = model
 		end
 
@@ -60,7 +69,7 @@ function Scene.fromDefinition(sceneDefinition, yield)
 			_maybeYield(yield, "begin", Model, modelDefinition)
 		end
 
-			--- @type RatScratch.Graphics.Graphics3D.Mesh[]
+		--- @type RatScratch.Graphics.Graphics3D.Mesh[]
 		local meshes = {}
 
 		for _, meshDefinition in ipairs(modelDefinition.meshes) do
@@ -77,12 +86,17 @@ function Scene.fromDefinition(sceneDefinition, yield)
 				local texture = meshDefinition.material.texture
 				if texture and texture:typeOf("ImageData") then
 					--- @cast texture love.ImageData
-					texture = love.graphics.newTexture(texture, { mipmaps = meshDefinition.material.mipmaps })
+					texture = love.graphics.newTexture(
+						texture,
+						{ mipmaps = meshDefinition.material.mipmaps }
+					)
 
 					--- @cast texture love.Texture
 
 					if meshDefinition.material.mipmapFilter then
-						texture:setMipmapFilter(meshDefinition.material.mipmapFilter)
+						texture:setMipmapFilter(
+							meshDefinition.material.mipmapFilter
+						)
 					end
 
 					texture:setWrap(
@@ -101,8 +115,14 @@ function Scene.fromDefinition(sceneDefinition, yield)
 				_maybeYield(yield, "load", material)
 			end
 
-			local mesh =
-				Mesh(meshDefinition.name, buffers, meshDefinition.format, vertices, indices, material)
+			local mesh = Mesh(
+				meshDefinition.name,
+				buffers,
+				meshDefinition.format,
+				vertices,
+				indices,
+				material
+			)
 			table.insert(meshes, mesh)
 
 			_maybeYield(yield, "load", mesh)
@@ -128,7 +148,9 @@ function Scene.fromDefinition(sceneDefinition, yield)
 					boneDefinition.inverseBindPoseTransform,
 					{
 						transform = boneDefinition.transform,
-						translation = Vector3(unpack(boneDefinition.translation)),
+						translation = Vector3(
+							unpack(boneDefinition.translation)
+						),
 						rotation = Quaternion(unpack(boneDefinition.rotation)),
 						scale = Vector3(unpack(boneDefinition.scale)),
 					}
@@ -149,7 +171,9 @@ function Scene.fromDefinition(sceneDefinition, yield)
 		if skeleton and modelDefinition.animations then
 			animations = {}
 
-			for animationIndex, animationDefinition in ipairs(modelDefinition.animations) do
+			for animationIndex, animationDefinition in
+				ipairs(modelDefinition.animations)
+			do
 				_maybeYield(yield, "begin", Animation, animationDefinition)
 
 				--- @type RatScratch.Graphics.Graphics3D.AnimationChannel[]
@@ -163,26 +187,42 @@ function Scene.fromDefinition(sceneDefinition, yield)
 						local keyFrames = {}
 
 						for _, propertyDefinition in ipairs(channel.properties) do
-							_maybeYield(yield, "begin", KeyFrames, propertyDefinition)
+							_maybeYield(
+								yield,
+								"begin",
+								KeyFrames,
+								propertyDefinition
+							)
 
 							--- @type RatScratch.Graphics.Graphics3D.KeyFrame[]
 							local keyFrameValues = {}
 
-							for _, frameDefinition in ipairs(propertyDefinition.frames) do
+							for _, frameDefinition in
+								ipairs(propertyDefinition.frames)
+							do
 								local value
 								if
-									propertyDefinition.property == "position"
-									or propertyDefinition.property == "scale"
+									propertyDefinition.property
+										== "position"
+									or propertyDefinition.property
+										== "scale"
 								then
 									value = Vector3
-								elseif propertyDefinition.property == "rotation" then
+								elseif
+									propertyDefinition.property == "rotation"
+								then
 									value = Quaternion
 								else
 									assert(
 										false,
 										'expected "position", "scale", or "rotation" for animation %s bone %s key frames, got: %s',
-										animationDefinition.name or animationIndex,
-										skeleton and skeleton:getBoneByID(channel.boneID) or channel.boneID,
+										animationDefinition.name
+											or animationIndex,
+										skeleton
+												and skeleton:getBoneByID(
+													channel.boneID
+												)
+											or channel.boneID,
 										propertyDefinition.property
 									)
 								end
@@ -190,10 +230,16 @@ function Scene.fromDefinition(sceneDefinition, yield)
 								--- @type RatScratch.Graphics.Graphics3D.KeyFrame
 								local keyFrameValue = {
 									time = frameDefinition.time,
-									inTangent = frameDefinition.inTangent and value(unpack(frameDefinition.inTangent)),
-									value = frameDefinition.value and value(unpack(frameDefinition.value)),
+									inTangent = frameDefinition.inTangent
+										and value(
+											unpack(frameDefinition.inTangent)
+										),
+									value = frameDefinition.value
+										and value(unpack(frameDefinition.value)),
 									outTangent = frameDefinition.outTangent
-										and value(unpack(frameDefinition.outTangent)),
+										and value(
+											unpack(frameDefinition.outTangent)
+										),
 								}
 
 								table.insert(keyFrameValues, keyFrameValue)
@@ -201,23 +247,44 @@ function Scene.fromDefinition(sceneDefinition, yield)
 
 							table.insert(
 								keyFrames,
-								KeyFrames(propertyDefinition.property, propertyDefinition.interpolation, keyFrameValues)
+								KeyFrames(
+									propertyDefinition.property,
+									propertyDefinition.interpolation,
+									keyFrameValues
+								)
 							)
 							_maybeYield(yield, "load", keyFrames[#keyFrames])
 						end
 
-						table.insert(channels, AnimationChannel(skeleton:getBoneByID(channel.boneID), keyFrames))
+						table.insert(
+							channels,
+							AnimationChannel(
+								skeleton:getBoneByID(channel.boneID),
+								keyFrames
+							)
+						)
 						_maybeYield(yield, "load", channels[#channels])
 					end
 				end
 
-				table.insert(animations, Animation(animationDefinition.name, channels))
+				table.insert(
+					animations,
+					Animation(animationDefinition.name, channels)
+				)
 				_maybeYield(yield, "load", animations[#animations])
 			end
 		end
 
 		if skeleton then
-			table.insert(models, SkinnedModel(modelDefinition.name, meshes, skeleton, animations or {}))
+			table.insert(
+				models,
+				SkinnedModel(
+					modelDefinition.name,
+					meshes,
+					skeleton,
+					animations or {}
+				)
+			)
 		else
 			table.insert(models, Model(modelDefinition.name, meshes))
 		end
@@ -252,7 +319,11 @@ function Scene:getModel(key)
 		assert(self.models[key] ~= nil, "no model at index %d", key)
 		return self.models[key]
 	elseif type(key) == "string" then
-		assert(self.modelsByName[key] ~= nil, "no model with given name: %s", key)
+		assert(
+			self.modelsByName[key] ~= nil,
+			"no model with given name: %s",
+			key
+		)
 		return self.modelsByName[key]
 	end
 

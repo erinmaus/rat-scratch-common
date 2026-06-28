@@ -188,7 +188,12 @@ function Mesh.getAttributeCountOffset(format, attributeName)
 	local index = 0
 	for _, attribute in ipairs(format) do
 		local count = ATTRIBUTE_COMPONENTS[attribute.format]
-		assert(count, "attribute format not valid for %s: %s", attribute.name, attribute.format)
+		assert(
+			count,
+			"attribute format not valid for %s: %s",
+			attribute.name,
+			attribute.format
+		)
 
 		if attribute.name == attributeName then
 			return count, index + 1
@@ -201,7 +206,8 @@ function Mesh.getAttributeCountOffset(format, attributeName)
 end
 
 function Mesh.getVertexAttributeValues(count, offset, attributeName, vertex)
-	local defaultValues = ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES[attributeName] or DEFAULT_MISSING_COMPONENT_VALUES
+	local defaultValues = ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES[attributeName]
+		or DEFAULT_MISSING_COMPONENT_VALUES
 	local dx, dy, dz, dw = unpack(defaultValues)
 
 	local x, y, z, w = unpack(vertex, offset, offset + count)
@@ -241,26 +247,53 @@ end
 --- @param outputVertex number[]
 --- @param preprocessedInputFormat? RatScratch.Graphics.Graphics3D.PreprocessedMeshFormat
 --- @param preprocessedOutputFormat? RatScratch.Graphics.Graphics3D.PreprocessedMeshFormat
-function Mesh.marshalFromInputFormatToOutputFormat(inputFormat, inputVertex, outputFormat, outputVertex, preprocessedInputFormat, preprocessedOutputFormat)
+function Mesh.marshalFromInputFormatToOutputFormat(
+	inputFormat,
+	inputVertex,
+	outputFormat,
+	outputVertex,
+	preprocessedInputFormat,
+	preprocessedOutputFormat
+)
 	local inputIndex = 0
 	for _, attribute in ipairs(inputFormat) do
 		local inputCount = ATTRIBUTE_COMPONENTS[attribute.format]
-		assert(inputCount, "attribute format not valid for %s: %s", attribute.name, attribute.format)
+		assert(
+			inputCount,
+			"attribute format not valid for %s: %s",
+			attribute.name,
+			attribute.format
+		)
 
 		local outputCount, outputIndex
 		if preprocessedInputFormat then
 			if preprocessedInputFormat[attribute.name] then
-				outputCount, outputIndex = unpack(preprocessedInputFormat[attribute.name])
+				outputCount, outputIndex =
+					unpack(preprocessedInputFormat[attribute.name])
 			end
 		else
-			outputCount, outputIndex = Mesh.getAttributeCountOffset(outputFormat, attribute.name)
+			outputCount, outputIndex =
+				Mesh.getAttributeCountOffset(outputFormat, attribute.name)
 		end
 
 		if outputIndex and outputCount then
 			local inputX, inputY, inputZ, inputW =
-				Mesh.getVertexAttributeValues(inputCount, inputIndex + 1, attribute.name, inputVertex)
+				Mesh.getVertexAttributeValues(
+					inputCount,
+					inputIndex + 1,
+					attribute.name,
+					inputVertex
+				)
 
-			_copy(outputIndex, outputIndex + outputCount - 1, outputVertex, inputX, inputY, inputZ, inputW)
+			_copy(
+				outputIndex,
+				outputIndex + outputCount - 1,
+				outputVertex,
+				inputX,
+				inputY,
+				inputZ,
+				inputW
+			)
 		end
 
 		inputIndex = inputIndex + inputCount
@@ -273,17 +306,28 @@ function Mesh.marshalFromInputFormatToOutputFormat(inputFormat, inputVertex, out
 		local inputCount, inputIndex
 		if preprocessedInputFormat then
 			if preprocessedInputFormat[attribute.name] then
-				inputCount, inputIndex = unpack(preprocessedInputFormat[attribute.name])
+				inputCount, inputIndex =
+					unpack(preprocessedInputFormat[attribute.name])
 			end
 		else
-			inputCount, inputIndex = Mesh.getAttributeCountOffset(inputFormat, attribute.name)
+			inputCount, inputIndex =
+				Mesh.getAttributeCountOffset(inputFormat, attribute.name)
 		end
 
 		if not (inputCount and inputIndex) then
-			local defaultValues = ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES[attribute.name] or DEFAULT_MISSING_COMPONENT_VALUES
+			local defaultValues = ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES[attribute.name]
+				or DEFAULT_MISSING_COMPONENT_VALUES
 			local x, y, z, w = unpack(defaultValues)
 
-			_copy(outputIndex + 1, outputIndex + outputCount, outputVertex, x, y, z, w)
+			_copy(
+				outputIndex + 1,
+				outputIndex + outputCount,
+				outputVertex,
+				x,
+				y,
+				z,
+				w
+			)
 		end
 
 		outputIndex = outputIndex + outputCount
@@ -330,7 +374,8 @@ function Mesh.extendMeshFormat(format, baseFormat)
 	local result = {}
 
 	for _, attribute in ipairs(baseFormat) do
-		local location, name, format = attribute.location, attribute.name, attribute.format
+		local location, name, format =
+			attribute.location, attribute.name, attribute.format
 		table.insert(result, {
 			location = location,
 			name = name,
@@ -339,14 +384,22 @@ function Mesh.extendMeshFormat(format, baseFormat)
 	end
 
 	for _, attribute in ipairs(format) do
-		local isReservedName = attribute.name and Mesh.isValidAttributeName(attribute.name)
-		local isReservedLocation = attribute.location and Mesh.isReservedLocation(attribute.location)
+		local isReservedName = attribute.name
+			and Mesh.isValidAttributeName(attribute.name)
+		local isReservedLocation = attribute.location
+			and Mesh.isReservedLocation(attribute.location)
 
 		if not (isReservedName or isReservedLocation) then
-			local location, name, format = attribute.location, attribute.name, attribute.format
+			local location, name, format =
+				attribute.location, attribute.name, attribute.format
 			local expandedFormat = EXPANDED_ATTRIBUTE_FORMAT[format]
 
-			assert(expandedFormat, "invalid attribute format for %s: %s", name, format)
+			assert(
+				expandedFormat,
+				"invalid attribute format for %s: %s",
+				name,
+				format
+			)
 
 			table.insert(result, {
 				location = location,
@@ -369,7 +422,7 @@ local INDEX_BUFFER_USAGE = { shaderstorage = true, index = true }
 --- @param mode? RatScratch.Graphics.Graphics3D.MeshIndexMode | string
 function Mesh.marshal(buffers, format, vertices, indices, mode)
 	--- @type number[][] | number, number
-	local outputVertices,  vertexCount
+	local outputVertices, vertexCount
 
 	--- @type RatScratch.Graphics.Graphics3D.MarshalBuffer[]
 	local outputBuffers = {}
@@ -407,7 +460,12 @@ function Mesh.marshal(buffers, format, vertices, indices, mode)
 			for _, inputVertex in ipairs(vertices) do
 				local outputVertex = {}
 
-				Mesh.marshalFromInputFormatToOutputFormat(format, inputVertex, buffer.format, outputVertex)
+				Mesh.marshalFromInputFormatToOutputFormat(
+					format,
+					inputVertex,
+					buffer.format,
+					outputVertex
+				)
 				table.insert(outputBufferVertices, outputVertex)
 			end
 
@@ -458,7 +516,11 @@ function Mesh:new(name, buffers, format, vertices, indices, material)
 			inputBuffer.role
 		)
 
-		local buffer = love.graphics.newBuffer(inputBuffer.format, numVertices, VERTEX_BUFFER_USAGE)
+		local buffer = love.graphics.newBuffer(
+			inputBuffer.format,
+			numVertices,
+			VERTEX_BUFFER_USAGE
+		)
 		if type(inputBuffer.vertices) ~= "number" then
 			buffer:setArrayData(inputBuffer.vertices)
 		end
@@ -474,12 +536,17 @@ function Mesh:new(name, buffers, format, vertices, indices, material)
 		numIndices = #indices
 	end
 
-	self.indexBuffer = love.graphics.newBuffer(Mesh.INDEX_FORMAT, numIndices, INDEX_BUFFER_USAGE)
+	self.indexBuffer = love.graphics.newBuffer(
+		Mesh.INDEX_FORMAT,
+		numIndices,
+		INDEX_BUFFER_USAGE
+	)
 	if type(indices) ~= "number" then
 		self.indexBuffer:setArrayData(indices)
 	end
 
-	self.mesh = love.graphics.newMesh(format, numVertices, "triangles", "static")
+	self.mesh =
+		love.graphics.newMesh(format, numVertices, "triangles", "static")
 	do
 		local staticBuffer = self.buffers.static
 		local staticBufferInfo = self.bufferInfo.static
