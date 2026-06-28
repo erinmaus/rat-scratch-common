@@ -1,4 +1,5 @@
 return {
+	Contour = require("rat-scratch-math.Geometry2D.Contour"),
 	Line = require("rat-scratch-math.Geometry2D.Line"),
 	Minkowski = require("rat-scratch-math.Geometry2D.Minkowski"),
 	Point = require("rat-scratch-math.Geometry2D.Point"),
