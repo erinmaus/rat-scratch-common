@@ -90,7 +90,7 @@ local function endVisit(state, currentFile)
 	state.visited[currentFile.filename] = nil
 end
 
-local LINE_PATTERN = "([^\r\n]*[\r\n]?)"
+local LINE_PATTERN = "([^\r\n]*)[\r\n]?"
 local TRIMMED_LINE_PATTERN = "^%s*(.-)%s*$"
 local INCLUDE_PATTERN = '^#include "([^"]+)"'
 local PRAGMA_OPTION_PATTERN = "^#pragma option%s+([%w_]+)%s*(.*)"
@@ -234,7 +234,7 @@ local ShaderPreprocessor = {}
 --- @param filename string
 --- @param options? RatScratch.Graphics.ShaderPreprocessOptions
 --- @return string
---- @return RatScratch.Graphics.ShaderPreprocessResult
+--- @return RatScratch.Graphics.ShaderPreprocessResult?
 function ShaderPreprocessor.preprocess(filename, options)
 	options = options or {}
 
@@ -331,6 +331,18 @@ function ShaderPreprocessor.validateResult(shader, result, strict)
 	return table.concat(combinedMessage, "\n")
 end
 
+local function _prependLineNumber(source)
+	local line = 0
+	return source:gsub("([^\r\n]*)\r?\n?", function(value)
+		local lineNumber = value:match("^%s*#line%s+(%d+)")
+		line = lineNumber and tonumber(lineNumber) or line
+
+		local result = ("/* line %d */ %s\n"):format(line, value)
+		line = (lineNumber and tonumber(lineNumber) or line) + 1
+		return result
+	end)
+end
+
 --- @param filename string
 --- @param options? RatScratch.Graphics.ShaderPreprocessOptions
 --- @return love.Shader
@@ -342,7 +354,9 @@ function ShaderPreprocessor.newComputeShader(filename, options)
 	end
 
 	local success, shader = pcall(love.graphics.newComputeShader, source)
-	Debug.assert(success, "%s\n%s", shader, source)
+	if not success then
+		Debug.assert(false, "%s\n%s", shader, _prependLineNumber(source))
+	end
 
 	return shader
 end
