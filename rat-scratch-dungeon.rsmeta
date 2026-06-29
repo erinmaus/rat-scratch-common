@@ -1,0 +1,27 @@
+name = rat-scratch-dungeon
+version = 1.0.0
+source = rat-scratch-dungeon
+
+[rat-scratch-common]
+version = *
+source = rat-scratch-common
+url = rat-scratch-common.rsmeta
+root = staging/module/build
+
+[rat-scratch-math]
+version = *
+source = rat-scratch-math
+url = rat-scratch-math.rsmeta
+root = staging/module/build
+
+[rat-scratch-graphics]
+version = *
+source = rat-scratch-graphics
+url = rat-scratch-graphics.rsmeta
+root = staging/module/build
+
+[rat-scratch-gltf]
+version = *
+source = rat-scratch-gltf
+url = rat-scratch-gltf.rsmeta
+root = staging/module/build

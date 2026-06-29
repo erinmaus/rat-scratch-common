@@ -33,3 +33,9 @@ version = *
 source = rat-scratch-gltf
 url = rat-scratch-gltf.rsmeta
 root = staging/module/build
+
+[rat-scratch-dungeon]
+version = *
+source = rat-scratch-dungeon
+url = rat-scratch-dungeon.rsmeta
+root = staging/module/build
