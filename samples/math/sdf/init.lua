@@ -8,8 +8,7 @@ local id, w, h, polygons = ...
 local imageData = love.image.newImageData(w, h, "rgba8")
 local before = love.timer.getTime()
 imageData:mapPixel(function(x, y)
-	--local distance = SDF.distanceFromPolygons(x, y, polygons)
-	local distance = SDF.distanceFromCircle(x, y, 100, 100, 40)
+	local distance = SDF.distanceFromPolygons(x, y, polygons)
 	local value = math.min(math.abs(distance / 255), 1)
 	if distance < 0 then
 		return 0, value, 0, 1
