@@ -6,7 +6,8 @@ local Path = {}
 --- @return string
 function Path.resolve(absolutePath, relativePath, rootPath)
 	if rootPath then
-		absolutePath = absolutePath:gsub("(@)", rootPath)
+		absolutePath = absolutePath:gsub("^(@)", rootPath)
+		relativePath = relativePath:gsub("^(@)", rootPath)
 	end
 
 	if relativePath:match("^/") then
