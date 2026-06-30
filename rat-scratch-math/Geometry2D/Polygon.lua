@@ -153,6 +153,38 @@ end
 do
 	local wrappedPolygon = FlatTable.wrap(0, 2)
 
+	--- @param points number[]
+	--- @param length? integer
+	--- @return number
+	function Polygon.perimeter(points, length)
+		length = length or math.ceil(#points / 2)
+
+		Debug.assert(
+			length >= 3,
+			"polygon must have at least 3 points, got %d",
+			length
+		)
+
+		local polygon = wrappedPolygon:intrude(points, length)
+
+		local length = 0
+		for i = 1, polygon:getLength() do
+			local x1, y1 = polygon:get(i)
+			local x2, y2 = polygon:get(i + 1)
+
+			length = length + Point.distance(x1, y1, x2, y2)
+		end
+
+		return length
+	end
+end
+
+do
+	local wrappedPolygon = FlatTable.wrap(0, 2)
+
+	--- @param points number[]
+	--- @param length? integer
+	--- @return number
 	function Polygon.shoelace(points, length)
 		length = length or math.ceil(#points / 2)
 

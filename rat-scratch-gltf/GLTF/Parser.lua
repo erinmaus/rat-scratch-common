@@ -7,6 +7,7 @@ local GLTFAccessor = require("rat-scratch-gltf.GLTF.Accessor")
 local GLTFAttributes = require("rat-scratch-gltf.GLTF.Attributes")
 local GLTFSparseAccessor = require("rat-scratch-gltf.GLTF.SparseAccessor")
 local Quaternion = require("rat-scratch-math").Quaternion
+local Transform = require("rat-scratch-math").Transform
 local Vector3 = require("rat-scratch-math").Vector3
 
 --- @class RatScratch.GLTF.GLTFParser : RatScratch.Common.BaseObject
@@ -43,7 +44,7 @@ function GLTFParser:new(filename, json, binaryData)
 	self.images = {}
 	self.animationsNodesMap = {}
 	self.accessors = {}
-	self.attributes = GLTFAttributes()
+	self.attributes = GLTFAttributes.makeDefault()
 end
 
 function GLTFParser:getAttributes()
@@ -513,9 +514,18 @@ function GLTFParser:getTextureCount()
 	return self.root.textures and #self.root.textures or 0
 end
 
+--- @alias RatScratch.GLTF.SceneLoadMeshAttributeRoles "static" | "skinned"
+--- @alias RatScratch.GLTF.SceneBufferRole RatScratch.Graphics.Graphics3D.BufferRole | "output"
+--- @alias RatScratch.GLTF.SceneLoadMeshAttributeFormats table<RatScratch.GLTF.SceneBufferRole, RatScratch.GLTF.GLTFAttributes>
+
+--- @class RatScratch.GLTF.SceneLoadOptions
+--- @field public attributes? table<RatScratch.GLTF.SceneLoadMeshAttributeRoles, RatScratch.GLTF.SceneLoadMeshAttributeFormats>
+local DefaultSceneLoadOptions = {}
+
 --- @param key string | number
+--- @param options? RatScratch.GLTF.SceneLoadOptions
 --- @return RatScratch.Graphics.Graphics3D.SceneDefinition
-function GLTFParser:loadScene(key)
+function GLTFParser:loadScene(key, options)
 	local index
 	if type(key) == "string" then
 		index = self:getIndexFromName("scenes", key)
@@ -525,18 +535,22 @@ function GLTFParser:loadScene(key)
 	end
 
 	local sceneData = self:getScene(index)
-	return self:_loadScene(sceneData)
+	return self:_loadScene(sceneData, options or DefaultSceneLoadOptions)
 end
 
+--- @param options? RatScratch.GLTF.SceneLoadOptions
 --- @return RatScratch.Graphics.Graphics3D.SceneDefinition[]
-function GLTFParser:loadScenes()
+function GLTFParser:loadScenes(options)
 	if not self.root.scenes then
 		return {}
 	end
 
 	local scenes = {}
 	for _, sceneData in ipairs(self.root.scenes) do
-		table.insert(scenes, self:_loadScene(sceneData))
+		table.insert(
+			scenes,
+			self:_loadScene(sceneData, options or DefaultSceneLoadOptions)
+		)
 	end
 
 	return scenes
@@ -547,15 +561,39 @@ end
 --- @param skeletonDefinitions table<integer, RatScratch.Graphics.Graphics3D.SkeletonDefinition>
 --- @param animationDefinitions table<integer, RatScratch.Graphics.Graphics3D.AnimationDefinition>
 --- @param node RatScratch.GLTF.Node
+--- @param parentTransform love.Transform
+--- @param options RatScratch.GLTF.SceneLoadOptions
 --- @return RatScratch.Graphics.Graphics3D.ModelDefinition[]
 function GLTFParser:_tryLoadNode(
 	modelDefinitions,
 	skeletonDefinitions,
 	animationDefinitions,
-	node
+	node,
+	parentTransform,
+	options
 )
 	local models = {}
 
+	local nodeTransform = love.math.newTransform()
+	if node.matrix then
+		nodeTransform:setMatrix("column", unpack(node.matrix))
+	elseif node.translation or node.scale or node.rotation then
+		local translation = node.translation and { unpack(node.translation) }
+			or { Vector3.ZERO:get() }
+		local scale = node.scale and { unpack(node.scale) }
+			or { Vector3.ONE:get() }
+		local rotation = node.rotation and { unpack(node.rotation) }
+			or { Quaternion.IDENTITY:get() }
+
+		Transform.compose(
+			Vector3(unpack(translation)),
+			Quaternion(unpack(rotation)),
+			Vector3(unpack(scale)),
+			nodeTransform
+		)
+	end
+
+	local transform = parentTransform * nodeTransform
 	if node.children then
 		for _, child in ipairs(node.children) do
 			local childNode = self:getNode(child)
@@ -563,7 +601,9 @@ function GLTFParser:_tryLoadNode(
 				modelDefinitions,
 				skeletonDefinitions,
 				animationDefinitions,
-				childNode
+				childNode,
+				transform,
+				options
 			)
 
 			for _, childModel in ipairs(childModels) do
@@ -577,7 +617,7 @@ function GLTFParser:_tryLoadNode(
 		local skinData = node.skin and self:getSkin(node.skin)
 
 		local model = modelDefinitions[node.mesh]
-			or self:_loadMesh(meshData, not not skinData)
+			or self:_loadMesh(meshData, not not skinData, options)
 
 		local skeleton = node.skin
 			and (skeletonDefinitions[node.skin] or self:_loadSkin(skinData))
@@ -589,6 +629,7 @@ function GLTFParser:_tryLoadNode(
 				or self:_loadAnimations(skeleton, skinData.skeleton)
 			)
 		model.animations = model.animations or animations
+		model.transform = transform
 
 		table.insert(models, model)
 	end
@@ -598,8 +639,9 @@ end
 
 --- @private
 --- @param sceneData RatScratch.GLTF.Scene
+--- @param options RatScratch.GLTF.SceneLoadOptions
 --- @return RatScratch.Graphics.Graphics3D.SceneDefinition
-function GLTFParser:_loadScene(sceneData)
+function GLTFParser:_loadScene(sceneData, options)
 	--- @type RatScratch.Graphics.Graphics3D.SceneDefinition
 	local sceneDefinition = { models = {} }
 
@@ -612,7 +654,9 @@ function GLTFParser:_loadScene(sceneData)
 			modelDefinitions,
 			skeletonDefinitions,
 			animationDefinitions,
-			self:getNode(nodeIndex)
+			self:getNode(nodeIndex),
+			love.math.newTransform(),
+			options
 		)
 
 		for _, model in ipairs(models) do
@@ -664,11 +708,75 @@ local GLTF_PRIMITIVE_MODE_TO_NECRO = {
 	[GLTF.MeshPrimitiveMode.TRIANGLE_STRIP] = "strip",
 }
 
+--- @param attributes? table<RatScratch.GLTF.SceneBufferRole, RatScratch.GLTF.GLTFAttributes>
+--- @param defaultOutputFormat RatScratch.Graphics.Graphics3D.MeshFormatAttribute[]
+--- @param defaultBufferRoles RatScratch.Graphics.Graphics3D.BufferDefinition[]
+--- @return RatScratch.Graphics.Graphics3D.MeshFormatAttribute[], RatScratch.Graphics.Graphics3D.BufferDefinition[]
+local function _tryGetFormatsAndRoles(
+	attributes,
+	defaultOutputFormat,
+	defaultBufferRoles
+)
+	if not attributes then
+		return defaultOutputFormat, defaultBufferRoles
+	end
+
+	local outputFormat
+	if attributes.output then
+		outputFormat = attributes.output:getFormat()
+	else
+		outputFormat = defaultOutputFormat
+	end
+
+	--- @type RatScratch.Graphics.Graphics3D.BufferDefinition[]
+	local outputBufferRoles
+	if
+		attributes.compute_input
+		or attributes.compute_output
+		or attributes.static
+	then
+		outputBufferRoles = {}
+
+		if attributes.compute_input then
+			table.insert(outputBufferRoles, {
+				role = "compute_input",
+				format = attributes.compute_input:getFormat(),
+			})
+		end
+
+		if attributes.compute_output then
+			table.insert(outputBufferRoles, {
+				role = "compute_output",
+				format = attributes.compute_output:getFormat(),
+			})
+		end
+
+		if attributes.static then
+			table.insert(outputBufferRoles, {
+				role = "static",
+				format = attributes.static:getFormat(),
+			})
+		end
+	elseif attributes.output then
+		outputBufferRoles = {
+			{
+				role = "static",
+				format = attributes.output:getFormat(),
+			},
+		}
+	else
+		outputBufferRoles = defaultBufferRoles
+	end
+
+	return outputFormat, outputBufferRoles
+end
+
 --- @private
 --- @param meshData RatScratch.GLTF.Mesh
 --- @param isSkinned boolean
+--- @param options RatScratch.GLTF.SceneLoadOptions
 --- @return RatScratch.Graphics.Graphics3D.ModelDefinition
-function GLTFParser:_loadMesh(meshData, isSkinned)
+function GLTFParser:_loadMesh(meshData, isSkinned, options)
 	--- @type RatScratch.Graphics.Graphics3D.ModelDefinition
 	local modelDefinition = { meshes = {} }
 	local value = {}
@@ -689,9 +797,25 @@ function GLTFParser:_loadMesh(meshData, isSkinned)
 		--- @type RatScratch.Graphics.Graphics3D.MeshFormatAttribute[]
 		local format = {}
 
-		for _, attribute in ipairs(self.attributes:getFormat()) do
+		local attributes = (
+			options.attributes
+			and (
+				(
+					isSkinned
+					and options.attributes.skinned
+					and options.attributes.skinned.output
+				)
+				or (
+					not isSkinned
+					and options.attributes.static
+					and options.attributes.static.output
+				)
+			)
+		) or self.attributes
+
+		for _, attribute in ipairs(attributes:getFormat()) do
 			local attributeName =
-				self.attributes:getAttributeFromVertexElement(attribute.name)
+				attributes:getAttributeFromVertexElement(attribute.name)
 			if primitiveData.attributes[attributeName] then
 				table.insert(format, {
 					location = attribute.location,
@@ -703,12 +827,12 @@ function GLTFParser:_loadMesh(meshData, isSkinned)
 
 		local vertices = {}
 		for attributeName, accessorIndex in pairs(primitiveData.attributes) do
-			if self.attributes:hasAttribute(attributeName) then
+			if attributes:hasAttribute(attributeName) then
 				local attributeAccessor = self:getAccessorParser(accessorIndex)
 				self:_loadVertices(
 					format,
 					vertices,
-					self.attributes:getVertexElementFromAttribute(attributeName),
+					attributes:getVertexElementFromAttribute(attributeName),
 					attributeAccessor
 				)
 			end
@@ -723,17 +847,29 @@ function GLTFParser:_loadMesh(meshData, isSkinned)
 
 		local outputBuffers, outputIndices, outputFormat
 		if isSkinned then
-			outputFormat = Mesh.SKINNED_MESH_FORMAT
-			outputBuffers, outputIndices = Mesh.marshal({
-				Mesh.CONSTANT_BUFFER_DEFINITION,
-				Mesh.TRANSFORM_INPUT_BUFFER_DEFINITION,
-				Mesh.TRANSFORM_OUTPUT_BUFFER_DEFINITION,
-			}, format, vertices, indices, indexMode)
+			local targetFormat, targetRoles = _tryGetFormatsAndRoles(
+				options.attributes and options.attributes.skinned,
+				Mesh.SKINNED_MESH_FORMAT,
+				{
+					Mesh.CONSTANT_BUFFER_DEFINITION,
+					Mesh.TRANSFORM_INPUT_BUFFER_DEFINITION,
+					Mesh.TRANSFORM_OUTPUT_BUFFER_DEFINITION,
+				}
+			)
+
+			outputFormat = targetFormat
+			outputBuffers, outputIndices =
+				Mesh.marshal(targetRoles, format, vertices, indices, indexMode)
 		else
-			outputFormat = Mesh.STATIC_MESH_FORMAT
-			outputBuffers, outputIndices = Mesh.marshal({
-				Mesh.STATIC_BUFFER_DEFINITION,
-			}, format, vertices, indices, indexMode)
+			local targetFormat, targetRoles = _tryGetFormatsAndRoles(
+				options.attributes and options.attributes.static,
+				Mesh.STATIC_MESH_FORMAT,
+				{ Mesh.STATIC_BUFFER_DEFINITION }
+			)
+
+			outputFormat = targetFormat
+			outputBuffers, outputIndices =
+				Mesh.marshal(targetRoles, format, vertices, indices, indexMode)
 		end
 
 		--- @type RatScratch.Graphics.Graphics3D.MeshDefinition

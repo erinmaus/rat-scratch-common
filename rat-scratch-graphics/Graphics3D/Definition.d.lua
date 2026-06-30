@@ -10,6 +10,7 @@ local SceneDefinition = {}
 --- @field public meshes? RatScratch.Graphics.Graphics3D.MeshDefinition[]
 --- @field public skeleton? RatScratch.Graphics.Graphics3D.SkeletonDefinition
 --- @field public animations? RatScratch.Graphics.Graphics3D.AnimationDefinition[]
+--- @field public transform? love.Transform
 local ModelDefinition = {}
 
 --- @class RatScratch.Graphics.Graphics3D.MeshDefinition

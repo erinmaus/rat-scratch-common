@@ -1,4 +1,5 @@
 local Object = require("rat-scratch-common").Object
+assert = require("rat-scratch-common").Debug.assert
 
 --- @class RatScratch.GLTF.GLTFAttributes : RatScratch.Common.BaseObject
 --- @field private attributeToVertexElement table<string, string>
@@ -8,19 +9,60 @@ local Object = require("rat-scratch-common").Object
 --- @field private format RatScratch.Graphics.Graphics3D.MeshFormatAttribute[]
 local GLTFAttributes = Object()
 
+GLTFAttributes.DEFAULT_VERTEX_ELEMENT_TO_GLTF_ATTRIBUTE = {
+	VertexPosition = "POSITION",
+	VertexTexCoord = "TEXCOORD_0",
+	VertexColor = "COLOR_0",
+	VertexNormal = "NORMAL",
+	VertexBoneIndex = "JOINTS_0",
+	VertexBoneWeight = "WEIGHTS_0",
+}
+
 function GLTFAttributes:new()
 	self.attributeToVertexElement = {}
 	self.vertexElementToAttribute = {}
 	self.locationToVertexElement = {}
 	self.vertexElementToLocation = {}
 	self.format = {}
+end
 
-	self:defineAttribute("POSITION", "VertexPosition", 0, "floatvec4")
-	self:defineAttribute("TEXCOORD_0", "VertexTexCoord", 1, "floatvec4")
-	self:defineAttribute("COLOR_0", "VertexColor", 2, "floatvec4")
-	self:defineAttribute("NORMAL", "VertexNormal", 10, "floatvec4")
-	self:defineAttribute("JOINTS_0", "VertexBoneIndex", 20, "uint32vec4")
-	self:defineAttribute("WEIGHTS_0", "VertexBoneWeight", 21, "floatvec4")
+function GLTFAttributes.makeDefault()
+	local result = GLTFAttributes()
+
+	result:defineAttribute("POSITION", "VertexPosition", 0, "floatvec4")
+	result:defineAttribute("TEXCOORD_0", "VertexTexCoord", 1, "floatvec4")
+	result:defineAttribute("COLOR_0", "VertexColor", 2, "floatvec4")
+	result:defineAttribute("NORMAL", "VertexNormal", 10, "floatvec4")
+	result:defineAttribute("JOINTS_0", "VertexBoneIndex", 20, "uint32vec4")
+	result:defineAttribute("WEIGHTS_0", "VertexBoneWeight", 21, "floatvec4")
+
+	return result
+end
+
+--- @param format RatScratch.Graphics.Graphics3D.MeshFormatAttribute[]
+--- @param vertexElementToGLTFAttribute? table<string, string>
+function GLTFAttributes.fromFormat(format, vertexElementToGLTFAttribute)
+	local result = GLTFAttributes()
+
+	for _, attribute in ipairs(format) do
+		local gltfAttributeName = vertexElementToGLTFAttribute
+				and vertexElementToGLTFAttribute[attribute.name]
+			or GLTFAttributes.DEFAULT_VERTEX_ELEMENT_TO_GLTF_ATTRIBUTE[attribute.name]
+		assert(
+			gltfAttributeName,
+			"could not map vertex attribute '%s' to GLTF attribute name",
+			attribute.name
+		)
+
+		result:defineAttribute(
+			gltfAttributeName,
+			attribute.name,
+			attribute.location,
+			attribute.format
+		)
+	end
+
+	return result
 end
 
 function GLTFAttributes:hasAttribute(attributeName)
