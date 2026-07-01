@@ -587,11 +587,13 @@ function Mesh:getMesh()
 end
 
 --- @param role RatScratch.Graphics.Graphics3D.BufferRole?
+--- @return love.graphics.GraphicsBuffer
 function Mesh:getBufferByRole(role)
 	return self.buffers[role]
 end
 
 --- @param role RatScratch.Graphics.Graphics3D.BufferRole?
+--- @return RatScratch.Graphics.Graphics3D.BufferDefinition
 function Mesh:getBufferInfoByRole(role)
 	return self.bufferInfo[role]
 end

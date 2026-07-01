@@ -113,6 +113,7 @@ function demo.drawGLTF()
 		love.graphics.setDepthMode("lequal", true)
 		love.graphics.setProjection(projection)
 		love.graphics.applyTransform(camera)
+		love.graphics.applyTransform(model:getTransform())
 
 		local loveMesh = mesh:getMesh()
 		if material and material:getTexture() then

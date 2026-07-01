@@ -286,7 +286,10 @@ function Scene.fromDefinition(sceneDefinition, yield)
 				)
 			)
 		else
-			table.insert(models, Model(modelDefinition.name, meshes))
+			table.insert(
+				models,
+				Model(modelDefinition.name, meshes, modelDefinition.transform)
+			)
 		end
 
 		_maybeYield(yield, "load", models[#models])

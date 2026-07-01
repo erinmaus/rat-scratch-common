@@ -2,10 +2,11 @@ local Object = require("rat-scratch-common").Object
 local assert = require("rat-scratch-common").Debug.assert
 
 --- @class RatScratch.Graphics.Graphics3D.Model : RatScratch.Common.BaseObject
---- @overload fun(name?: string, meshes: RatScratch.Graphics.Graphics3D.Mesh[])
+--- @overload fun(name?: string, meshes: RatScratch.Graphics.Graphics3D.Mesh[], transform?: love.Transform)
 --- @field private name string
 --- @field private meshes RatScratch.Graphics.Graphics3D.Mesh[]
 --- @field private meshesByName table<string, RatScratch.Graphics.Graphics3D.Mesh>
+--- @field private transform love.Transform
 local Model = Object()
 
 --- @param inputMeshes RatScratch.Graphics.Graphics3D.Mesh[]
@@ -30,16 +31,22 @@ end
 
 --- @param name string
 --- @param meshes RatScratch.Graphics.Graphics3D.Mesh[]
-function Model:new(name, meshes)
+--- @param transform? love.Transform
+function Model:new(name, meshes, transform)
 	local outputMeshes, outputMeshesByName = Model.validateMeshes(meshes)
 
 	self.name = name or ""
 	self.meshes = outputMeshes
 	self.meshesByName = outputMeshesByName
+	self.transform = transform or love.math.newTransform()
 end
 
 function Model:getName()
 	return self.name
+end
+
+function Model:getTransform()
+	return self.transform
 end
 
 --- @param key number | string

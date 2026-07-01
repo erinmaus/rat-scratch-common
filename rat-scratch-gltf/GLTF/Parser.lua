@@ -7,6 +7,7 @@ local GLTFAccessor = require("rat-scratch-gltf.GLTF.Accessor")
 local GLTFAttributes = require("rat-scratch-gltf.GLTF.Attributes")
 local GLTFSparseAccessor = require("rat-scratch-gltf.GLTF.SparseAccessor")
 local Quaternion = require("rat-scratch-math").Quaternion
+local Transform = require("rat-scratch-math").Transform
 local Vector3 = require("rat-scratch-math").Vector3
 
 --- @class RatScratch.GLTF.GLTFParser : RatScratch.Common.BaseObject
@@ -560,18 +561,39 @@ end
 --- @param skeletonDefinitions table<integer, RatScratch.Graphics.Graphics3D.SkeletonDefinition>
 --- @param animationDefinitions table<integer, RatScratch.Graphics.Graphics3D.AnimationDefinition>
 --- @param node RatScratch.GLTF.Node
+--- @param parentTransform love.Transform
 --- @param options RatScratch.GLTF.SceneLoadOptions
 --- @return RatScratch.Graphics.Graphics3D.ModelDefinition[]
 function GLTFParser:_tryLoadNode(
 	modelDefinitions,
 	skeletonDefinitions,
 	animationDefinitions,
-	node
 	node,
+	parentTransform,
 	options
 )
 	local models = {}
 
+	local nodeTransform = love.math.newTransform()
+	if node.matrix then
+		nodeTransform:setMatrix("column", unpack(node.matrix))
+	elseif node.translation or node.scale or node.rotation then
+		local translation = node.translation and { unpack(node.translation) }
+			or { Vector3.ZERO:get() }
+		local scale = node.scale and { unpack(node.scale) }
+			or { Vector3.ONE:get() }
+		local rotation = node.rotation and { unpack(node.rotation) }
+			or { Quaternion.IDENTITY:get() }
+
+		Transform.compose(
+			Vector3(unpack(translation)),
+			Quaternion(unpack(rotation)),
+			Vector3(unpack(scale)),
+			nodeTransform
+		)
+	end
+
+	local transform = parentTransform * nodeTransform
 	if node.children then
 		for _, child in ipairs(node.children) do
 			local childNode = self:getNode(child)
@@ -579,8 +601,8 @@ function GLTFParser:_tryLoadNode(
 				modelDefinitions,
 				skeletonDefinitions,
 				animationDefinitions,
-				childNode
 				childNode,
+				transform,
 				options
 			)
 
@@ -595,7 +617,6 @@ function GLTFParser:_tryLoadNode(
 		local skinData = node.skin and self:getSkin(node.skin)
 
 		local model = modelDefinitions[node.mesh]
-			or self:_loadMesh(meshData, not not skinData)
 			or self:_loadMesh(meshData, not not skinData, options)
 
 		local skeleton = node.skin
@@ -608,6 +629,7 @@ function GLTFParser:_tryLoadNode(
 				or self:_loadAnimations(skeleton, skinData.skeleton)
 			)
 		model.animations = model.animations or animations
+		model.transform = transform
 
 		table.insert(models, model)
 	end
@@ -632,8 +654,8 @@ function GLTFParser:_loadScene(sceneData, options)
 			modelDefinitions,
 			skeletonDefinitions,
 			animationDefinitions,
-			self:getNode(nodeIndex)
 			self:getNode(nodeIndex),
+			love.math.newTransform(),
 			options
 		)
 
