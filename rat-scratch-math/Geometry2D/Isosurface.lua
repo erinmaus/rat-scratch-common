@@ -1,7 +1,7 @@
 local Common = require("rat-scratch-math.Common")
 local Point = require("rat-scratch-math.Geometry2D.Point")
 
---- @alias RatScratch.Math.IsosurfaceSampleFunc fun<T>(image: T, x: number, y: number): number, boolean
+--- @alias RatScratch.Math.IsosurfaceSampleFunc fun<T, U>(image: T, x: number, y: number): number, boolean, U?
 
 local Isosurface = {}
 
@@ -36,6 +36,28 @@ function Isosurface.calculateGradient(x, y, image, sampleFunc)
 	dx, dy = Point.normal(dx, dy)
 
 	return dx, dy
+end
+
+--- @generic T
+--- @param contours number[][]
+--- @param image T
+--- @param sampleFunc RatScratch.Math.IsosurfaceSampleFunc<T>
+function Isosurface.sampleUserdata(contours, image, sampleFunc)
+	local contoursUserdata = {}
+
+	for _, contour in ipairs(contours) do
+		local contourUserdata = {}
+		for i = 1, #contour, 2 do
+			local x, y = contour[i], contour[i + 1]
+
+			local _, _, userdata = sampleFunc(image, x, y)
+			table.insert(contourUserdata, userdata)
+		end
+
+		table.insert(contoursUserdata, contourUserdata)
+	end
+
+	return contoursUserdata
 end
 
 return Isosurface
