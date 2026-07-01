@@ -46,12 +46,13 @@ local DEFAULT_OPTIONS = {
 ---   hoistedOptions: RatScratch.Graphics.impl.ShaderHoistedOptions,
 ---   result: RatScratch.Graphics.ShaderPreprocessResult,
 ---   dependencies: table<string, boolean>,
+---   include: table<string, boolean>,
 --- }
 
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
---- @param? parent RatScratch.Graphics.impl.ShaderProcessFile
+--- @param parent? RatScratch.Graphics.impl.ShaderProcessFile
 --- @param filename string
---- @return? RatScratch.Graphics.impl.ShaderProcessFile
+--- @return RatScratch.Graphics.impl.ShaderProcessFile
 local function beginVisit(state, parent, filename)
 	if state.visited[filename] then
 		local errorMessage = string.format(
@@ -82,7 +83,7 @@ end
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
 --- @param currentFile RatScratch.Graphics.impl.ShaderProcessFile
 local function endVisit(state, currentFile)
-	assert(
+	Debug.assert(
 		state.visited[currentFile.filename] ~= nil,
 		"ending visit, but current file not in visit table"
 	)
@@ -123,6 +124,8 @@ local function process(state, parent, filename, rootPath)
 	local currentFile = beginVisit(state, parent, filename)
 	if not currentFile then
 		return string.format('// file "%s" is recursively included', filename)
+	elseif state.include[filename] then
+		return string.format('// file "%s" is included previously', filename)
 	end
 
 	local content = readContent(state, currentFile)
@@ -150,6 +153,8 @@ local function process(state, parent, filename, rootPath)
 				lines,
 				string.format("#line %d\n", currentFile.currentLineNumber + 1)
 			)
+
+			state.include[resolvedPath] = true
 		elseif optionName and optionValue then
 			if state.hoistedOptions.keys[optionName] then
 				if state.options.warnings then
@@ -264,6 +269,7 @@ function ShaderPreprocessor.preprocess(filename, options)
 		options = mergedOptions,
 		result = result,
 		dependencies = dependencies,
+		include = {},
 	}
 
 	local absoluteFilename = Path.resolve("", filename, mergedOptions.rootPath)
