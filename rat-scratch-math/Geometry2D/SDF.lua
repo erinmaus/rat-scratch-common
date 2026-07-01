@@ -46,6 +46,7 @@ do
 	--- @param length integer
 	--- @param minDistanceSquared? number
 	--- @param windingNumber? number
+	--- @return number, integer, boolean, integer?
 	function SDFImpl._distanceFromPolygon(
 		px,
 		py,
@@ -54,6 +55,9 @@ do
 		minDistanceSquared,
 		windingNumber
 	)
+		local isCloser = false
+		local segmentIndex
+
 		minDistanceSquared = minDistanceSquared or math.huge
 		windingNumber = windingNumber or 0
 
@@ -82,18 +86,20 @@ do
 				Line.pointDistanceSquaredFromLineSegment(px, py, ax, ay, bx, by)
 
 			if distanceSquared < minDistanceSquared then
+				isCloser = true
+				segmentIndex = i
 				minDistanceSquared = distanceSquared
 			end
 		end
 
-		return minDistanceSquared, windingNumber
+		return minDistanceSquared, windingNumber, isCloser, segmentIndex
 	end
 
 	--- @param px number
 	--- @param py number
 	--- @param points number[]
 	--- @param length? number
-	--- @return number
+	--- @return number, integer
 	function SDF.distanceFromPolygon(px, py, points, length)
 		length = length or math.ceil(#points / 2)
 		assert(
@@ -102,7 +108,7 @@ do
 			length
 		)
 
-		local squaredDistance, windingNumber =
+		local squaredDistance, windingNumber, _, vertexIndex =
 			SDFImpl._distanceFromPolygon(px, py, points, length)
 
 		local distance = math.sqrt(squaredDistance)
@@ -110,18 +116,19 @@ do
 			distance = -distance
 		end
 
-		return distance
+		--- @cast vertexIndex integer
+		return distance, vertexIndex
 	end
 
 	--- @param px number
 	--- @param py number
 	--- @param points number[][]
 	--- @param lengths? number[]
-	--- @return number
+	--- @return number, integer, integer
 	function SDF.distanceFromPolygons(px, py, points, lengths)
 		assert(#points >= 1, "expected at least one polygon, got 0")
 
-		local squaredDistance, windingNumber
+		local squaredDistance, windingNumber, polygonIndex, polygonVertexIndex
 		for i, polygonPoints in ipairs(points) do
 			local length = lengths and lengths[i]
 			if not length then
@@ -134,14 +141,21 @@ do
 				length
 			)
 
-			squaredDistance, windingNumber = SDFImpl._distanceFromPolygon(
-				px,
-				py,
-				polygonPoints,
-				length,
-				squaredDistance,
-				windingNumber
-			)
+			local isCloser, vertexIndex
+			squaredDistance, windingNumber, isCloser, vertexIndex =
+				SDFImpl._distanceFromPolygon(
+					px,
+					py,
+					polygonPoints,
+					length,
+					squaredDistance,
+					windingNumber
+				)
+
+			if isCloser then
+				polygonIndex = i
+				polygonVertexIndex = vertexIndex
+			end
 		end
 
 		local distance = math.sqrt(squaredDistance)
@@ -149,7 +163,9 @@ do
 			distance = -distance
 		end
 
-		return distance
+		--- @cast polygonIndex integer
+		--- @cast polygonVertexIndex integer
+		return distance, polygonIndex, polygonVertexIndex
 	end
 end
 
