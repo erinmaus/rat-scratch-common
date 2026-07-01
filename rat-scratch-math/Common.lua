@@ -92,4 +92,10 @@ function Common.equal(a, b, E)
 	return math.abs(a - b) < E
 end
 
+--- @param value number
+--- @return integer
+function Common.round(value)
+	return math.floor(value + 0.5)
+end
+
 return Common
