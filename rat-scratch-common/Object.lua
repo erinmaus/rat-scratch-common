@@ -73,6 +73,7 @@ end
 --- @field public _METATABLE metatable
 --- @field public _PARENT RatScratch.Common.BaseObject | false
 --- @field public _DEBUG RatScratch.Common.ObjectDebugInfo
+--- @field public extend fun(): table, metatable
 local Common = {}
 
 --- @param ... any
@@ -115,11 +116,15 @@ end
 --- @return T, metatable
 local function __call(self, parent, stack)
 	local Type = { __index = parent or Common, __parent = parent, __c = Object }
-	local Object = setmetatable({}, Type)
-	local Metatable = { __index = Object, __type = Object }
-	Object._METATABLE = Metatable
-	Object._PARENT = parent or false
-	Object._DEBUG = {}
+	local ResultObject = setmetatable({}, Type)
+	local Metatable = { __index = ResultObject, __type = ResultObject }
+	ResultObject._METATABLE = Metatable
+	ResultObject._PARENT = parent or false
+	ResultObject._DEBUG = {}
+
+	ResultObject.extend = function()
+		return __call(self, ResultObject)
+	end
 
 	do
 		local debug = require("debug")
@@ -131,12 +136,12 @@ local function __call(self, parent, stack)
 			):gsub("/", ".")
 			local lineNumber = info.currentline
 
-			Object._DEBUG.lineNumber = lineNumber
-			Object._DEBUG.filename = info.source
-			Object._DEBUG.shortName =
+			ResultObject._DEBUG.lineNumber = lineNumber
+			ResultObject._DEBUG.filename = info.source
+			ResultObject._DEBUG.shortName =
 				string.format("%s@%d", shortObjectName, lineNumber)
-			Object._DEBUG.requireName = shortObjectName
-			Object._DEBUG.module = Module.getSelfRequire(shortObjectName)
+			ResultObject._DEBUG.requireName = shortObjectName
+			ResultObject._DEBUG.module = Module.getSelfRequire(shortObjectName)
 		end
 	end
 
@@ -147,14 +152,14 @@ local function __call(self, parent, stack)
 	function Type.__call(_self, ...)
 		local result = setmetatable({}, Metatable)
 
-		if Object.new then
-			Object.new(result, ...)
+		if ResultObject.new then
+			ResultObject.new(result, ...)
 		end
 
 		return result
 	end
 
-	return Object, Metatable
+	return ResultObject, Metatable
 end
 
 --- @type RatScratch.Common.Object
