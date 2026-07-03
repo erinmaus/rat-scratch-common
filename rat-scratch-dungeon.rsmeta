@@ -25,3 +25,10 @@ version = *
 source = rat-scratch-gltf
 url = rat-scratch-gltf.rsmeta
 root = staging/module/build
+
+[slick]
+version = 4.0.8
+source = slick
+url = https://github.com/erinmaus/slick/archive/refs/tags/slick-v4.0.8.zip
+hash = sha512:01e9d931d570bc05dd38dc9a5b94a70650005f83d71c0d13d1b487c98041fc90be70da48ba2620692a0d6f7585820226c93451536c2af458111c77a66b77472b
+root = ^slick%-slick%-v4%.0%.8$
