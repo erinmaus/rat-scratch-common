@@ -69,6 +69,12 @@ function Table.copy(t, i, j, ...)
 end
 
 --- @param t any[]
+--- @param ... any
+function Table.append(t, ...)
+	Table.copy(t, #t + 1, #t + select("#") - 1, ...)
+end
+
+--- @param t any[]
 --- @param o? any[]
 function Table.clone(t, o)
 	local result = o or Table.new(#t, 0)

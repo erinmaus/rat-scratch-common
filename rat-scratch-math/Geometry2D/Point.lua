@@ -82,19 +82,15 @@ end
 --- @param y1 number
 --- @param x2 number
 --- @param y2 number
+--- @param E number?
 --- @return -1 | 0 | 1
 function Point.compare(x1, y1, x2, y2, E)
-	local s = y1 - y2
-	if Common.equal(s, 0, E) then
-		local t = x1 - x2
-		if Common.equal(t, 0, E) then
-			return 0
-		end
-
-		return Common.sign(t)
+	local y = Common.zerosign(y1 - y2, E)
+	if y == 0 then
+		return Common.zerosign(x1, x2, E)
 	end
 
-	return Common.sign(s)
+	return y
 end
 
 --- @param x1 number

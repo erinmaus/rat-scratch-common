@@ -44,6 +44,11 @@ function Common.subtractAngles(left, right)
 	return (difference + math.pi) % (math.pi * 2) - math.pi
 end
 
+--- @param value number
+function Common.wrapAngle(value)
+	return value % (math.pi * 2)
+end
+
 --- @param x number
 --- @param y number
 --- @param angle number
@@ -61,9 +66,12 @@ function Common.rotate(x, y, angle, ox, oy)
 end
 
 --- @param value number
+--- @param E number?
 --- @return 1 | -1
-function Common.sign(value)
-	if value < 0 then
+function Common.sign(value, E)
+	E = E or Common.EPSILON
+
+	if Common.lessThan(value, 0, E) then
 		return -1
 	end
 
@@ -71,15 +79,29 @@ function Common.sign(value)
 end
 
 --- @param value number
+--- @param E number?
 --- @return 1 | 0 | -1
-function Common.zerosign(value)
-	if value < 0 then
-		return -1
-	elseif value > 0 then
-		return 1
+function Common.zerosign(value, E)
+	E = E or Common.EPSILON
+	if Common.equal(value, 0, E) then
+		return 0
 	end
 
-	return 0
+	if value < 0 then
+		return -1
+	end
+
+	return 1
+end
+
+function Common.lessThan(a, b, E)
+	E = E or Common.EPSILON
+	return a + E < b
+end
+
+function Common.greaterThan(a, b, E)
+	E = E or Common.EPSILON
+	return a - E > b
 end
 
 --- @param a number
