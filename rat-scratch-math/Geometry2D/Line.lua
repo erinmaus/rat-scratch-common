@@ -90,15 +90,7 @@ end
 --- @param py number
 --- @return -1 | 0 | 1
 function Line.sideOfLineSegment(ax, ay, bx, by, px, py)
-	local side = Line.direction(ax, ay, bx, by, px, py)
-
-	if side < 0 then
-		return -1
-	elseif side > 0 then
-		return 1
-	end
-
-	return 0
+	return Common.zerosign(Line.direction(ax, ay, bx, by, px, py))
 end
 
 --- @param a number
@@ -188,7 +180,12 @@ function Line.intersection(ax, ay, bx, by, cx, cy, dx, dy)
 	local rx = ax + bax * u
 	local ry = ay + bay * u
 
-	if u < 0 or u > 1 or v < 0 or v > 1 then
+	if
+		Common.lessThan(u, 0)
+		or Common.greaterThan(u, 1)
+		or Common.lessThan(v, 0)
+		or Common.greaterThan(v, 1)
+	then
 		return false, rx, ry, u, v
 	end
 
