@@ -87,7 +87,7 @@ end
 function Point.compare(x1, y1, x2, y2, E)
 	local y = Common.zerosign(y1 - y2, E)
 	if y == 0 then
-		return Common.zerosign(x1, x2, E)
+		return Common.zerosign(x1 - x2, E)
 	end
 
 	return y
