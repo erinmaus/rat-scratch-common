@@ -99,9 +99,19 @@ function Common.lessThan(a, b, E)
 	return a + E < b
 end
 
+function Common.lessThanEqual(a, b, E)
+	E = E or Common.EPSILON
+	return Common.lessThan(a, b, E) or Common.equal(a, b, E)
+end
+
 function Common.greaterThan(a, b, E)
 	E = E or Common.EPSILON
 	return a - E > b
+end
+
+function Common.greaterThanEqual(a, b, E)
+	E = E or Common.EPSILON
+	return Common.greaterThan(a, b, E) or Common.equal(a, b, E)
 end
 
 --- @param a number
@@ -110,7 +120,6 @@ end
 --- @return boolean
 function Common.equal(a, b, E)
 	E = E or Common.EPSILON
-
 	return math.abs(a - b) < E
 end
 
