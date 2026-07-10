@@ -71,7 +71,7 @@ end
 --- @param t any[]
 --- @param ... any
 function Table.append(t, ...)
-	Table.copy(t, #t + 1, #t + select("#") - 1, ...)
+	Table.copy(t, #t + 1, #t + select("#", ...), ...)
 end
 
 --- @param t any[]
