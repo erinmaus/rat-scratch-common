@@ -11,10 +11,6 @@
 --- @field public maxArea? number
 --- @field public areaRelaxationThreshold? number
 --- @field public areaRelaxationFactor? number
---- @field public minAspectRatio? number
---- @field public maxAspectRatio? number
---- @field public aspectRatioRelaxationThreshold? number
---- @field public aspectRatioRelaxationFactor? number
 local ConstrainedSplitProfile = {}
 
 --- @param profile RatScratch.Dungeon.ConstrainedSplitProfile
@@ -50,14 +46,6 @@ function ConstrainedSplitProfile.relax(profile, iteration)
 			or nil,
 		areaRelaxationThreshold = profile.areaRelaxationThreshold,
 		areaRelaxationFactor = profile.areaRelaxationFactor,
-		minAspectRatio = profile.minAspectRatio
-				and (profile.minAspectRatio - (profile.aspectRatioRelaxationThreshold or 0) * (profile.aspectRatioRelaxationFactor or 0) * iteration)
-			or nil,
-		maxAspectRatio = profile.maxAspectRatio
-				and (profile.maxAspectRatio + (profile.aspectRatioRelaxationThreshold or 0) * (profile.aspectRatioRelaxationFactor or 0) * iteration)
-			or nil,
-		aspectRatioRelaxationThreshold = profile.aspectRatioRelaxationThreshold,
-		aspectRatioRelaxationFactor = profile.aspectRatioRelaxationFactor,
 	}
 end
 

@@ -4,6 +4,7 @@
 --- @field public navigator RatScratch.Dungeon.Navigator
 --- @field public shape RatScratch.Dungeon.DungeonDefinition.PolygonRootShape | RatScratch.Dungeon.DungeonDefinition.RectangleRootShape
 --- @field public limits RatScratch.Dungeon.DungeonDefinition.Limits
+--- @field public random RatScratch.Dungeon.Random
 local DungeonDefinition = {}
 
 --- @alias RatScratch.Dungeon.DungeonDefinition.RootShape

@@ -1,10 +1,14 @@
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
 local BSPNode = require("rat-scratch-math").BSP2D.BSPNode
+local Random = require("rat-scratch-dungeon.Random")
+local Splitter = require("rat-scratch-dungeon.impl.Splitter")
 
 --- @class RatScratch.Dungeon.Dungeon : RatScratch.Common.BaseObject
 --- @overload fun(definition: RatScratch.Dungeon.DungeonDefinition): RatScratch.Dungeon.Dungeon
 --- @field navigator RatScratch.Dungeon.Navigator
+--- @field random RatScratch.Dungeon.Random
+--- @field splitter RatScratch.Dungeon.impl.Splitter
 --- @field rootBSPNode RatScratch.Math.BSP2D.BSPNode
 --- @field limits RatScratch.Dungeon.DungeonDefinition.Limits
 local Dungeon = Object()
@@ -12,6 +16,8 @@ local Dungeon = Object()
 --- @param definition RatScratch.Dungeon.DungeonDefinition
 function Dungeon:new(definition)
 	self.navigator = definition.navigator
+	self.random = definition.random or Random()
+	self.splitter = Splitter()
 
 	self.limits = {
 		attemptSplitIterations = definition.limits
@@ -51,7 +57,17 @@ end
 --- @private
 --- @param node RatScratch.Math.BSP2D.BSPNode
 --- @param profile RatScratch.Dungeon.ConstrainedSplitProfile
-function Dungeon:_solveNodeSplit(node, profile) end
+function Dungeon:_solveNodeSplit(node, profile)
+	self.splitter:start(node, self:_getNodeConnections(node))
+	local success, x, y, nx, ny = self.splitter:split(profile, self.random)
+
+	if success and x and y and nx and ny then
+		node:split(x, y, nx, ny)
+		return true
+	end
+
+	return false
+end
 
 --- @private
 --- @param node RatScratch.Math.BSP2D.BSPNode
