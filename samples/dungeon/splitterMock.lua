@@ -225,8 +225,6 @@ function demo.keypressed(key, scan, isRepeat)
 				local success, x, y, nx, ny = splitter:split({
 					minAngle = demo.minAngle,
 					maxAngle = demo.maxAngle,
-					minEdgeLength = 64,
-					minArea = 128 * 128,
 				}, Random())
 
 				if success and x and y and nx and ny then

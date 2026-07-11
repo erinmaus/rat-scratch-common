@@ -480,12 +480,6 @@ do
 			end
 		end
 
-		assert(
-			#hits <= 2,
-			"too many hits for convex polygon; got %d, should be 1 or 2",
-			#hits
-		)
-
 		if #hits == 1 then
 			return true, hits[1][1], hits[1][3], hits[1][4]
 		end
@@ -494,9 +488,9 @@ do
 			hits[1][1],
 			hits[1][3],
 			hits[1][4],
-			hits[2][1],
-			hits[2][3],
-			hits[2][4]
+			hits[#hits][1],
+			hits[#hits][3],
+			hits[#hits][4]
 	end
 end
 

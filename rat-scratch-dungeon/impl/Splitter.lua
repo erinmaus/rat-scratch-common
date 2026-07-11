@@ -159,9 +159,9 @@ function Splitter:_splitEdges(points, connections)
 
 		local tx, ty
 		if self.polygonWinding == "cw" then
-			tx, ty = Point.left(nx, ny)
-		else
 			tx, ty = Point.right(nx, ny)
+		else
+			tx, ty = Point.left(nx, ny)
 		end
 
 		for _ = 1, edgeCount do
@@ -190,19 +190,15 @@ end
 --- @param polygon RatScratch.Common.FlatTable<number>
 --- @param polygonDirections RatScratch.Common.FlatTable<number>
 --- @param edgeIndex integer
---- @param anx number
---- @param any number
---- @param bnx number
---- @param bny number
---- @return boolean, number, number, boolean, number, number
+--- @param minAngle number
+--- @param maxAngle number
+--- @return number, number, number, number
 function Splitter:_calculateEdgeRayDirections(
 	polygon,
 	polygonDirections,
 	edgeIndex,
-	anx,
-	any,
-	bnx,
-	bny
+	minAngle,
+	maxAngle
 )
 	local x1, y1 = polygon:get(edgeIndex)
 	local x2, y2 = polygon:get(edgeIndex + 1)
@@ -214,18 +210,15 @@ function Splitter:_calculateEdgeRayDirections(
 		dx, dy = Point.directionNormal(x1, y1, x2, y2)
 	end
 
+	local anx, any = Common.rotate(dx, dy, minAngle)
+	local bnx, bny = Common.rotate(dx, dy, maxAngle)
+
 	if self.polygonWinding == "ccw" then
 		anx, bnx = bnx, anx
 		any, bny = bny, any
 	end
 
-	local d1 = Line.direction(x1, y1, x1 + dx, y1 + dy, x1 + anx, y1 + any)
-	local d2 = Line.direction(x2, y2, x2 + dx, y2 + dy, x2 + bnx, y2 + bny)
-
-	local inside1 = Polygon.isOnSide(self.polygonWinding, "inside", d1)
-	local inside2 = Polygon.isOnSide(self.polygonWinding, "inside", d2)
-
-	return inside1, anx, any, inside2, bnx, bny
+	return anx, any, bnx, bny
 end
 
 --- @private
@@ -234,29 +227,16 @@ end
 --- @param maxAngle number
 --- @return boolean, number[]?, integer?, integer?
 function Splitter:_projectEdge(edgeIndex, minAngle, maxAngle)
-	local anx, any = math.cos(minAngle), math.sin(minAngle)
-	local bnx, bny = math.cos(maxAngle), math.sin(maxAngle)
-
-	local inside1, dx1, dy1, inside2, dx2, dy2 =
-		self:_calculateEdgeRayDirections(
-			self.outputPolygonWrapper,
-			self.outputPolygonDirectionsWrapper,
-			edgeIndex,
-			anx,
-			any,
-			bnx,
-			bny
-		)
+	local dx1, dy1, dx2, dy2 = self:_calculateEdgeRayDirections(
+		self.outputPolygonWrapper,
+		self.outputPolygonNormalsWrapper,
+		edgeIndex,
+		minAngle,
+		maxAngle
+	)
 
 	local x1, y1 = self.outputPolygonWrapper:get(edgeIndex)
 	local x2, y2 = self.outputPolygonWrapper:get(edgeIndex + 1)
-
-	if not (inside1 or inside2) then
-		return true,
-			self.outputPolygon,
-			1,
-			self.outputPolygonWrapper:getLength()
-	end
 
 	local destinationPolygon = self.polygonPool:pop()
 	local sourcePolygon = self.polygonPool:pop()
@@ -268,7 +248,7 @@ function Splitter:_projectEdge(edgeIndex, minAngle, maxAngle)
 	local workingPolygon = outputPolygon
 	local index1, index2
 
-	if inside1 then
+	do
 		local left, right
 		if self.polygonWinding == "cw" then
 			left, right = sourcePolygon, destinationPolygon
@@ -303,7 +283,7 @@ function Splitter:_projectEdge(edgeIndex, minAngle, maxAngle)
 	destinationPolygon = self.polygonPool:pop()
 	sourcePolygon = self.polygonPool:pop()
 
-	if inside2 then
+	do
 		local left, right
 		if self.polygonWinding == "cw" then
 			left, right = destinationPolygon, sourcePolygon
@@ -376,43 +356,31 @@ end
 
 --- @private
 --- @param edgeIndex integer
---- @param anx number
---- @param any number
---- @param bnx number
---- @param bny number
+--- @param minAngle number
+--- @param maxAngle number
 --- @param polygon number[][]
 --- @return number[][]
 function Splitter:_splitOutputPolygonByConstraintEdgeProjection(
 	edgeIndex,
-	anx,
-	any,
-	bnx,
-	bny,
+	minAngle,
+	maxAngle,
 	polygon
 )
-	local inside1, dx1, dy1, inside2, dx2, dy2 =
-		self:_calculateEdgeRayDirections(
-			self.outputPolygonWrapper,
-			self.outputPolygonDirectionsWrapper,
-			edgeIndex,
-			-anx,
-			-any,
-			-bnx,
-			-bny
-		)
+	local dx1, dy1, dx2, dy2 = self:_calculateEdgeRayDirections(
+		self.outputPolygonWrapper,
+		self.outputPolygonNormalsWrapper,
+		edgeIndex,
+		minAngle,
+		maxAngle
+	)
 
 	local result = self.tablePool:pop()
-
-	if not (inside1 or inside2) then
-		Table.append(result, polygon)
-		return result
-	end
 
 	local x1, y1 = self.outputPolygonWrapper:get(edgeIndex)
 	local x2, y2 = self.outputPolygonWrapper:get(edgeIndex + 1)
 
 	local a
-	if inside1 then
+	do
 		a = self:_splitOutputPolygonByLine(
 			x1,
 			y1,
@@ -424,7 +392,7 @@ function Splitter:_splitOutputPolygonByConstraintEdgeProjection(
 	end
 
 	local b
-	if inside2 then
+	do
 		b = self:_splitOutputPolygonByLine(
 			x2,
 			y2,
@@ -445,22 +413,23 @@ end
 --- @param polygon number[]
 --- @param minAngle number
 --- @param maxAngle number
+--- @param edgeIndex integer
 --- @param startIndex integer
 --- @param stopIndex integer
 function Splitter:_splitWorkingPolygonByConnections(
 	polygon,
 	minAngle,
 	maxAngle,
+	edgeIndex,
 	startIndex,
 	stopIndex
 )
 	local outputPolygons = self.tablePool:pop()
 	table.insert(outputPolygons, polygon)
 
-	local ianx, iany = math.cos(minAngle), math.sin(minAngle)
-	local ibnx, ibny = math.cos(maxAngle), math.sin(maxAngle)
 	local outputPolygonProtectedEdges = self.outputPolygonProtectedEdgeWrapper
 	local length = outputPolygonProtectedEdges:getLength()
+	local dx, dy = self.outputPolygonNormalsWrapper:get(edgeIndex)
 
 	for i = 1, length do
 		local index = Table.wrapIndex(startIndex + i - 1, length)
@@ -473,10 +442,8 @@ function Splitter:_splitWorkingPolygonByConnections(
 				local polygons =
 					self:_splitOutputPolygonByConstraintEdgeProjection(
 						index,
-						ianx,
-						iany,
-						ibnx,
-						ibny,
+						minAngle,
+						maxAngle,
 						polygon
 					)
 
@@ -521,6 +488,7 @@ function Splitter:projectEdgeWithAnglesAndConnections(
 			projectedPolygon,
 			minAngle,
 			maxAngle,
+			edgeIndex,
 			i,
 			j
 		)
@@ -600,6 +568,17 @@ do
 	end
 end
 
+--- @private
+--- @param x number
+--- @param y number
+--- @param nx number
+--- @param ny number
+function Splitter:_isProtectedEdge(x, y, nx, ny)
+	local _, _, _, _, j =
+		Polygon.linecast(x, y, x + nx, y + ny, self.outputPolygon)
+	return self.outputPolygonProtectedEdgeWrapper:get(j)
+end
+
 do
 	local wrappedPolygon = FlatTable.wrap(0, 2)
 
@@ -621,9 +600,20 @@ do
 		local x2, y2 = polygon:get(outputEdgeIndex + 1)
 		local delta = random:rollEdgeDelta()
 
+		local dx, dy = Point.directionNormal(x1, y1, x2, y2)
+		if self.polygonWinding == "cw" then
+			dx, dy = Point.right(dx, dy)
+		else
+			dx, dy = Point.left(dx, dy)
+		end
+
 		local x, y = Common.lerp(x1, x2, delta), Common.lerp(y1, y2, delta)
 		local angle = random:rollAngle(profile.minAngle, profile.maxAngle)
-		local nx, ny = math.cos(angle), math.sin(angle)
+		local nx, ny = Common.rotate(dx, dy, angle)
+
+		if self:_isProtectedEdge(x, y, nx, ny) then
+			return false
+		end
 
 		local left = self.polygonPool:pop()
 		local right = self.polygonPool:pop()
@@ -691,19 +681,24 @@ function Splitter:split(profile, random)
 		math.min(minAngle, maxAngle), math.max(minAngle, maxAngle)
 
 	local offset = random:rollEdge(1, self.outputPolygonWrapper:getLength())
+	local protectedEdges = self.outputPolygonProtectedEdgeWrapper
 	for i = 1, self.outputPolygonWrapper:getLength() do
 		local edgeIndex = i + offset - 1
+		local isProtected = protectedEdges:get(edgeIndex)
+		if not isProtected then
+			local outputPolygons = self:projectEdgeWithAnglesAndConnections(
+				edgeIndex,
+				minAngle,
+				maxAngle
+			)
+			local success, x, y, nx, ny =
+				self:_trySplit(profile, random, edgeIndex, outputPolygons)
 
-		local outputPolygons = self:projectEdgeWithAnglesAndConnections(
-			edgeIndex,
-			minAngle,
-			maxAngle
-		)
-		local success, x, y, nx, ny =
-			self:_trySplit(profile, random, edgeIndex, outputPolygons)
+			if success then
+				return true, x, y, nx, ny
+			end
 
-		if success then
-			return true, x, y, nx, ny
+			break
 		end
 	end
 
