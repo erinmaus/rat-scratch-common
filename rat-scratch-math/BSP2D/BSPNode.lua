@@ -56,7 +56,7 @@ function BSPNode:getRight()
 	return self.children[BSPNode.CHILD_RIGHT]
 end
 
---- @return fun(table: RatScratch.Math.BSP2D.BSPNode[], i?: integer): integer
+--- @return fun(table: RatScratch.Math.BSP2D.BSPNode[], i?: integer): integer, RatScratch.Math.BSP2D.BSPNode
 --- @return RatScratch.Math.BSP2D.BSPNode[]
 --- @return integer
 function BSPNode:iterate()
