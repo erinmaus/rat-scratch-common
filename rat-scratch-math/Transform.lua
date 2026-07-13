@@ -365,7 +365,7 @@ end
 --- @param viewportY number
 --- @param viewportWidth number
 --- @param viewportHeight number
---- @param result RatScratch.Math.Vector3
+--- @param result? RatScratch.Math.Vector3
 --- @return RatScratch.Math.Vector3
 function Transform.project(
 	projectionView,
@@ -378,33 +378,72 @@ function Transform.project(
 )
 	result = result or Vector3()
 
-	local x, y, z = point:transform(projectionView, result):get()
+	local _, w = point:perspectiveTransform(projectionView, 1, result)
+	local x, y, z = result:get()
+	if math.abs(w) > Common.EPSILON then
+		local inverseW = 1 / w
+		x = x * inverseW
+		y = y * inverseW
+		z = z * inverseW
+	end
+
 	x = viewportX + (x + 1) / 2 * viewportWidth
 	y = viewportY + (y + 1) / 2 * viewportHeight
 
 	return result:from(x, y, z)
 end
 
---- @param inverseProjectionView love.Transform
---- @param point RatScratch.Math.Vector3
---- @param result RatScratch.Math.Vector3?
---- @return RatScratch.Math.Vector3
-function Transform.unproject(inverseProjectionView, point, result)
-	result = result or Vector3()
+do
+	local normalizedPoint = Vector3()
 
-	local _, w = point:perspectiveTransform(inverseProjectionView, 1, result)
-	if math.abs(w) > Common.EPSILON then
-		local inverseW = 1 / w
-		result:from(
-			result.x * inverseW,
-			result.y * inverseW,
-			result.z * inverseW
+	--- @param inverseProjectionView love.Transform
+	--- @param point RatScratch.Math.Vector3
+	--- @param viewportX number
+	--- @param viewportY number
+	--- @param viewportWidth number
+	--- @param viewportHeight number
+	--- @param result? RatScratch.Math.Vector3
+	--- @return RatScratch.Math.Vector3
+	function Transform.unproject(
+		inverseProjectionView,
+		point,
+		viewportX,
+		viewportY,
+		viewportWidth,
+		viewportHeight,
+		result
+	)
+		result = result or Vector3()
+
+		normalizedPoint:from(
+			((point.x - viewportX) / viewportWidth * 2) - 1,
+			((viewportHeight - (point.y - viewportY)) / viewportHeight * 2) - 1,
+			2 * point.z - 1
 		)
-	end
 
-	return result
+		local _, w = normalizedPoint:perspectiveTransform(
+			inverseProjectionView,
+			1,
+			result
+		)
+		if math.abs(w) > Common.EPSILON then
+			local inverseW = 1 / w
+			result:from(
+				result.x * inverseW,
+				result.y * inverseW,
+				result.z * inverseW
+			)
+		end
+
+		return result
+	end
 end
 
+--- @param translation RatScratch.Math.Vector3
+--- @param rotation RatScratch.Math.Quaternion
+--- @param scale RatScratch.Math.Vector3
+--- @param transform? love.Transform
+--- @return love.Transform
 function Transform.compose(translation, rotation, scale, transform)
 	transform = transform or love.math.newTransform()
 

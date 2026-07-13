@@ -200,7 +200,7 @@ function Vector3:perspectiveTransform(transform, w, result)
 	return result:from(
 		m11 * self.x + m12 * self.y + m13 * self.z + m14 * w,
 		m21 * self.x + m22 * self.y + m23 * self.z + m24 * w,
-		m31 * self.x + m32 * self.y + m33 * self.z + m24 * w
+		m31 * self.x + m32 * self.y + m33 * self.z + m34 * w
 	),
 		m41 * self.x + m42 * self.y + m43 * self.z + m44 * w
 end
