@@ -36,7 +36,7 @@ do
 	--- @param axis RatScratch.Math.Vector3
 	--- @param angle number
 	--- @param result RatScratch.Math.Quaternion?
-	--- @return unknown
+	--- @return RatScratch.Math.Quaternion
 	function Quaternion.fromAxisAngle(axis, angle, result)
 		local scale = scale
 		local axisNormal = axisNormal
