@@ -31,6 +31,12 @@ function love.keyreleased(...)
 	end
 end
 
+function love.wheelmoved(x, y)
+	if currentSample and currentSample.wheelmoved then
+		currentSample.wheelmoved(x, y)
+	end
+end
+
 function love.mousepressed(x, y, button, ...)
 	if currentSample and currentSample.mousepressed then
 		currentSample.mousepressed(x, y, button, ...)

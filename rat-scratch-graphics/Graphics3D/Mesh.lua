@@ -181,6 +181,86 @@ local ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES = {
 
 local DEFAULT_MISSING_COMPONENT_VALUES = { 0, 0, 0, 0 }
 
+function Mesh.getStride(format)
+	local stride = 0
+	for i, attribute in ipairs(format) do
+		local componentCount = ATTRIBUTE_COMPONENTS[attribute.format]
+		assert(
+			componentCount,
+			"attribute %s (index = %d) does not have a valid format: %s",
+			attribute.name,
+			i,
+			attribute.format
+		)
+
+		local adjustedComponentCount
+		if componentCount == 3 then
+			adjustedComponentCount = 4
+		else
+			adjustedComponentCount = componentCount
+		end
+
+		local alignmentBytes = adjustedComponentCount * 4
+		local nextStride = stride + alignmentBytes
+
+		local strideRemainder = nextStride % alignmentBytes
+		if strideRemainder == 0 then
+			stride = nextStride
+		else
+			stride = nextStride + alignmentBytes - strideRemainder
+		end
+	end
+
+	return stride
+end
+
+--- @param format RatScratch.Graphics.Graphics3D.MeshFormatAttribute[]
+--- @param attributeName string
+--- @return integer?
+function Mesh.getByteOffset(format, attributeName)
+	local byteIndex = 0
+	for i, attribute in ipairs(format) do
+		if attribute.name == attributeName then
+			return byteIndex
+		end
+
+		local componentCount = ATTRIBUTE_COMPONENTS[attribute.format]
+		assert(
+			componentCount,
+			"attribute %s (index = %d) does not have a valid format: %s",
+			attribute.name,
+			i,
+			attribute.format
+		)
+
+		local adjustedComponentCount
+		if componentCount == 3 then
+			adjustedComponentCount = 4
+		else
+			adjustedComponentCount = componentCount
+		end
+
+		local adjustedComponentCount
+		if componentCount == 3 then
+			adjustedComponentCount = 4
+		else
+			adjustedComponentCount = componentCount
+		end
+
+		local alignmentBytes = adjustedComponentCount * 4
+		local nextByteIndex = byteIndex + alignmentBytes
+
+		local bytesRemainder = nextByteIndex % alignmentBytes
+		if bytesRemainder == 0 then
+			byteIndex = nextByteIndex
+		else
+			byteIndex = nextByteIndex + alignmentBytes - bytesRemainder
+		end
+	end
+
+	return nil
+end
+
 --- @param format RatScratch.Graphics.Graphics3D.MeshFormatAttribute[]
 --- @param attributeName string
 --- @return integer?, integer?
