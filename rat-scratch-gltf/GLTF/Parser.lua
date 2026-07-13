@@ -520,6 +520,7 @@ end
 
 --- @class RatScratch.GLTF.SceneLoadOptions
 --- @field public attributes? table<RatScratch.GLTF.SceneLoadMeshAttributeRoles, RatScratch.GLTF.SceneLoadMeshAttributeFormats>
+--- @field public forceSkinning? boolean
 local DefaultSceneLoadOptions = {}
 
 --- @param key string | number
@@ -617,7 +618,11 @@ function GLTFParser:_tryLoadNode(
 		local skinData = node.skin and self:getSkin(node.skin)
 
 		local model = modelDefinitions[node.mesh]
-			or self:_loadMesh(meshData, not not skinData, options)
+			or self:_loadMesh(
+				meshData,
+				not not skinData or options.forceSkinning,
+				options
+			)
 
 		local skeleton = node.skin
 			and (skeletonDefinitions[node.skin] or self:_loadSkin(skinData))
