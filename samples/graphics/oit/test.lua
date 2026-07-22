@@ -311,13 +311,15 @@ function demo.drawGLTF()
 	love.graphics.setColor(1, 1, 1, 1)
 	love.graphics.setCanvas()
 	love.graphics.origin()
+
+	love.graphics.setBlendMode("alpha", "premultiplied")
 	love.graphics.draw(demo.canvas)
 
 	love.graphics.pop()
 
 	love.graphics.printf(
 		("OIT = %s, Cull Mode = %s"):format(
-			love.keyboard.isDown("a") and "off" or "on",
+			demo.enableOIT and "on" or "off",
 			demo.enableCulling and "back" or "none"
 		),
 		0,

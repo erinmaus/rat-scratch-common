@@ -18,11 +18,12 @@ struct Fragment {
 
 uniform uvec2 rat_ABufferSize;
 
-void pullFragments(out Fragment fragments[RAT_SCRATCH_MAX_FRAGMENTS],
+void pullFragments(vec2 textureCoordinate,
+                   out Fragment fragments[RAT_SCRATCH_MAX_FRAGMENTS],
                    out uint count) {
   count = 0;
 
-  uvec2 fragCoord = uvec2(gl_FragCoord.xy);
+  uvec2 fragCoord = uvec2(textureCoordinate * vec2(rat_ABufferSize));
 
   uint relativeIndex = fragCoord.x * rat_ABufferSize.y + fragCoord.y;
   int current = rat_ABuffer[relativeIndex];
@@ -75,7 +76,7 @@ void effect() {
 
   Fragment fragments[RAT_SCRATCH_MAX_FRAGMENTS];
   uint count = 0;
-  pullFragments(fragments, count);
+  pullFragments(VaryingTexCoord.xy, fragments, count);
 
   uint sortedFragmentIndices[RAT_SCRATCH_MAX_FRAGMENTS];
   sortFragments(count, fragments, sortedFragmentIndices);
@@ -93,5 +94,5 @@ void effect() {
     }
   }
 
-  love_PixelColor = texture(MainTex, VaryingTexCoord.xy) + resultSample;
+  love_PixelColor = resultSample;
 }
