@@ -362,7 +362,7 @@ function ShaderPreprocessor.newComputeShader(filename, options)
 end
 
 --- @param pixelFilename string
---- @param vertexFilename string
+--- @param vertexFilename? string
 --- @param options? RatScratch.Graphics.ShaderPreprocessOptions
 --- @return love.Shader
 function ShaderPreprocessor.newShader(pixelFilename, vertexFilename, options)
