@@ -56,7 +56,7 @@ function list.click(values, mx, my)
 		if list.inside(mx, my, sx, sy, sw, sh) then
 			return i
 		end
-	end)
+	end) or 1
 end
 
 function list.draw(values)
