@@ -101,9 +101,9 @@ function PipelineBuffer:_resize(count)
 	local reservedCount = Common.nextPowerOfTwo(count)
 
 	local freeInstance = self.freeInstancesByIndex[#self.freeInstancesByIndex]
-	local i = freeInstance[1]
+	local i = freeInstance and freeInstance[1]
 
-	if i > self.maxInstanceIndex then
+	if i and i > self.maxInstanceIndex then
 		freeInstance[2] = freeInstance[2] + (reservedCount - self.reservedCount)
 	else
 		local newFreeInstance = self.tablePool:pop()

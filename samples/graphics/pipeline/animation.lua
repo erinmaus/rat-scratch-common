@@ -17,7 +17,9 @@ local GRID_SIZE_X = 1
 local GRID_SIZE_Y = 1
 local GRID_SIZE_Z = 1
 local SIZE = Vector3(512, 512, 512)
-local INSTANCE_COUNT = GRID_SIZE_X * GRID_SIZE_Y * GRID_SIZE_Z
+local INSTANCE_COUNT = (GRID_SIZE_X * 2 + 1)
+	* (GRID_SIZE_Y * 2 + 1)
+	* (GRID_SIZE_Z * 2 + 1)
 
 local INSTANCE_FORMAT = {
 	{ location = 0, name = "worldMatrix", format = "floatmat4x4" },
@@ -52,9 +54,9 @@ function demo.load()
 	)
 
 	demo.animators = {}
-	for i = 1, GRID_SIZE_X do
-		for j = 1, GRID_SIZE_Y do
-			for k = 1, GRID_SIZE_Z do
+	for i = -GRID_SIZE_X, GRID_SIZE_X do
+		for j = -GRID_SIZE_Y, GRID_SIZE_Y do
+			for k = -GRID_SIZE_Z, GRID_SIZE_Z do
 				local animator = Animator(model)
 				demo.pipeline:addAnimator(animator)
 
@@ -71,10 +73,10 @@ function demo.load()
 
 	local instanceData = {}
 	local index = 1
-	for i = 1, GRID_SIZE_X do
-		for j = 1, GRID_SIZE_Y do
-			for k = 1, GRID_SIZE_Z do
-				local cellIndex = Vector3(i - 1, j - 1, k - 1)
+	for i = -GRID_SIZE_X, GRID_SIZE_X do
+		for j = -GRID_SIZE_Y, GRID_SIZE_Y do
+			for k = -GRID_SIZE_Z, GRID_SIZE_Z do
+				local cellIndex = Vector3(i / 2, j / 2, k / 2)
 				local scale = Vector3.ONE:divide(SIZE)
 				local transform = model:getTransform()
 					* Transform.compose(cellIndex, Quaternion.IDENTITY, scale)
@@ -82,12 +84,12 @@ function demo.load()
 					Transform.transposeTransform(transform)
 
 				Table.append(instanceData, transposedTransform:getMatrix())
-				Table.append(
-					instanceData,
+
+				local animatorIndex, animatorCount =
 					demo.pipeline:getAnimatorBoneIndexCount(
 						demo.animators[index]
 					)
-				)
+				Table.append(instanceData, animatorIndex - 1, animatorCount)
 
 				index = index + 1
 			end

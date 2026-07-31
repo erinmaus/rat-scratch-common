@@ -680,6 +680,16 @@ function Mesh:new(name, buffers, format, vertices, indices, material)
 			end
 		end
 
+		local inputBuffer = self.buffers.compute_input
+		local inputBufferInfo = self.bufferInfo.compute_input
+
+		if inputBuffer and inputBufferInfo then
+			for _, attribute in ipairs(inputBufferInfo.format) do
+				self.mesh:setAttributeEnabled(attribute.location, true)
+				self.mesh:attachAttribute(attribute.location, inputBuffer)
+			end
+		end
+
 		local outputBuffer = self.buffers.compute_output
 		local outputBufferInfo = self.bufferInfo.compute_output
 
