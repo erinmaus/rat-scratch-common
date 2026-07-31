@@ -547,6 +547,7 @@ function AnimationPipeline:_refreshBoneTransformData()
 	end
 
 	self.globalBoneMapBuffer:compact()
+	self.globalBoneMapBuffer:flush()
 end
 
 --- @private
