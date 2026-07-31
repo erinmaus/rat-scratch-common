@@ -394,9 +394,13 @@ function ShaderPreprocessor.newShader(pixelFilename, vertexFilename, options)
 	end
 
 	if vertexSource and pixelSource then
-		return love.graphics.newShader(pixelSource, vertexSource)
+		return love.graphics.newShader(
+			pixelSource,
+			vertexSource,
+			{ write = true }
+		)
 	else
-		return love.graphics.newShader(pixelSource)
+		return love.graphics.newShader(pixelSource, { write = true })
 	end
 end
 
