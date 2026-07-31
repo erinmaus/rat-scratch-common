@@ -1,3 +1,5 @@
+local bit = require("bit")
+
 local Common = {}
 
 Common.EPSILON = 0.0001
@@ -127,6 +129,27 @@ end
 --- @return integer
 function Common.round(value)
 	return math.floor(value + 0.5)
+end
+
+--- @param value integer
+--- @return integer
+function Common.nextPowerOfTwo(value)
+	value = math.floor(value)
+
+	if value <= 1 then
+		return 1
+	end
+
+	value = value - 1
+	value = bit.bor(
+		value,
+		bit.rshift(value, 1),
+		bit.rshift(value, 2),
+		bit.rshift(value, 4),
+		bit.rshift(value, 8),
+		bit.rshift(value, 16)
+	)
+	return value + 1
 end
 
 return Common
