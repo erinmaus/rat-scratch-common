@@ -1,5 +1,4 @@
 local PATH = ...
-local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
 local Module = require("lib.rat-scratch-module")
 local ShaderPreprocessor = require("rat-scratch-graphics.ShaderPreprocessor")
@@ -24,7 +23,7 @@ ModelProcessor._SKIN_SHADER = false
 function ModelProcessor.getSkinShader()
 	local shader = ModelProcessor._SKIN_SHADER
 	if not shader then
-		local modulePath = Module.getSelfPath()
+		local modulePath = Module.getSelfPath(PATH)
 		local shaderRootPath = ("%s/Shaders"):format(modulePath)
 		shader = ShaderPreprocessor.newComputeShader(
 			"@/SkinnedModel/Skin.compute.glsl",

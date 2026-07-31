@@ -18,6 +18,10 @@ function BoneInstance:new(bone)
 	self.scale = Vector3(1)
 end
 
+function BoneInstance:from(bone)
+	self.bone = bone
+end
+
 function BoneInstance:getBone()
 	return self.bone
 end

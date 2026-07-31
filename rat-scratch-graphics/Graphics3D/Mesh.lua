@@ -153,6 +153,16 @@ local ATTRIBUTE_COMPONENTS = {
 	uint32vec2 = 2,
 	uint32vec3 = 3,
 	uint32vec4 = 4,
+	floatmat2x2 = 4,
+	floatmat2x3 = 6,
+	floatmat2x4 = 8,
+	floatmat3x2 = 6,
+	floatmat3x3 = 9,
+	floatmat3x4 = 12,
+	floatmat4x1 = 4,
+	floatmat4x2 = 8,
+	floatmat4x3 = 12,
+	floatmat4x4 = 16,
 }
 
 local EXPANDED_ATTRIBUTE_FORMAT = {
@@ -168,6 +178,16 @@ local EXPANDED_ATTRIBUTE_FORMAT = {
 	uint32vec2 = "uint32vec4",
 	uint32vec3 = "uint32vec4",
 	uint32vec4 = "uint32vec4",
+	floatmat2x2 = "floatmat4x4",
+	floatmat2x3 = "floatmat4x4",
+	floatmat2x4 = "floatmat4x4",
+	floatmat3x2 = "floatmat4x4",
+	floatmat3x3 = "floatmat4x4",
+	floatmat3x4 = "floatmat4x4",
+	floatmat4x1 = "floatmat4x4",
+	floatmat4x2 = "floatmat4x4",
+	floatmat4x3 = "floatmat4x4",
+	floatmat4x4 = "floatmat4x4",
 }
 
 local ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES = {
@@ -180,6 +200,25 @@ local ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES = {
 }
 
 local DEFAULT_MISSING_COMPONENT_VALUES = { 0, 0, 0, 0 }
+
+function Mesh.getComponentCount(format)
+	local count = 0
+
+	for _, attribute in ipairs(format) do
+		local componentCount = ATTRIBUTE_COMPONENTS[attribute.format]
+		assert(
+			componentCount,
+			"attribute %s (index = %d) does not have a valid format: %s",
+			attribute.name,
+			i,
+			attribute.format
+		)
+
+		count = count + componentCount
+	end
+
+	return count
+end
 
 function Mesh.getStride(format)
 	local stride = 0
@@ -306,7 +345,10 @@ end
 
 --- @param format RatScratch.Graphics.Graphics3D.MeshFormatAttribute[]
 --- @param vertex number[]
-function Mesh.resetVertex(format, vertex)
+--- @param offset? number
+function Mesh.resetVertex(format, vertex, offset)
+	offset = offset or 0
+
 	local index = 0
 	for _, attribute in ipairs(format) do
 		local numComponents = ATTRIBUTE_COMPONENTS[attribute.format]
@@ -314,7 +356,7 @@ function Mesh.resetVertex(format, vertex)
 			or DEFAULT_MISSING_COMPONENT_VALUES
 
 		for i = 1, numComponents do
-			vertex[index + i] = defaultValues[i] or 0
+			vertex[index + i + offset] = defaultValues[i] or 0
 		end
 
 		index = index + numComponents

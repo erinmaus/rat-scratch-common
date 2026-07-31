@@ -8,6 +8,7 @@ local Object = require("rat-scratch-common").Object
 --- @field private bonesByID table<integer, RatScratch.Graphics.Graphics3D.Bone>
 --- @field private boneToIndex table<RatScratch.Graphics.Graphics3D.Bone, integer>
 --- @field private boneChildren table<RatScratch.Graphics.Graphics3D.Bone, RatScratch.Graphics.Graphics3D.Bone[]>
+--- @field private layers RatScratch.Graphics.Graphics3D.Bone[][]
 local Skeleton = Object()
 
 --- @param bones RatScratch.Graphics.Graphics3D.Bone[]
@@ -58,15 +59,46 @@ function Skeleton.validateBones(bones)
 end
 
 --- @param bones RatScratch.Graphics.Graphics3D.Bone[]
+--- @param parent? RatScratch.Graphics.Graphics3D.Bone
+--- @param layers? RatScratch.Graphics.Graphics3D.Bone[][]
+--- @param layer? integer
+--- @return RatScratch.Graphics.Graphics3D.Bone[][]
+local function buildLayers(bones, parent, layers, layer)
+	layers = layers or {}
+	layer = layer or 1
+
+	local bonesAtDepth = layers[layer] or {}
+	layers[layer] = bonesAtDepth
+
+	for _, bone in ipairs(bones) do
+		if bone:getParent() == parent then
+			table.insert(bonesAtDepth, bone)
+
+			buildLayers(bones, bone, layers, layer + 1)
+		end
+	end
+
+	return layers
+end
+
+--- @param bones RatScratch.Graphics.Graphics3D.Bone[]
+--- @return RatScratch.Graphics.Graphics3D.Bone[][]
+function Skeleton.buildLayers(bones)
+	return buildLayers(bones)
+end
+
+--- @param bones RatScratch.Graphics.Graphics3D.Bone[]
 function Skeleton:new(bones)
 	local outputBones, outputBonesByID, outputBonesByName, outputBoneToIndex, outputBoneChildren =
 		Skeleton.validateBones(bones)
+	local layers = Skeleton.buildLayers(outputBones)
 
 	self.bones = outputBones
 	self.bonesByID = outputBonesByID
 	self.bonesByName = outputBonesByName
 	self.boneToIndex = outputBoneToIndex
 	self.boneChildren = outputBoneChildren
+	self.layers = layers
 end
 
 --- @param key number | string
@@ -145,6 +177,26 @@ function Skeleton:getBoneChild(bone, index)
 	assert(children[index], "bone has no child at index: %d", index)
 
 	return children[index]
+end
+
+--- @return integer
+function Skeleton:getLayerCount()
+	return #self.layers
+end
+
+--- @param layer integer
+--- @return integer
+function Skeleton:getLayerBoneCount(layer)
+	local bones = self.layers[layer]
+	return bones and #bones or 0
+end
+
+--- @param layer integer
+--- @param index integer
+--- @return RatScratch.Graphics.Graphics3D.Bone
+function Skeleton:getBoneAtLayer(layer, index)
+	local bones = self.layers[layer]
+	return bones and bones[index]
 end
 
 return Skeleton
