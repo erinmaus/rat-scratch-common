@@ -79,12 +79,14 @@ local Common = {}
 --- @param ... any
 function Common:new(...) end
 
---- @param otherType RatScratch.Common.BaseObject
+--- @generic T : RatScratch.Common.BaseObject
+--- @param otherType T | unknown
 function Common:isType(otherType)
 	return self:getType() == otherType
 end
 
---- @param otherType RatScratch.Common.BaseObject
+--- @generic T : RatScratch.Common.BaseObject
+--- @param otherType T | unknown
 function Common:isDerived(otherType)
 	return Object.isDerived(Object.getType(self), otherType)
 end
