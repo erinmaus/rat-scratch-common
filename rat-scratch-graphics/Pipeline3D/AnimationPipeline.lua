@@ -821,6 +821,8 @@ function AnimationPipeline:_evaluateAnimations()
 		"rat_PlaybackTransformInfoBuffer",
 		self.playbackTransformInfoBuffer:getBuffer()
 	)
+	shader:send("rat_SkeletonBonesBuffer", self.skeletonBonesBuffer:getBuffer())
+	shader:send("rat_SkeletonsBuffer", self.skeletonsBuffer:getBuffer())
 	shader:send(
 		"rat_PlaybackStatesBuffer",
 		self.playbackStatesBuffer:getBuffer()

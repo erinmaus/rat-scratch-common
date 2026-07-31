@@ -9,6 +9,16 @@ readonly restrict buffer rat_AnimationChannelKeyFramesBuffer
 	RatScratchAnimationChannelKeyFrame rat_AnimationChannelKeyFrames[];
 };
 
+readonly restrict buffer rat_SkeletonsBuffer
+{
+	RatScratchSkeleton rat_Skeletons[];
+};
+
+readonly restrict buffer rat_SkeletonBonesBuffer
+{
+	RatScratchSkeletonBone rat_SkeletonBones[];
+};
+
 readonly restrict buffer rat_AnimationChannelsBuffer
 {
 	RatScratchAnimationChannel rat_AnimationChannels[];
@@ -90,6 +100,7 @@ void computemain()
 	RatScratchPlaybackTransformInfo info = rat_PlaybackTransformInfo[index];
 	RatScratchPlaybackState state = rat_PlaybackStates[info.playbackStateIndex];
 	RatScratchAnimationChannel channel = rat_AnimationChannels[info.animationChannelIndex];
+	uint globalBoneIndex = rat_Skeletons[channel.skeletonIndex].boneIndexCount.x + channel.boneIndex;
 	float time = state.time;
 	vec4 inverseWeight = vec4(state.inverseWeight);
 
@@ -104,6 +115,10 @@ void computemain()
 
 		rat_PlaybackTransforms[index].translation = mix(fromValue, toValue, delta) * inverseWeight;
 	}
+	else
+	{
+		rat_PlaybackTransforms[index].translation = rat_SkeletonBones[globalBoneIndex].translation * inverseWeight;
+	}
 
 	if (findKeyFrameCurrentNextIndex(channel.rotationKeyFrameIndexCount, time, currentKeyFrameIndex, nextKeyFrameIndex))
 	{
@@ -114,6 +129,10 @@ void computemain()
 
 		rat_PlaybackTransforms[index].rotation = normalize(quaternionSlerp(fromValue, toValue, delta)) * inverseWeight;
 	}
+	else
+	{
+		rat_PlaybackTransforms[index].rotation = rat_SkeletonBones[globalBoneIndex].rotation * inverseWeight;
+	}
 
 	if (findKeyFrameCurrentNextIndex(channel.scaleKeyFrameIndexCount, time, currentKeyFrameIndex, nextKeyFrameIndex))
 	{
@@ -123,5 +142,9 @@ void computemain()
 		getKeyFrameValues(currentKeyFrameIndex, nextKeyFrameIndex, fromValue, toValue);
 
 		rat_PlaybackTransforms[index].scale = mix(fromValue, toValue, delta) * inverseWeight;
+	}
+	else
+	{
+		rat_PlaybackTransforms[index].scale = rat_SkeletonBones[globalBoneIndex].scale * inverseWeight;
 	}
 }
