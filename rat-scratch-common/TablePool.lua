@@ -30,6 +30,12 @@ end
 
 --- @generic T
 --- @param self RatScratch.Common.TablePool<T>
+function TablePool:free(value)
+	table.insert(self.freeList, self:clear(value))
+end
+
+--- @generic T
+--- @param self RatScratch.Common.TablePool<T>
 --- @return T
 function TablePool:allocate()
 	return {}
