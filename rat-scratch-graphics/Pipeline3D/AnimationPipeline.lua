@@ -614,6 +614,11 @@ function AnimationPipeline:flush()
 		self.isAnimatorDataDirty = false
 	end
 
+	if self.isPlaybackStateDirty then
+		self.playbackStatesBuffer:flush()
+		self.isPlaybackStateDirty = false
+	end
+
 	local isAnimatorGroupsDirtyDirty = #self.dirtyAnimatorGroupsByIndex >= 1
 	if isAnimatorGroupsDirtyDirty then
 		self:_refreshAnimatorGroupData()
@@ -705,6 +710,8 @@ function AnimationPipeline:updateAnimatorGroupPlayback(
 			playback.time,
 			inverseRelativeWeight
 		)
+
+		self.isPlaybackStateDirty = true
 	end
 end
 

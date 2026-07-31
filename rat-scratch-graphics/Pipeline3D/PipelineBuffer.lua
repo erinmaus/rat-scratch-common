@@ -498,7 +498,12 @@ function PipelineBuffer:set(instance, index, ...)
 	local elementIndex = i + index - 1
 	local componentIndex = (elementIndex - 1) * self.componentCount + 1
 
-	Table.copy(self.bufferData, componentIndex, select("#", ...), ...)
+	Table.copy(
+		self.bufferData,
+		componentIndex,
+		componentIndex + select("#", ...) - 1,
+		...
+	)
 
 	self:_makeDirty(elementIndex, 1)
 end
