@@ -123,7 +123,7 @@ function Transform.makeRotationTransform(rotation, transform)
 end
 
 --- @param scale RatScratch.Math.Vector3
---- @param transform love.Transform
+--- @param transform? love.Transform
 --- @return love.Transform
 function Transform.makeScaleTransform(scale, transform)
 	transform = transform or love.math.newTransform()
