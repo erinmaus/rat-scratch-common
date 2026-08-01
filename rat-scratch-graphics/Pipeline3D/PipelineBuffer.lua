@@ -111,6 +111,7 @@ function PipelineBuffer:_resize(count)
 			self.maxInstanceIndex + 1, reservedCount - self.reservedCount
 		table.insert(self.freeInstancesByIndex, newFreeInstance)
 		table.insert(self.freeInstancesByCount, newFreeInstance)
+		self:_cleanFreeList()
 	end
 
 	self.reservedCount = reservedCount
@@ -391,6 +392,7 @@ function PipelineBuffer:resize(instance, newCount)
 			count - newCount
 		)
 		table.insert(self.freeInstancesByCount, instance)
+		self:_cleanFreeList()
 		return
 	end
 

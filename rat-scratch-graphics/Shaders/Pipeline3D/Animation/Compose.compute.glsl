@@ -37,7 +37,7 @@ void computemain()
 	uint baseTransformIndex = boneInfo.boneTransformIndex - boneInfo.boneIndex;
 	uint boneGlobalIndex = rat_Skeletons[boneInfo.skeletonIndex].boneIndexCount.x + boneInfo.boneIndex;
 
-	mat4 currentTransform = rat_MeshInstanceBoneTransforms[boneInfo.boneIndex];
+	mat4 currentTransform = rat_MeshInstanceBoneTransforms[boneInfo.boneTransformIndex];
 
 	int nextBoneIndex = rat_SkeletonBones[boneGlobalIndex].parentBoneIndex;
 	if (nextBoneIndex >= 0)

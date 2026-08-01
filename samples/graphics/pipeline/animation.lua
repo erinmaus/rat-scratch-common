@@ -13,9 +13,9 @@ local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
 
 local demo = {}
 
-local GRID_SIZE_X = 1
-local GRID_SIZE_Y = 1
-local GRID_SIZE_Z = 1
+local GRID_SIZE_X = 5
+local GRID_SIZE_Y = 5
+local GRID_SIZE_Z = 5
 local SIZE = Vector3(512, 512, 512)
 local INSTANCE_COUNT = (GRID_SIZE_X * 2 + 1)
 	* (GRID_SIZE_Y * 2 + 1)
@@ -63,7 +63,7 @@ function demo.load()
 				animator:play(
 					love.math.random(model:getAnimationCount()),
 					"main",
-					{ looping = true }
+					{ looping = true, time = love.math.random() }
 				)
 
 				table.insert(demo.animators, animator)
@@ -176,6 +176,18 @@ function demo.draw()
 
 		love.graphics.pop()
 	end
+
+	local width, height = love.graphics.getDimensions()
+	love.graphics.printf(
+		("frame: %.2f ms (%d entities)"):format(
+			love.timer.getAverageDelta() * 1000,
+			#demo.animators
+		),
+		0,
+		height - 16,
+		width - 16,
+		"right"
+	)
 end
 
 return demo
