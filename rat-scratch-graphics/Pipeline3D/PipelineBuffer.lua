@@ -128,7 +128,7 @@ function PipelineBuffer:compact()
 
 	local n = 1
 
-	local newBufferData = Table.new(self.count * self.componentCount, 0)
+	local newBufferData = Table.new(self.reservedCount * self.componentCount, 0)
 	for _, instanceInfo in ipairs(self.instances) do
 		local index, count = unpack(instanceInfo)
 
