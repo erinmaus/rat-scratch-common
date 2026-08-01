@@ -327,13 +327,12 @@ function AnimationPipeline:addAnimator(animator)
 		animator:getSkeleton():getBoneCount()
 	)
 
-	animator:attachToAnimationPipeline(self)
-
 	self.globalBoneMapBuffer:registerOrResize(
 		animator,
 		animator:getSkeleton():getBoneCount()
 	)
 
+	animator:attachToAnimationPipeline(self)
 	self.isAnimatorDataDirty = true
 end
 

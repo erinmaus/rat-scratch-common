@@ -12,10 +12,11 @@ local AnimationPipeline =
 local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
 
 local demo = {}
+demo.isPaused = false
 
-local GRID_SIZE_X = 5
-local GRID_SIZE_Y = 5
-local GRID_SIZE_Z = 5
+local GRID_SIZE_X = 8
+local GRID_SIZE_Y = 8
+local GRID_SIZE_Z = 8
 local SIZE = Vector3(512, 512, 512)
 local INSTANCE_COUNT = (GRID_SIZE_X * 2 + 1)
 	* (GRID_SIZE_Y * 2 + 1)
@@ -104,9 +105,21 @@ function demo.load()
 	demo.instanceBuffer:setArrayData(instanceData)
 end
 
+function demo.keypressed(key, _, isRepeat)
+	if isRepeat then
+		return
+	end
+
+	if key == "p" then
+		demo.isPaused = not demo.isPaused
+	end
+end
+
 function demo.update(deltaTime)
-	for _, animator in ipairs(demo.animators) do
-		animator:updateTime(deltaTime)
+	if not demo.isPaused then
+		for _, animator in ipairs(demo.animators) do
+			animator:updateTime(deltaTime)
+		end
 	end
 
 	demo.pipeline:update()

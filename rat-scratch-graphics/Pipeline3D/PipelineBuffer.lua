@@ -118,7 +118,7 @@ function PipelineBuffer:_resize(count)
 	self.buffer =
 		love.graphics.newBuffer(self.format, self.reservedCount, self.flags)
 
-	self:compact()
+	self:_makeEntireBufferDirty()
 end
 
 function PipelineBuffer:compact()
@@ -144,6 +144,22 @@ function PipelineBuffer:compact()
 		instanceInfo[1] = n
 		n = n + count
 	end
+
+	self:_recalculateCount()
+
+	for _, freeInstance in ipairs(self.freeInstancesByIndex) do
+		self.tablePool:free(freeInstance)
+	end
+
+	Table.clear(self.freeInstancesByCount)
+	Table.clear(self.freeInstancesByIndex)
+
+	local freeInstance = self.tablePool:pop()
+	freeInstance[1], freeInstance[2] =
+		self.maxInstanceIndex + 1, self.reservedCount - self.maxInstanceIndex
+
+	table.insert(self.freeInstancesByCount, freeInstance)
+	table.insert(self.freeInstancesByIndex, freeInstance)
 
 	self.tablePool:free(self.bufferData)
 	self.bufferData = newBufferData
@@ -255,6 +271,8 @@ function PipelineBuffer:_cleanFreeList()
 					table.remove(self.freeInstancesByIndex, nextIndex)
 					break
 				end
+
+				nextIndex = nextIndex + 1
 			end
 		end
 	end
@@ -386,6 +404,8 @@ function PipelineBuffer:resize(instance, newCount)
 	if newCount < count then
 		self.isCompacted = false
 
+		instanceInfo[2] = newCount
+
 		local instance = self:_expandOrInsert(
 			self.freeInstancesByIndex,
 			i + newCount,
@@ -407,7 +427,7 @@ function PipelineBuffer:resize(instance, newCount)
 	local c = freeInstance and freeInstance[2]
 	if not freeInstance or j ~= i + count or c < (newCount - count) then
 		self:unregister(instance)
-		self:register(instance, count)
+		self:register(instance, newCount)
 	else
 		freeInstance[1], freeInstance[2] = i + newCount, c - (newCount - count)
 		instanceInfo[2] = newCount
@@ -420,7 +440,7 @@ function PipelineBuffer:resize(instance, newCount)
 		self:_expandOrInsert(self.dirtyInstances, i + count, newCount - count)
 	end
 
-	self.count = self.count + (count - newCount)
+	self.count = self.count + (newCount - count)
 end
 
 --- @generic T : RatScratch.Common.BaseObject
