@@ -186,53 +186,96 @@ function PipelineBuffer:_makeEntireBufferDirty()
 end
 
 --- @private
---- @param instances number[][]
---- @param i integer
---- @param count integer
-function PipelineBuffer:_expandOrInsert(instances, i, count)
-	local j =
-		Search.lessThan(instances, i, PipelineBuffer._compareInstanceIndex)
+--- @param i any
+--- @param count any
+function PipelineBuffer:_freeInstance(i, count)
+	local j = Search.lessThanEqual(
+		self.freeInstancesByIndex,
+		i,
+		PipelineBuffer._compareInstanceIndex
+	)
+	local k = j + 1
 
-	local didMergePrevious = false
+	local resultInstance
 
-	local previousInstance = instances[j]
+	local previousInstance = self.freeInstancesByIndex[j]
 	if previousInstance then
-		local k, c = unpack(previousInstance)
-		k = k + c
-
-		if k == i then
-			previousInstance[2] = previousInstance[2] + count
-			didMergePrevious = true
+		local pi, pc = unpack(previousInstance)
+		if pi + pc == i then
+			previousInstance[2] = pc + count
+			resultInstance = previousInstance
 		end
 	end
 
-	if not didMergePrevious then
-		local instance = self.tablePool:pop()
-		instance[1], instance[2] = i, count
-
-		table.insert(instances, j + 1, instance)
-		j = j + 1
-
-		previousInstance = instance
+	if not resultInstance then
+		resultInstance = self.tablePool:pop()
+		resultInstance[1], resultInstance[2] = i, count
+		table.insert(self.freeInstancesByIndex, j + 1, resultInstance)
+		table.insert(self.freeInstancesByCount, resultInstance)
+		k = k + 1
 	end
 
-	local nextInstance = instances[j + 1]
+	local nextInstance = self.freeInstancesByIndex[k]
 	if nextInstance then
 		local ni, nc = unpack(nextInstance)
-		local pi, pc = unpack(previousInstance)
-
-		if pi + pc == ni then
-			self.tablePool:free(table.remove(instances, j + 1))
-			previousInstance[2] = previousInstance[2] + nc
+		if i + count == ni then
+			nextInstance[2] = 0
+			resultInstance[2] = resultInstance[2] + nc
 		end
 	end
 
-	return previousInstance
+	self:_cleanFreeList()
+
+	return resultInstance
 end
 
 --- @private
+--- @param i integer
+--- @param count integer
 function PipelineBuffer:_makeDirty(i, count)
-	self:_expandOrInsert(self.dirtyInstances, i, count)
+	local j1 = Search.lessThanEqual(
+		self.dirtyInstances,
+		i,
+		PipelineBuffer._compareInstanceIndex
+	)
+	local j2 = Search.lessThanEqual(
+		self.dirtyInstances,
+		i + count,
+		PipelineBuffer._compareInstanceIndex
+	)
+
+	local leftInstance, rightInstance =
+		self.dirtyInstances[j1], self.dirtyInstances[j2]
+	if not leftInstance or leftInstance[1] + leftInstance[2] < i then
+		j1 = j1 + 1
+		leftInstance = self.dirtyInstances[j1]
+	end
+
+	local realI, realCount
+	if leftInstance and j1 <= j2 then
+		realI = math.min(i, leftInstance[1])
+		realCount = math.max(i + count, rightInstance[1] + rightInstance[2])
+			- realI
+
+		for j = j2, j1, -1 do
+			local value = table.remove(self.dirtyInstances, j)
+			self.tablePool:free(value)
+		end
+	else
+		realI = i
+		realCount = count
+	end
+
+	local resultInstance = self.tablePool:pop()
+	resultInstance[1], resultInstance[2] = realI, realCount
+
+	local j = Search.lessThan(
+		self.dirtyInstances,
+		realI,
+		PipelineBuffer._compareInstanceIndex
+	)
+
+	table.insert(self.dirtyInstances, j + 1, resultInstance)
 end
 
 --- @private
@@ -306,7 +349,14 @@ function PipelineBuffer:_popFreeInstance(count)
 	local i, c = unpack(freeInstance)
 	freeInstance[1], freeInstance[2] = i + count, c - count
 
-	local result = self:_expandOrInsert(self.instances, i, count)
+	local result = self.tablePool:pop()
+	result[1], result[2] = i, count
+
+	table.insert(
+		self.instances,
+		Search.lessThan(self.instances, i, self._compareInstanceIndex) + 1,
+		result
+	)
 	self:_recalculateCount()
 
 	return result
@@ -383,6 +433,8 @@ function PipelineBuffer:register(instance, count)
 		self._compareInstanceIndex
 	)
 	table.insert(self.instances, instanceIndex, instanceInfo)
+	self:_makeDirty(instanceInfo[1], instanceInfo[2])
+	self:_recalculateCount()
 
 	self.indexCountByInstance[instance] = instanceInfo
 
@@ -403,16 +455,8 @@ function PipelineBuffer:resize(instance, newCount)
 	local i, count = unpack(instanceInfo)
 	if newCount < count then
 		self.isCompacted = false
-
 		instanceInfo[2] = newCount
-
-		local instance = self:_expandOrInsert(
-			self.freeInstancesByIndex,
-			i + newCount,
-			count - newCount
-		)
-		table.insert(self.freeInstancesByCount, instance)
-		self:_cleanFreeList()
+		self:_freeInstance(i + newCount, count - newCount)
 		return
 	end
 
@@ -437,7 +481,7 @@ function PipelineBuffer:resize(instance, newCount)
 			Mesh.resetVertex(self.format, self.bufferData, offset)
 		end
 
-		self:_expandOrInsert(self.dirtyInstances, i + count, newCount - count)
+		self:_makeDirty(i + count, newCount - count)
 	end
 
 	self.count = self.count + (newCount - count)
@@ -453,15 +497,12 @@ function PipelineBuffer:unregister(instance)
 	assert(instanceInfo, "instance not registered with pipeline buffer")
 
 	local i, count = unpack(instanceInfo)
-	local freeInstance =
-		self:_expandOrInsert(self.freeInstancesByIndex, i, count)
-	table.insert(self.freeInstancesByCount, freeInstance)
-	self:_cleanFreeList()
+	self:_freeInstance(i, count)
 
 	local index =
 		Search.first(self.instances, i, PipelineBuffer._compareInstanceIndex)
 	assert(
-		index,
+		index and self.instances[index] == instanceInfo,
 		"instance with index %d (count %d) not found in instance list",
 		i,
 		count
