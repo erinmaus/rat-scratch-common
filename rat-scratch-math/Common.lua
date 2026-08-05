@@ -152,4 +152,20 @@ function Common.nextPowerOfTwo(value)
 	return value + 1
 end
 
+function Common.nextMultiple(value, base)
+	return value + (base - (value % base)) % base
+end
+
+function Common.isMultipleOf(value, base)
+	return value % base == 0
+end
+
+function Common.isOdd(value)
+	return value % 2 == 1
+end
+
+function Common.isEven(value)
+	return value % 2 == 0
+end
+
 return Common
