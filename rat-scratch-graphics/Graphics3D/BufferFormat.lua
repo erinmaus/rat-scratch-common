@@ -418,8 +418,16 @@ local GET_FUNCS
 local _dataGetPointer
 
 if jit.status() then
+	local dataPointerCache = setmetatable({}, { __mode = "k" })
+
 	_dataGetPointer = function(data)
-		return ffi.cast("uint8_t*", data:getFFIPointer())
+		local pointer = dataPointerCache[data]
+		if not pointer then
+			pointer = ffi.cast("uint8_t*", data:getFFIPointer())
+			dataPointerCache[data] = pointer
+		end
+
+		return pointer
 	end
 
 	local function _get(pointer, count, result, resultOffset)
