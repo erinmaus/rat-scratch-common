@@ -11,6 +11,7 @@ local Object = require("rat-scratch-common").Object
 local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
 local Point = require("rat-scratch-math").Geometry2D.Point
 local Mesh = require("rat-scratch-graphics").Graphics3D.Mesh
+local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 
 local list = require("samples.common.list")
 local demo = {}
@@ -282,11 +283,11 @@ function demo.endPaint(mesh, info, hits)
 	--- @cast mesh RatScratch.Graphics.Graphics3D.Mesh
 	local canvas = demo.getCanvas(mesh:getMaterial():getTexture())
 
-	local stride = Mesh.getStride(RAY_HITS_FORMAT)
+	local stride = BufferFormat.getFormatStride(RAY_HITS_FORMAT)
 	local textureCoordinateOffset =
-		Mesh.getByteOffset(RAY_HITS_FORMAT, "textureCoordinate")
+		BufferFormat.getFormatByteOffset(RAY_HITS_FORMAT, "textureCoordinate")
 	local textureCoordinatTriangleOffset =
-		Mesh.getByteOffset(RAY_HITS_FORMAT, "textureCoordinateA")
+		BufferFormat.getFormatByteOffset(RAY_HITS_FORMAT, "textureCoordinateA")
 	local w, h = canvas:getWidth(), canvas:getHeight()
 
 	love.graphics.push("all")

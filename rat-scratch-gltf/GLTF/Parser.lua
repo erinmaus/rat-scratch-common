@@ -9,6 +9,7 @@ local GLTFSparseAccessor = require("rat-scratch-gltf.GLTF.SparseAccessor")
 local Quaternion = require("rat-scratch-math").Quaternion
 local Transform = require("rat-scratch-math").Transform
 local Vector3 = require("rat-scratch-math").Vector3
+local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
 
 --- @class RatScratch.GLTF.GLTFParser : RatScratch.Common.BaseObject
 --- @field public filename string
@@ -680,7 +681,7 @@ function GLTFParser:_loadVertices(format, vertices, vertexElementName, accessor)
 	format = format or self.attributes:getFormat()
 
 	local count, offset =
-		Mesh.getAttributeCountOffset(format, vertexElementName)
+		BufferFormat.getFormatAttributeCountOffset(format, vertexElementName)
 	if not (count and offset) then
 		return
 	end
@@ -692,7 +693,7 @@ function GLTFParser:_loadVertices(format, vertices, vertexElementName, accessor)
 		local vertex = vertices[i]
 		if not vertex then
 			vertex = {}
-			Mesh.resetVertex(format, vertex)
+			BufferFormat.resetValue(format, vertex)
 
 			table.insert(vertices, vertex)
 		end

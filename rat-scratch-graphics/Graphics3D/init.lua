@@ -9,6 +9,7 @@ return {
 	Animator = require("rat-scratch-graphics.Graphics3D.Animator"),
 	Bone = require("rat-scratch-graphics.Graphics3D.Bone"),
 	BoneInstance = require("rat-scratch-graphics.Graphics3D.BoneInstance"),
+	BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat"),
 	Interpolator = require("rat-scratch-graphics.Graphics3D.Interpolator"),
 	KeyFrames = require("rat-scratch-graphics.Graphics3D.KeyFrames"),
 	Material = require("rat-scratch-graphics.Graphics3D.Material"),
