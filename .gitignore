@@ -1,6 +1,7 @@
 node_modules/
 build/
 lib/
+jit/
 bin/
 .DS_Store
 *.tar.gz
