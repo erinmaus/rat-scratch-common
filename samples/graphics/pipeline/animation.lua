@@ -117,12 +117,22 @@ end
 
 function demo.update(deltaTime)
 	if not demo.isPaused then
+		local before = love.timer.getTime()
 		for _, animator in ipairs(demo.animators) do
 			animator:updateTime(deltaTime)
 		end
+		local after = love.timer.getTime()
+		demo.animationUpdateDelta = (after - before) * 1000
+	else
+		demo.animationUpdateDelta = 0
 	end
 
-	demo.pipeline:update()
+	do
+		local before = love.timer.getTime()
+		demo.pipeline:update()
+		local after = love.timer.getTime()
+		demo.pipelineUpdateDelta = (after - before) * 1000
+	end
 end
 
 function demo.draw()
@@ -192,8 +202,10 @@ function demo.draw()
 
 	local width, height = love.graphics.getDimensions()
 	love.graphics.printf(
-		("frame: %.2f ms (%d entities)"):format(
+		("frame: %.2f ms, animation: %.2f ms, pipeline: %.2f ms (%d entities)"):format(
 			love.timer.getAverageDelta() * 1000,
+			demo.animationUpdateDelta or 0,
+			demo.pipelineUpdateDelta or 0,
 			#demo.animators
 		),
 		0,
