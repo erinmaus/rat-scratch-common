@@ -15,9 +15,10 @@ local BufferFormatAttribute = {}
 
 --- @class RatScratch.Graphics.Graphics3D.BufferFormat : RatScratch.Common.BaseObject
 --- @overload fun(format: RatScratch.Graphics.Graphics3D.BufferFormatAttribute[]): RatScratch.Graphics.Graphics3D.BufferFormat
---- @field locationToAttribute table<integer, string>
---- @field attributeToLocation table<string, integer>
---- @field index table<string | integer, integer>
+--- @field private locationToAttribute table<integer, string>
+--- @field private attributeToLocation table<string, integer>
+--- @field private index table<string | integer, integer>
+--- @field private preprocessedAttributes any[][]
 local BufferFormat = Object()
 
 local ATTRIBUTE_NAME_TO_LOCATION = {
@@ -556,23 +557,22 @@ else
 	}
 end
 
-local ATTRIBUTES = {}
-
 --- @param formatInstance RatScratch.Graphics.Graphics3D.BufferFormat
-local function _preprocessAttributeFormat(formatInstance, funcs)
+local function _preprocessAttributeFormat(formatInstance)
+	local result = Table.new(#formatInstance:getFormat(), 0)
+
 	for i, attribute in ipairs(formatInstance:getFormat()) do
-		local f = ATTRIBUTES[i]
-		if not f then
-			f = {}
-			ATTRIBUTES[i] = f
-		end
+		local f = {}
 
 		f[1], f[2] = formatInstance:getCountOffset(attribute.location)
 		f[3] = formatInstance:getByteOffset(attribute.location)
-		f[4] = funcs[formatInstance:getScalarType(attribute.location)]
+		f[4] = GET_FUNCS[formatInstance:getScalarType(attribute.location)]
+		f[5] = SET_FUNCS[formatInstance:getScalarType(attribute.location)]
+
+		result[i] = f
 	end
 
-	return ATTRIBUTES
+	return result
 end
 
 --- @param format RatScratch.Graphics.Graphics3D.MeshFormatAttribute[] | RatScratch.Graphics.Graphics3D.BufferFormat
@@ -589,7 +589,6 @@ function BufferFormat.copyFromFlatTableToByteData(
 	source,
 	destination
 )
-	local funcs = SET_FUNCS
 	local pointer = _dataGetPointer(destination)
 
 	--- @type RatScratch.Graphics.Graphics3D.BufferFormat
@@ -598,8 +597,7 @@ function BufferFormat.copyFromFlatTableToByteData(
 		BufferFormat
 	) and format or BufferFormat.get(format)
 
-	local attributeInfo = _preprocessAttributeFormat(formatInstance, funcs)
-
+	local attributeInfo = formatInstance.preprocessedAttributes
 	local componentCount = formatInstance:getComponentCount()
 	local stride = formatInstance:getStride()
 
@@ -611,7 +609,7 @@ function BufferFormat.copyFromFlatTableToByteData(
 			local info = attributeInfo[index]
 			local attributeComponentCount, attributeOffset = info[1], info[2]
 			local byteOffset = info[3]
-			local set = info[4]
+			local set = info[5]
 
 			local i = k + (attributeOffset - 1)
 
@@ -640,7 +638,6 @@ function BufferFormat.copyFromTableToByteData(
 	source,
 	destination
 )
-	local funcs = SET_FUNCS
 	local pointer = _dataGetPointer(destination)
 
 	--- @type RatScratch.Graphics.Graphics3D.BufferFormat
@@ -649,8 +646,7 @@ function BufferFormat.copyFromTableToByteData(
 		BufferFormat
 	) and format or BufferFormat.get(format)
 
-	local attributeInfo = _preprocessAttributeFormat(formatInstance, funcs)
-
+	local attributeInfo = formatInstance.preprocessedAttributes
 	local stride = formatInstance:getStride()
 
 	for offset = 1, count do
@@ -661,7 +657,7 @@ function BufferFormat.copyFromTableToByteData(
 			local info = attributeInfo[index]
 			local attributeComponentCount, attributeOffset = info[1], info[2]
 			local byteOffset = info[3]
-			local set = info[4]
+			local set = info[5]
 
 			set(
 				pointer,
@@ -697,7 +693,7 @@ function BufferFormat.copyFromByteDataToFlatTable(
 		BufferFormat
 	) and format or BufferFormat.get(format)
 
-	local attributeInfo = _preprocessAttributeFormat(formatInstance, funcs)
+	local attributeInfo = formatInstance.preprocessedAttributes
 
 	local componentCount = formatInstance:getComponentCount()
 	local stride = formatInstance:getStride()
@@ -750,7 +746,7 @@ function BufferFormat.copyFromByteDataToTable(
 		BufferFormat
 	) and format or BufferFormat.get(format)
 
-	local attributeInfo = _preprocessAttributeFormat(formatInstance, funcs)
+	local attributeInfo = formatInstance.preprocessedAttributes
 
 	local stride = formatInstance:getStride()
 
@@ -841,6 +837,8 @@ function BufferFormat:new(format)
 			defaultValues = defaultValues,
 		}
 	end
+
+	self.preprocessedAttributes = _preprocessAttributeFormat(self)
 end
 
 function BufferFormat:getFormat()
