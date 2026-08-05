@@ -69,15 +69,6 @@ do
 	--- @param count integer
 	--- @param ... number
 	function PipelineBufferByteData:set(index, count, ...)
-		assert(
-			count
-				== math.floor(
-					select("#", ...) / self:getFormat():getComponentCount()
-				),
-			"count (%d) must equal arguments (%d)",
-			index
-		)
-
 		local c = cache
 		Table.clear(c)
 		Table.append(c, ...)

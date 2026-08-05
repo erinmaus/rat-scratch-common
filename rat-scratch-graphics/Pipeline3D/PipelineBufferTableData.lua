@@ -63,17 +63,9 @@ end
 --- @param count integer
 --- @param ... number
 function PipelineBufferTableData:set(index, count, ...)
-	assert(
-		count
-			== math.floor(
-				select("#", ...) / self:getFormat():getComponentCount()
-			),
-		"count (%d) must equal arguments (%d)",
-		index
-	)
-
 	local componentIndex =
 		Table.indexToStride(index, self:getFormat():getComponentCount())
+
 	Table.copy(
 		self.bufferData,
 		componentIndex,

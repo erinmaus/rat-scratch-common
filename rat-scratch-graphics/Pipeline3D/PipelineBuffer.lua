@@ -157,22 +157,7 @@ end
 --- @param count integer
 --- @param ... number
 function PipelineBuffer:set(instance, index, count, ...)
-	local i, c = self:getIndexCount(instance)
-	assert(
-		index + count - 1 <= c,
-		"count (%d) exceeds total (%d) given index %d",
-		count,
-		c,
-		index
-	)
-
-	local n = select("#", ...)
-	assert(
-		Common.isMultipleOf(n, self.format:getComponentCount()),
-		"count of values (%d) must be multiple of component count (%d)",
-		n,
-		self.format:getComponentCount()
-	)
+	local i = self:getIndexCount(instance)
 
 	local k = i + index - 1
 	self.data:set(k, count, ...)
