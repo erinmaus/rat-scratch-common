@@ -1,59 +1,47 @@
+local jit = require("jit")
 local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
-local Search = require("rat-scratch-common").Search
-local Table = require("rat-scratch-common").Table
-local TablePool = require("rat-scratch-common").TablePool
 local Common = require("rat-scratch-math").Common
-local Mesh = require("rat-scratch-graphics.Graphics3D.Mesh")
+local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
+local PipelineBufferContext =
+	require("rat-scratch-graphics.Pipeline3D.PipelineBufferContext")
+local PipelineBufferContextEvent =
+	require("rat-scratch-graphics.Pipeline3D.PipelineBufferContextEvent")
+local PipelineBufferDirtyContext =
+	require("rat-scratch-graphics.Pipeline3D.PipelineBufferDirtyContext")
 
---- @generic T
---- @class RatScratch.Graphics.Pipeline3D.PipelineBuffer<T> : RatScratch.Common.BaseObject
---- @overload fun(format: RatScratch.Graphics.Graphics3D.MeshFormatAttribute[], flags: table, count?: integer): RatScratch.Graphics.Pipeline3D.PipelineBuffer<T>
---- @field private format RatScratch.Graphics.Graphics3D.MeshFormatAttribute[]
---- @field private componentCount number
---- @field private flags table
---- @field private instances any[][]
---- @field private indexCountByInstance table<T, number[]>
---- @field private tablePool RatScratch.Common.TablePool<table>
---- @field private freeInstancesByIndex number[][]
---- @field private freeInstancesByCount number[][]
---- @field private reservedCount integer
---- @field private count integer
---- @field private maxInstanceIndex integer
---- @field private bufferData number[][]
---- @field private buffer love.GraphicsBuffer
---- @field private isCompacted boolean
---- @field private dirtyInstances number[][]
+local PipelineBufferData = jit.status()
+		and require("rat-scratch-graphics.Pipeline3D.PipelineBufferByteData")
+	or require("rat-scratch-graphics.Pipeline3D.PipelineBufferTableData")
+
+--- @class RatScratch.Graphics.Pipeline3D.PipelineBuffer : RatScratch.Common.BaseObject
+--- @overload fun(format: RatScratch.Graphics.Graphics3D.MeshFormatAttribute[], flags: table, count?: integer): RatScratch.Graphics.Pipeline3D.PipelineBuffer
+--- @field private context RatScratch.Graphics.Pipeline3D.PipelineBufferContext
+--- @field private dirtyContext RatScratch.Graphics.Pipeline3D.PipelineBufferDirtyContext
+--- @field private data RatScratch.Graphics.Pipeline3D.PipelineBufferData
 local PipelineBuffer = Object()
 
 --- @param format RatScratch.Graphics.Graphics3D.MeshFormatAttribute[]
 --- @param flags table
---- @param count? integer
+--- @param count integer
 function PipelineBuffer:new(format, flags, count)
-	count = Common.nextPowerOfTwo(count or 1024)
+	count = 8
 
-	self.format = format
-	self.componentCount = Mesh.getComponentCount(self.format)
+	self.format = BufferFormat(format)
 	self.flags = flags
-	self.instances = {}
-	self.indexCountByInstance = {}
-	self.tablePool = TablePool()
-	self.freeInstancesByIndex = {}
-	self.freeInstancesByCount = {}
-	self.reservedCount = count
-	self.minInstanceIndex = 0
-	self.maxInstanceIndex = 0
-	self.count = 0
-	self.bufferData = Table.new(count * self.componentCount, 0)
-	self.buffer =
-		love.graphics.newBuffer(self.format, self.reservedCount, self.flags)
-	self.isCompacted = true
-	self.dirtyInstances = {}
 
-	local freeInstance = self.tablePool:pop()
-	freeInstance[1], freeInstance[2] = 1, count
-	table.insert(self.freeInstancesByIndex, freeInstance)
-	table.insert(self.freeInstancesByCount, freeInstance)
+	self.context = PipelineBufferContext(count)
+	self.context:listen(PipelineBufferContextEvent.RESIZE, self._resize, self)
+	self.context:listen(PipelineBufferContextEvent.COMPACT, self._compact, self)
+
+	self.data = PipelineBufferData(format, self.context:getReservedCount())
+
+	self.buffer = love.graphics.newBuffer(
+		self.format:getFormat(),
+		self.context:getReservedCount(),
+		self.flags
+	)
+	self.dirtyContext = PipelineBufferDirtyContext()
 end
 
 function PipelineBuffer:getBuffer()
@@ -61,324 +49,42 @@ function PipelineBuffer:getBuffer()
 end
 
 function PipelineBuffer:getIsDirty()
-	return #self.dirtyInstances >= 1
+	return self.dirtyContext:getIsDirty()
 end
 
 function PipelineBuffer:getCount()
-	return self.count
+	return self.context:getCount()
 end
 
 --- @private
-function PipelineBuffer:_getIndexCount()
-	return self.minInstanceIndex,
-		self.maxInstanceIndex - self.minInstanceIndex + 1
-end
+--- @param event RatScratch.Graphics.Pipeline3D.PipelineBufferContextEvent
+function PipelineBuffer:_resize(event)
+	local newCount = event:getNewCount()
 
---- @private
---- @param instance number[]
---- @param index number
---- @return RatScratch.Common.Search.CompareResult
-function PipelineBuffer._compareInstanceIndex(instance, index)
-	local i = unpack(instance)
-
-	return Common.zerosign(i - index)
-end
-
-function PipelineBuffer._compareInstanceCount(instance, count)
-	local _, c = unpack(instance)
-
-	-- we flip it since this array is sorted in descending order
-	return -Common.zerosign(c - count)
-end
-
-function PipelineBuffer._lessInstanceCount(a, b)
-	return a[2] > b[2]
-end
-
---- @private
---- @param count integer
-function PipelineBuffer:_resize(count)
-	local reservedCount = Common.nextPowerOfTwo(count)
-
-	local freeInstance = self.freeInstancesByIndex[#self.freeInstancesByIndex]
-	local i = freeInstance and freeInstance[1]
-
-	if i and i > self.maxInstanceIndex then
-		freeInstance[2] = freeInstance[2] + (reservedCount - self.reservedCount)
-	else
-		local newFreeInstance = self.tablePool:pop()
-		newFreeInstance[1], newFreeInstance[2] =
-			self.maxInstanceIndex + 1, reservedCount - self.reservedCount
-		table.insert(self.freeInstancesByIndex, newFreeInstance)
-		table.insert(self.freeInstancesByCount, newFreeInstance)
-		self:_cleanFreeList()
-	end
-
-	self.reservedCount = reservedCount
+	self.data:resize(newCount)
 	self.buffer =
-		love.graphics.newBuffer(self.format, self.reservedCount, self.flags)
-
-	self:_makeEntireBufferDirty()
+		love.graphics.newBuffer(self.format:getFormat(), newCount, self.flags)
+	self.dirtyContext:dirty(1, self:getCount())
 end
 
 function PipelineBuffer:compact()
-	if self.isCompacted then
+	self.context:compact()
+end
+
+--- @private
+--- @param event RatScratch.Graphics.Pipeline3D.PipelineBufferContextEvent
+function PipelineBuffer:_compact(event)
+	if event:getOldIndex() == event:getNewIndex() then
 		return
 	end
 
-	local n = 1
-
-	local newBufferData = Table.new(self.reservedCount * self.componentCount, 0)
-	for _, instanceInfo in ipairs(self.instances) do
-		local index, count = unpack(instanceInfo)
-
-		for i = 1, count do
-			local inputOffset = ((index - 1) + (i - 1)) * self.componentCount
-			local outputOffset = ((n - 1) + (i - 1)) * self.componentCount
-			for j = 1, self.componentCount do
-				newBufferData[outputOffset + j] =
-					self.bufferData[inputOffset + j]
-			end
-		end
-
-		instanceInfo[1] = n
-		n = n + count
-	end
-
-	self:_recalculateCount()
-
-	for _, freeInstance in ipairs(self.freeInstancesByIndex) do
-		self.tablePool:free(freeInstance)
-	end
-
-	Table.clear(self.freeInstancesByCount)
-	Table.clear(self.freeInstancesByIndex)
-
-	local freeInstance = self.tablePool:pop()
-	freeInstance[1], freeInstance[2] =
-		self.maxInstanceIndex + 1, self.reservedCount - self.maxInstanceIndex
-
-	table.insert(self.freeInstancesByCount, freeInstance)
-	table.insert(self.freeInstancesByIndex, freeInstance)
-
-	self.tablePool:free(self.bufferData)
-	self.bufferData = newBufferData
-
-	self:_makeEntireBufferDirty()
-	self.isCompacted = true
-end
-
---- @private
-function PipelineBuffer:_makeEntireBufferDirty()
-	for _, dirtyInstance in ipairs(self.dirtyInstances) do
-		self.tablePool:free(dirtyInstance)
-	end
-
-	Table.clear(self.dirtyInstances)
-
-	if #self.bufferData == 0 then
-		return
-	end
-
-	local dirtyInstance = self.tablePool:pop()
-	dirtyInstance[1], dirtyInstance[2] = 1, self.maxInstanceIndex
-	table.insert(self.dirtyInstances, dirtyInstance)
-end
-
---- @private
---- @param i any
---- @param count any
-function PipelineBuffer:_freeInstance(i, count)
-	local j = Search.lessThanEqual(
-		self.freeInstancesByIndex,
-		i,
-		PipelineBuffer._compareInstanceIndex
-	)
-	local k = j + 1
-
-	local resultInstance
-
-	local previousInstance = self.freeInstancesByIndex[j]
-	if previousInstance then
-		local pi, pc = unpack(previousInstance)
-		if pi + pc == i then
-			previousInstance[2] = pc + count
-			resultInstance = previousInstance
-		end
-	end
-
-	if not resultInstance then
-		resultInstance = self.tablePool:pop()
-		resultInstance[1], resultInstance[2] = i, count
-		table.insert(self.freeInstancesByIndex, j + 1, resultInstance)
-		table.insert(self.freeInstancesByCount, resultInstance)
-		k = k + 1
-	end
-
-	local nextInstance = self.freeInstancesByIndex[k]
-	if nextInstance then
-		local ni, nc = unpack(nextInstance)
-		if i + count == ni then
-			nextInstance[2] = 0
-			resultInstance[2] = resultInstance[2] + nc
-		end
-	end
-
-	self:_cleanFreeList()
-
-	return resultInstance
-end
-
---- @private
---- @param i integer
---- @param count integer
-function PipelineBuffer:_makeDirty(i, count)
-	local j1 = Search.lessThanEqual(
-		self.dirtyInstances,
-		i,
-		PipelineBuffer._compareInstanceIndex
-	)
-	local j2 = Search.lessThanEqual(
-		self.dirtyInstances,
-		i + count,
-		PipelineBuffer._compareInstanceIndex
+	self.data:compact(
+		event:getOldIndex(),
+		event:getNewIndex(),
+		event:getCount()
 	)
 
-	local leftInstance, rightInstance =
-		self.dirtyInstances[j1], self.dirtyInstances[j2]
-	if not leftInstance or leftInstance[1] + leftInstance[2] < i then
-		j1 = j1 + 1
-		leftInstance = self.dirtyInstances[j1]
-	end
-
-	local realI, realCount
-	if leftInstance and j1 <= j2 then
-		realI = math.min(i, leftInstance[1])
-		realCount = math.max(i + count, rightInstance[1] + rightInstance[2])
-			- realI
-
-		for j = j2, j1, -1 do
-			local value = table.remove(self.dirtyInstances, j)
-			self.tablePool:free(value)
-		end
-	else
-		realI = i
-		realCount = count
-	end
-
-	local resultInstance = self.tablePool:pop()
-	resultInstance[1], resultInstance[2] = realI, realCount
-
-	local j = Search.lessThan(
-		self.dirtyInstances,
-		realI,
-		PipelineBuffer._compareInstanceIndex
-	)
-
-	table.insert(self.dirtyInstances, j + 1, resultInstance)
-end
-
---- @private
-function PipelineBuffer:_cleanFreeList()
-	table.sort(self.freeInstancesByCount, PipelineBuffer._lessInstanceCount)
-
-	while
-		#self.freeInstancesByCount > 0
-		and (
-			not next(self.freeInstancesByCount[#self.freeInstancesByCount])
-			or self.freeInstancesByCount[#self.freeInstancesByCount][2] <= 0
-		)
-	do
-		local freeInstance = table.remove(self.freeInstancesByCount)
-		local i, count = unpack(freeInstance)
-
-		assert(
-			count == nil or count == 0,
-			"free list at %d has negative count (%d)",
-			i,
-			count
-		)
-
-		if i and count then
-			local nextIndex = Search.first(
-				self.freeInstancesByIndex,
-				i,
-				PipelineBuffer._compareInstanceIndex
-			)
-			while
-				self.freeInstancesByIndex[nextIndex]
-				and self.freeInstancesByIndex[nextIndex][1] == i
-			do
-				local nextInstance = self.freeInstancesByIndex[nextIndex]
-				if nextInstance == freeInstance then
-					table.remove(self.freeInstancesByIndex, nextIndex)
-					break
-				end
-
-				nextIndex = nextIndex + 1
-			end
-		end
-	end
-end
-
---- @private
---- @param count integer
-function PipelineBuffer:_popFreeInstance(count)
-	local index = Search.lessThanEqual(
-		self.freeInstancesByCount,
-		count,
-		PipelineBuffer._compareInstanceCount
-	)
-	local freeInstance = self.freeInstancesByCount[index]
-	if freeInstance then
-		local result = self.tablePool:pop()
-
-		local j, c = unpack(freeInstance)
-		result[1], result[2] = j, count
-		freeInstance[1], freeInstance[2] = j + count, c - count
-
-		self:_cleanFreeList()
-
-		return result
-	end
-
-	self:_resize(self.reservedCount + count)
-
-	local freeInstance = self.freeInstancesByIndex[#self.freeInstancesByIndex]
-
-	local i, c = unpack(freeInstance)
-	freeInstance[1], freeInstance[2] = i + count, c - count
-
-	local result = self.tablePool:pop()
-	result[1], result[2] = i, count
-
-	table.insert(
-		self.instances,
-		Search.lessThan(self.instances, i, self._compareInstanceIndex) + 1,
-		result
-	)
-	self:_recalculateCount()
-
-	return result
-end
-
---- @private
-function PipelineBuffer:_recalculateCount()
-	local firstInstanceInfo = self.instances[1]
-	local lastInstanceInfo = self.instances[#self.instances]
-
-	if firstInstanceInfo then
-		self.minInstanceIndex = firstInstanceInfo[1]
-	else
-		self.minInstanceIndex = 0
-	end
-
-	if lastInstanceInfo then
-		local i, c = unpack(lastInstanceInfo)
-		self.maxInstanceIndex = i + c - 1
-	else
-		self.maxInstanceIndex = 0
-	end
+	self.dirtyContext:dirty(event:getNewIndex(), event:getCount())
 end
 
 --- @generic T
@@ -386,7 +92,7 @@ end
 --- @param instance T
 --- @return boolean
 function PipelineBuffer:has(instance)
-	return self.indexCountByInstance[instance] ~= nil
+	return self.context:has(instance)
 end
 
 --- @generic T
@@ -394,14 +100,7 @@ end
 --- @param instance T
 --- @param count integer
 function PipelineBuffer:registerOrResize(instance, count)
-	if self:has(instance) then
-		local _, currentCount = self:getIndexCount(instance)
-		if count ~= currentCount then
-			self:resize(instance, count)
-		end
-	else
-		self:register(instance, count)
-	end
+	self.context:registerOrResize(instance, count)
 end
 
 --- @generic T
@@ -409,180 +108,87 @@ end
 --- @param instance T
 --- @param count integer
 function PipelineBuffer:register(instance, count)
-	count = count or 1
-	assert(count >= 1, "count must be >= 1; got %d", count)
+	local i, c = self.context:register(instance, count)
 
-	assert(
-		not self.indexCountByInstance[instance],
-		"instance is already registered with pipeline buffer"
-	)
-
-	local instanceInfo = self:_popFreeInstance(count)
-	instanceInfo[3] = instance
-
-	for i = 1, count do
-		local j = instanceInfo[1] + i - 1
-		local index = (j - 1) * self.componentCount
-
-		Mesh.resetVertex(self.format, self.bufferData, index)
-	end
-
-	local instanceIndex = Search.greaterThanEqual(
-		self.instances,
-		instanceInfo[1],
-		self._compareInstanceIndex
-	)
-	table.insert(self.instances, instanceIndex, instanceInfo)
-	self:_makeDirty(instanceInfo[1], instanceInfo[2])
-	self:_recalculateCount()
-
-	self.indexCountByInstance[instance] = instanceInfo
-
-	self.count = self.count + count
+	self.data:initialize(i, c)
+	self.dirtyContext:dirty(i, c)
 end
 
---- @generic T : RatScratch.Common.BaseObject
+--- @generic T
 --- @param self RatScratch.Graphics.Pipeline3D.PipelineBuffer<T>
 --- @param instance T
 --- @param newCount integer
 function PipelineBuffer:resize(instance, newCount)
-	local instanceInfo = self.indexCountByInstance[instance]
+	local _, oldCount = self.context:getIndexCount(instance)
+	local index, count = self.context:resize(instance, newCount)
 
-	--- @cast instance RatScratch.Common.BaseObject
-	assert(instanceInfo, "instance not registered with pipeline buffer")
-	assert(newCount >= 1, "count must be >= 1; got %d", newCount)
+	local i = index + oldCount
+	local c = index + count - 1
 
-	local i, count = unpack(instanceInfo)
-	if newCount < count then
-		self.isCompacted = false
-		instanceInfo[2] = newCount
-		self:_freeInstance(i + newCount, count - newCount)
-		return
+	if c > 0 then
+		self.data:initialize(i, count)
 	end
 
-	local nextIndex = Search.greaterThanEqual(
-		self.freeInstancesByIndex,
-		i + count,
-		PipelineBuffer._compareInstanceIndex
-	)
-
-	local freeInstance = self.freeInstancesByIndex[nextIndex]
-	local j = freeInstance and freeInstance[1]
-	local c = freeInstance and freeInstance[2]
-	if not freeInstance or j ~= i + count or c < (newCount - count) then
-		self:unregister(instance)
-		self:register(instance, newCount)
-	else
-		freeInstance[1], freeInstance[2] = i + newCount, c - (newCount - count)
-		instanceInfo[2] = newCount
-
-		for k = i + count, i + newCount - 1 do
-			local offset = (k - 1) * self.componentCount
-			Mesh.resetVertex(self.format, self.bufferData, offset)
-		end
-
-		self:_makeDirty(i + count, newCount - count)
+	if newCount > oldCount then
+		self.dirtyContext:dirty(index + oldCount, count - oldCount)
 	end
-
-	self.count = self.count + (newCount - count)
 end
 
---- @generic T : RatScratch.Common.BaseObject
+--- @generic T
 --- @param self RatScratch.Graphics.Pipeline3D.PipelineBuffer<T>
 --- @param instance T
 function PipelineBuffer:unregister(instance)
-	local instanceInfo = self.indexCountByInstance[instance]
-
-	--- @cast instance RatScratch.Common.BaseObject
-	assert(instanceInfo, "instance not registered with pipeline buffer")
-
-	local i, count = unpack(instanceInfo)
-	self:_freeInstance(i, count)
-
-	local index =
-		Search.first(self.instances, i, PipelineBuffer._compareInstanceIndex)
-	assert(
-		index and self.instances[index] == instanceInfo,
-		"instance with index %d (count %d) not found in instance list",
-		i,
-		count
-	)
-
-	self.tablePool:free(table.remove(self.instances, index))
-	self.indexCountByInstance[instance] = nil
-
-	self.count = self.count - count
-	self.isCompacted = false
+	self.context:unregister(instance)
 end
 
---- @generic T : RatScratch.Common.BaseObject
+--- @generic T
 --- @param self RatScratch.Graphics.Pipeline3D.PipelineBuffer<T>
 --- @param instance T
 --- @return integer, integer
 --- @overload fun(): integer, integer
 function PipelineBuffer:getIndexCount(instance)
-	if not instance then
-		return self:_getIndexCount()
-	end
-
-	local instanceInfo = self.indexCountByInstance[instance]
-
-	--- @cast instance RatScratch.Common.BaseObject
-	assert(instanceInfo, "instance not registered with pipeline buffer")
-
-	return instanceInfo[1], instanceInfo[2]
+	return self.context:getIndexCount(instance)
 end
 
---- @generic T : RatScratch.Common.BaseObject
+--- @generic T
 --- @param self RatScratch.Graphics.Pipeline3D.PipelineBuffer<T>
 --- @param instance T
 --- @param index integer
+--- @param count integer
 --- @param ... number
-function PipelineBuffer:set(instance, index, ...)
-	local instanceInfo = self.indexCountByInstance[instance]
-
-	--- @cast instance RatScratch.Common.BaseObject
-	assert(instanceInfo, "instance not registered with pipeline buffer")
+function PipelineBuffer:set(instance, index, count, ...)
+	local i, c = self:getIndexCount(instance)
 	assert(
-		select("#", ...) == self.componentCount,
-		"expected %d vararg parameters; got %d",
-		self.componentCount,
-		select("#", ...)
+		index + count - 1 <= c,
+		"count (%d) exceeds total (%d) given index %d",
+		count,
+		c,
+		index
 	)
 
-	local i, count = unpack(instanceInfo)
+	local n = select("#", ...)
 	assert(
-		index <= count and index >= 1,
-		"index %d out of range; must be >= 1 and <= %d",
-		index,
-		count
+		Common.isMultipleOf(n, self.format:getComponentCount()),
+		"count of values (%d) must be multiple of component count (%d)",
+		n,
+		self.format:getComponentCount()
 	)
 
-	local elementIndex = i + index - 1
-	local componentIndex = (elementIndex - 1) * self.componentCount + 1
-
-	Table.copy(
-		self.bufferData,
-		componentIndex,
-		componentIndex + select("#", ...) - 1,
-		...
-	)
-
-	self:_makeDirty(elementIndex, 1)
+	local k = i + index - 1
+	self.data:set(k, count, ...)
+	self.dirtyContext:dirty(k, count)
 end
 
 function PipelineBuffer:flush()
-	for _, dirtyInstance in ipairs(self.dirtyInstances) do
-		local i, count = unpack(dirtyInstance)
-
-		if count > 0 then
-			self.buffer:setArrayData(self.bufferData, i, i, count)
+	local count = self.dirtyContext:getDirtyRangeCount()
+	for j = 1, count do
+		local i, c = self.dirtyContext:getDirtyRangeIndexCount(j)
+		if c > 0 then
+			self.data:toBuffer(self.buffer, i, c)
 		end
-
-		self.tablePool:free(dirtyInstance)
 	end
 
-	Table.clear(self.dirtyInstances)
+	self.dirtyContext:clear()
 end
 
 return PipelineBuffer

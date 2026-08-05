@@ -215,7 +215,7 @@ function AnimationPipeline:new()
 	self.shaders = {}
 end
 
---- @return love.GraphicsBuffer
+--- @return love.graphics.GraphicsBuffer
 function AnimationPipeline:getBoneTransforms()
 	return self.boneTransformsBuffer:getBuffer()
 end
@@ -285,6 +285,7 @@ function AnimationPipeline:addAnimation(animation, skeleton)
 				self.animationChannelKeyFramesBuffer:set(
 					keyedProperty,
 					k,
+					1,
 					time,
 					x,
 					y,
@@ -374,7 +375,7 @@ do
 
 			local bonesIndex, bonesCount =
 				self.skeletonBonesBuffer:getIndexCount(skeleton)
-			self.skeletonsBuffer:set(skeleton, 1, bonesIndex - 1, bonesCount)
+			self.skeletonsBuffer:set(skeleton, 1, 1, bonesIndex - 1, bonesCount)
 
 			for i = 1, skeleton:getBoneCount() do
 				local bone = skeleton:getBone(i)
@@ -411,16 +412,16 @@ do
 				)
 				Table.append(boneBuffer, scale.x, scale.y, scale.z, 1)
 
-				self.skeletonBonesBuffer:set(skeleton, i, unpack(boneBuffer))
+				self.skeletonBonesBuffer:set(skeleton, i, 1, unpack(boneBuffer))
 			end
 
 			for _, animation in ipairs(skeletonInfo.animations) do
 				for i = 1, animation:getChannelCount() do
 					local animationChannel = animation:getChannel(i)
 
-					local translationIndex, translationCount = 0, 0
-					local rotationIndex, rotationCount = 0, 0
-					local scaleIndex, scaleCount = 0, 0
+					local translationIndex, translationCount = 1, 0
+					local rotationIndex, rotationCount = 1, 0
+					local scaleIndex, scaleCount = 1, 0
 
 					for j = 1, animationChannel:getKeyedPropertyCount() do
 						local keyedProperty =
@@ -441,6 +442,7 @@ do
 					self.animationChannelsBuffer:set(
 						animation,
 						i,
+						1,
 						animationChannel:getBone():getIndex() - 1,
 						skeletonIndex - 1,
 						translationIndex - 1,
@@ -501,6 +503,7 @@ function AnimationPipeline:_refreshAnimatorData()
 					boneMap:set(
 						animator,
 						j,
+						1,
 						skeletonIndex - 1,
 						bone:getIndex() - 1,
 						(boneTransformsIndex - 1) + (bone:getIndex() - 1)
@@ -538,6 +541,7 @@ function AnimationPipeline:_refreshBoneTransformData()
 			self.globalBoneMapBuffer:set(
 				animator,
 				j,
+				1,
 				skeletonIndex - 1,
 				bone:getIndex() - 1,
 				(boneTransformsIndex - 1) + (bone:getIndex() - 1)
@@ -563,6 +567,7 @@ function AnimationPipeline:_refreshAnimatorGroup(group)
 		self.playbackGroupBonesBuffer:set(
 			group,
 			i,
+			1,
 			index - 1,
 			count,
 			(animatorRootBoneIndex - 1) + (bone:getBone():getIndex() - 1)
@@ -579,6 +584,7 @@ function AnimationPipeline:_refreshAnimatorGroup(group)
 			self.playbackTransformInfoBuffer:set(
 				bone,
 				j,
+				1,
 				(channelIndex - 1)
 					+ (playback.animation:getChannelIndex(bone:getBone()) - 1),
 				(playbackStateIndex - 1) + (j - 1),
@@ -707,6 +713,7 @@ function AnimationPipeline:updateAnimatorGroupPlayback(
 		self.playbackStatesBuffer:set(
 			group,
 			index,
+			1,
 			playback.time,
 			inverseRelativeWeight
 		)
