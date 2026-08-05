@@ -69,6 +69,20 @@ function Table.copy(t, i, j, ...)
 end
 
 --- @param t any[]
+--- @param o any[]
+--- @param count integer
+--- @param ti? integer
+--- @param oi? integer
+function Table.transfer(t, o, count, ti, oi)
+	oi = oi or 1
+	ti = ti or 1
+
+	for i = 1, count do
+		t[ti + i - 1] = o[oi + i - 1]
+	end
+end
+
+--- @param t any[]
 --- @param ... any
 function Table.append(t, ...)
 	Table.copy(t, #t + 1, #t + select("#", ...), ...)
