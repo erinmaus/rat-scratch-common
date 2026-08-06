@@ -299,9 +299,9 @@ function BufferFormat.getFormatVertexAttributeValues(
 )
 	local defaultValues = ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES[attributeName]
 		or DEFAULT_MISSING_COMPONENT_VALUES
-	local dx, dy, dz, dw = unpack(defaultValues)
+	local dx, dy, dz, dw = Table.unpack(defaultValues)
 
-	local x, y, z, w = unpack(vertex, offset, offset + count)
+	local x, y, z, w = Table.unpack(vertex, offset, offset + count)
 
 	return x or dx, y or dy, z or dz, w or dw
 end
@@ -392,7 +392,7 @@ function BufferFormat.marshalFromInputFormatToOutputFormat(
 				attribute.location,
 				outputVertex,
 				outputVertexOffset,
-				unpack(
+				Table.unpack(
 					inputVertex,
 					inputOffset + inputVertexOffset,
 					inputOffset + inputVertexOffset + (inputCount - 1)
@@ -532,21 +532,21 @@ else
 	local function _dataSetFloat(data, offset, count, source, sourceOffset)
 		data:setFloat(
 			offset,
-			unpack(source, sourceOffset, sourceOffset + count - 1)
+			Table.unpack(source, sourceOffset, sourceOffset + count - 1)
 		)
 	end
 
 	local function _dataSetUInt32(data, offset, count, source, sourceOffset)
 		data:setUInt32(
 			offset,
-			unpack(source, sourceOffset, sourceOffset + count - 1)
+			Table.unpack(source, sourceOffset, sourceOffset + count - 1)
 		)
 	end
 
 	local function _dataSetInt32(data, offset, count, source, sourceOffset)
 		data:setInt32(
 			offset,
-			unpack(source, sourceOffset, sourceOffset + count - 1)
+			Table.unpack(source, sourceOffset, sourceOffset + count - 1)
 		)
 	end
 

@@ -70,7 +70,7 @@ do
 	--- @param ... number
 	function PipelineBufferByteData:set(index, count, ...)
 		local c = cache
-		Table.copy(c, 1, math.huge, ...)
+		Table.copy(c, 1, count * self:getFormat():getComponentCount(), ...)
 
 		BufferFormat.copyFromFlatTableToByteData(
 			self:getFormat(),
