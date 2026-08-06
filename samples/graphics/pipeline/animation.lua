@@ -14,9 +14,9 @@ local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
 local demo = {}
 demo.isPaused = false
 
-local GRID_SIZE_X = 8
-local GRID_SIZE_Y = 8
-local GRID_SIZE_Z = 8
+local GRID_SIZE_X = 3
+local GRID_SIZE_Y = 3
+local GRID_SIZE_Z = 3
 local SIZE = Vector3(512, 512, 512)
 local INSTANCE_COUNT = (GRID_SIZE_X * 2 + 1)
 	* (GRID_SIZE_Y * 2 + 1)
