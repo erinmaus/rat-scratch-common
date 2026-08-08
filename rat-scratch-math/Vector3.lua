@@ -12,20 +12,23 @@ local Vector3 = Object()
 --- @param y number?
 --- @param z number?
 function Vector3:new(x, y, z)
-	if not x and not y and not z then
-		x = 0
-		y = 0
-		z = 0
-	elseif x and not y and not z then
-		y = x
-		z = z
+	if x and y and z then
+		self.x = x
+		self.y = y
+		self.z = z
 	elseif x and y and not z then
-		z = 0
+		self.x = x
+		self.y = y
+		self.z = 0
+	elseif x then
+		self.x = x
+		self.y = x
+		self.z = x
+	else
+		self.x = 0
+		self.y = 0
+		self.z = 0
 	end
-
-	self.x = x
-	self.y = y
-	self.z = z
 end
 
 ---@param x number?
@@ -381,8 +384,8 @@ function Vector3:equal(other, e)
 	e = e or Common.EPSILON
 
 	return math.abs(self.x - other.x) < e
-		and math.abs(self.y - other.z) < e
-		and math.abs(self.y - other.z) < e
+		and math.abs(self.y - other.y) < e
+		and math.abs(self.z - other.z) < e
 end
 
 Vector3.ZERO = Vector3(0, 0, 0)
