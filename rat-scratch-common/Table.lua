@@ -23,16 +23,9 @@ end
 
 --- @generic T
 --- @param value integer
---- @param t T[] | number
+--- @param n integer
 --- @return integer
-function Table.wrapIndex(value, t)
-	local n
-	if type(t) == "number" then
-		n = t
-	else
-		n = #t
-	end
-
+function Table.wrapIndex(value, n)
 	if n == 0 then
 		return 0
 	end
@@ -75,6 +68,10 @@ do
 		return unpack(t, i, j)
 	end
 
+	--- @param t any[]
+	--- @param i integer
+	--- @param j integer
+	--- @return ...
 	function Table.unpack(t, i, j)
 		i = i or 1
 		j = j or #t
@@ -203,6 +200,89 @@ end
 --- @return integer
 function Table.to2DKey(i, j, width)
 	return (j - 1) * width + i
+end
+
+--- @param t any[]
+--- @param i integer
+--- @param j integer
+function Table.swap(t, i, j)
+	t[i], t[j] = t[j], t[i]
+end
+
+--- @generic T
+--- @param t T[]
+--- @param left integer
+--- @param right integer
+--- @param func RatScratch.Common.Search.CompareFunc<T, T>
+function Table.sort(t, left, right, func)
+	for i = left + 1, right do
+		local key = t[i]
+		local j = i - 1
+		while j >= left and func(t[j], key) > 0 do
+			t[j + 1] = t[j]
+			j = j - 1
+		end
+		t[j + 1] = key
+	end
+end
+
+--- @generic T
+--- @param t T[]
+--- @param left integer
+--- @param right integer
+--- @param pivot integer
+--- @param func RatScratch.Common.Search.CompareFunc<T, T>
+function Table.partition(t, left, right, pivot, func)
+	local pivotValue = t[pivot]
+	Table.swap(t, pivot, right)
+
+	local store = left
+	for i = left, right - 1 do
+		if func(t[i], pivotValue) < 0 then
+			Table.swap(t, store, i)
+			store = store + 1
+		end
+	end
+
+	Table.swap(t, store, right)
+	return store
+end
+
+--- @generic T
+--- @param t T[]
+--- @param left integer
+--- @param right integer
+--- @param k integer
+--- @param func RatScratch.Common.Search.CompareFunc<T, T>
+--- @return integer
+function Table.select(t, left, right, k, func)
+	if right - left < 5 then
+		Table.sort(t, left, right, func)
+		return k
+	end
+
+	local medianCount = 0
+	for i = left, right, 5 do
+		local subRight = math.min(i + 4, right)
+		Table.sort(t, i, subRight, func)
+
+		local medianIndex = math.floor((i + subRight) / 2)
+		Table.swap(t, left + medianCount, medianIndex)
+		medianCount = medianCount + 1
+	end
+
+	local midOfMediansIndex = left + math.floor((medianCount - 1) / 2)
+	local pivotPointIndex =
+		Table.select(t, left, left + medianCount - 1, midOfMediansIndex, func)
+
+	local finalIndex = Table.partition(t, left, right, pivotPointIndex, func)
+	if k == finalIndex then
+		return k
+	elseif k < finalIndex then
+		return Table.select(t, left, finalIndex - 1, k, func)
+	end
+
+	return Table.select(t, finalIndex + 1, right, k, func)
 end
 
 return Table
