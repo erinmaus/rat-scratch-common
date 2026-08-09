@@ -33,3 +33,16 @@ version = *
 source = rat-scratch-gltf
 url = rat-scratch-gltf.rsmeta
 root = staging/module/build
+
+[rat-scratch-dungeon]
+version = *
+source = rat-scratch-dungeon
+url = rat-scratch-dungeon.rsmeta
+root = staging/module/build
+
+[meshoptimizer]
+version = 1.2.0
+source = .
+url = https://github.com/zeux/meshoptimizer/archive/refs/tags/v1.2.zip
+hash = sha512:82364e1c78dce46a28c81cf5736cd42a32ad229b43b22debb6d2797fd90866b630268e072443504659f9d8868514614b4ca96a1047f76d00cefadefa8f8a760d
+root = ^meshoptimizer%-v?1%.2$
