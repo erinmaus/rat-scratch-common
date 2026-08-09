@@ -107,12 +107,14 @@ function demo.draw()
 		end
 
 		if demo.useDefaultIndexBuffer then
-			loveMesh:setIndexBuffer(mesh:getIndexBuffer())
+			for i = 1, #demo.indices do
+				loveMesh:setIndexBuffer(demo.indices[i])
+				love.graphics.draw(loveMesh)
+			end
 		else
 			loveMesh:setIndexBuffer(demo.indices[demo.currentIndexBuffer])
+			love.graphics.draw(loveMesh)
 		end
-
-		love.graphics.draw(loveMesh)
 
 		love.graphics.pop()
 	end

@@ -4,6 +4,7 @@ local Vector3 = require("rat-scratch-math").Vector3
 local KDTreeNode = require("rat-scratch-math").KDTreeNode
 local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
 local Table = require("rat-scratch-common").Table
+local TablePool = require("rat-scratch-common.TablePool")
 
 --- @class RatScratch.Graphics.Pipeline3D.ClusteredMesh.Options
 --- @field public maxTriangles? integer
@@ -46,19 +47,39 @@ function ClusteredMesh:getDefinition()
 end
 
 do
+	local _trianglePool = TablePool()
 	local _pointPool = ObjectPool(Vector3)
 	local _nodePool = ObjectPool(KDTreeNode)
 	local _points = {}
-	local _pointsToTriangle = {}
+	local _pointToTriangle = {}
+	local _triangleToPoint = {}
+	local _vertexTriangles = {}
+	local _triangles = {}
 	local INVERSE_TRIANGLE_POINT_COUNT = 1 / 3
+
+	local _connectedTriangles, _visitedTriangles = {}, {}
+	local function _searchNearestConnectedUnvisited(node)
+		local triangle = _pointToTriangle[node:getPoint()]
+		return _connectedTriangles[triangle] and not _visitedTriangles[triangle]
+	end
+
+	local function _searchNearestUnvisited(node)
+		local triangle = _pointToTriangle[node:getPoint()]
+		return not _visitedTriangles[triangle]
+	end
 
 	--- @private
 	function ClusteredMesh:_prepare()
 		local pointPool = _pointPool:reset()
 		local nodePool = _nodePool:reset()
+		local trianglePool = _trianglePool:reset()
+
+		local vertexTriangles = _vertexTriangles
+		local triangles = _triangles
 
 		local points = _points
-		local pointsToTriangle = _pointsToTriangle
+		local pointToTriangle = _pointToTriangle
+		local triangleToPoint = _triangleToPoint
 		local inverseTrianglePointCount = INVERSE_TRIANGLE_POINT_COUNT
 
 		local count, offset = BufferFormat.getFormatAttributeCountOffset(
@@ -89,54 +110,89 @@ do
 				:add(w, sum)
 				:scale(inverseTrianglePointCount, pointPool:pop())
 
-			pointsToTriangle[point] = i
+			local triangle = trianglePool:pop()
+			triangle[1], triangle[2], triangle[3] = a, b, c
+			table.insert(triangles, triangle)
+
+			for _, index in ipairs(triangle) do
+				local vt = vertexTriangles[index]
+				if not vt then
+					vt = _trianglePool:pop()
+					vertexTriangles[index] = vt
+				end
+
+				table.insert(vt, triangle)
+			end
+
+			pointToTriangle[point] = triangle
+			triangleToPoint[triangle] = point
 			table.insert(points, point)
 		end
 
-		return KDTreeNode.build(points, 3, nodePool)
+		return KDTreeNode.build(points, 3, nodePool), triangles, vertexTriangles
 	end
 
 	--- @private
 	--- @param triangleCenters RatScratch.Math.KDTreeNode
 	function ClusteredMesh:_split(triangleCenters)
-		local pointsToTriangle = _pointsToTriangle
+		local pointToTriangle = _pointToTriangle
+		local triangleToPoint = _triangleToPoint
+		local vertexTriangles = _vertexTriangles
+		local triangles = _triangles
 
-		local currentClusterIndices
 		local maxCount = self.options.maxTriangles * 3
-
 		local clusters = self.result.clusters
-		local indices = self.inputMesh.indices
+
+		local connectedTriangles = _connectedTriangles
+		local visitedTriangles = _visitedTriangles
 
 		--- @type RatScratch.Math.KDTreeNode | nil
 		local currentRoot = triangleCenters
-		repeat
-			currentClusterIndices = Table.new(maxCount, 0)
 
-			local p = next(pointsToTriangle)
-			if not p then
-				break
-			end
+		local p = triangleToPoint[triangles[1]]
+		repeat
+			local currentClusterIndices = Table.new(maxCount, 0)
+
+			Table.clear(connectedTriangles)
 
 			local n = p
-			while currentRoot and p and #currentClusterIndices < maxCount do
+			while currentRoot and n and #currentClusterIndices < maxCount do
+				local t = pointToTriangle[n]
+				visitedTriangles[t] = true
+
+				for i = 1, 3 do
+					local index = t[i]
+					local triangles = vertexTriangles[index]
+
+					for _, o in ipairs(triangles) do
+						connectedTriangles[o] = true
+					end
+				end
+
 				local nextRoot, c = currentRoot:remove(n)
-
 				if c then
-					local index = pointsToTriangle[c]
-					pointsToTriangle[c] = nil
+					local triangle = pointToTriangle[c]
 
-					--- @cast indices integer[]
 					Table.transfer(
 						currentClusterIndices,
-						indices,
+						triangle,
 						3,
 						#currentClusterIndices + 1,
-						index
+						1
 					)
 				end
 
 				currentRoot = nextRoot
-				n = currentRoot and c and currentRoot:search(p):getPoint()
+
+				local node = currentRoot
+					and c
+					and currentRoot:search(p, _searchNearestConnectedUnvisited)
+				n = node and node:getPoint()
+
+				if not n and currentRoot then
+					local node = currentRoot:search(p, _searchNearestUnvisited)
+					n = node and node:getPoint()
+				end
 			end
 
 			if #currentClusterIndices < maxCount then
@@ -146,19 +202,30 @@ do
 			end
 
 			table.insert(clusters, currentClusterIndices)
-		until not currentRoot
+
+			p = n
+		until not (p and currentRoot)
+
+		Table.clear(visitedTriangles)
+		Table.clear(connectedTriangles)
 	end
 
 	--- @private
 	function ClusteredMesh:_transform()
 		local points = _points
-		local pointsToTriangle = _pointsToTriangle
+		local pointToTriangle = _pointToTriangle
+		local triangleToPoint = _triangleToPoint
+		local vertexTriangles = _vertexTriangles
+		local triangles = _triangles
 
 		local triangleCenters = self:_prepare()
 		self:_split(triangleCenters)
 
 		Table.clear(points)
-		Table.clear(pointsToTriangle)
+		Table.clear(pointToTriangle)
+		Table.clear(triangleToPoint)
+		Table.clear(vertexTriangles)
+		Table.clear(triangles)
 	end
 end
 

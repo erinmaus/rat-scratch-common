@@ -81,20 +81,27 @@ function KDTreeNode:getIsLeaf()
 	return not (self.left or self.right)
 end
 
+--- @alias RatScratch.Math.KDTreeNode.SearchFunc fun(point: RatScratch.Math.KDTreeNode): boolean
+
 --- @private
 --- @param target RatScratch.Math.Vector3
---- @param best RatScratch.Math.KDTreeNode
+--- @param best? RatScratch.Math.KDTreeNode
 --- @param bestDistanceSquared number
---- @return RatScratch.Math.KDTreeNode, number
-function KDTreeNode:_search(target, best, bestDistanceSquared)
+--- @param searchFunc RatScratch.Math.KDTreeNode.SearchFunc
+--- @return RatScratch.Math.KDTreeNode?, number
+--- @overload fun(self: RatScratch.Math.KDTreeNode, target: RatScratch.Math.Vector3, best: RatScratch.Math.KDTreeNode, bestDistanceSquared: number): RatScratch.Math.KDTreeNode, number
+function KDTreeNode:_search(target, best, bestDistanceSquared, searchFunc)
 	local currentDistanceSquared = self.point:distanceSquared(target)
-	if currentDistanceSquared < bestDistanceSquared then
+	if
+		currentDistanceSquared < bestDistanceSquared
+		and (not searchFunc or searchFunc(self))
+	then
 		bestDistanceSquared = currentDistanceSquared
 		best = self
 	end
 
-	local func = KDTreeNode.COMPARE_FUNCS[self.axis]
-	local side = func(target, self.point)
+	local compareFunc = KDTreeNode.COMPARE_FUNCS[self.axis]
+	local side = compareFunc(target, self.point)
 	local difference = target[self.axis] - self.point[self.axis]
 
 	local near = side < 0 and self.left or self.right
@@ -102,12 +109,12 @@ function KDTreeNode:_search(target, best, bestDistanceSquared)
 
 	if near then
 		best, bestDistanceSquared =
-			near:_search(target, best, bestDistanceSquared)
+			near:_search(target, best, bestDistanceSquared, searchFunc)
 	end
 
 	if far and (difference ^ 2) < bestDistanceSquared then
 		best, bestDistanceSquared =
-			far:_search(target, best, bestDistanceSquared)
+			far:_search(target, best, bestDistanceSquared, searchFunc)
 	end
 
 	return best, bestDistanceSquared
@@ -115,8 +122,18 @@ end
 
 --- @param target RatScratch.Math.Vector3
 --- @return RatScratch.Math.KDTreeNode, number
-function KDTreeNode:search(target)
+function KDTreeNode:nearest(target)
 	return self:_search(target, self, self.point:distanceSquared(target))
+end
+
+--- @param target RatScratch.Math.Vector3
+--- @param func RatScratch.Math.KDTreeNode.SearchFunc
+--- @return RatScratch.Math.KDTreeNode?, number
+function KDTreeNode:search(target, func)
+	local best = func(self) and self or nil
+	local bestDistanceSquared = best and self.point:distanceSquared(target)
+		or math.huge
+	return self:_search(target, best, bestDistanceSquared, func)
 end
 
 --- @private

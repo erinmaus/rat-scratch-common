@@ -52,6 +52,7 @@ end
 
 function TablePool:reset()
 	self.freeList, self.usedList = self.usedList, self.freeList
+	return self
 end
 
 return TablePool
