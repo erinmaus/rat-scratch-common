@@ -7,19 +7,19 @@ directory.build = ./build/rat-scratch-main
 version = *
 source = rat-scratch-common
 url = rat-scratch-common.rsmeta
-root = staging/module/build
+root = staging/module/rat%-scratch
 
 [rat-scratch-graphics]
 version = *
 source = rat-scratch-graphics
 url = rat-scratch-graphics.rsmeta
-root = staging/module/build
+root = staging/module/rat%-scratch
 
 [rat-scratch-math]
 version = *
 source = rat-scratch-math
 url = rat-scratch-math.rsmeta
-root = staging/module/build
+root = staging/module/rat%-scratch
 
 [json]
 version = 0.1.2
@@ -32,13 +32,7 @@ root = ^json%.lua%-v?0%.1%.2$
 version = *
 source = rat-scratch-gltf
 url = rat-scratch-gltf.rsmeta
-root = staging/module/build
-
-[rat-scratch-dungeon]
-version = *
-source = rat-scratch-dungeon
-url = rat-scratch-dungeon.rsmeta
-root = staging/module/build
+root = staging/module/rat%-scratch
 
 [meshoptimizer]
 version = 1.2.0

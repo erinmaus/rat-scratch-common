@@ -17,23 +17,25 @@ jobs:
         run: |
           sudo apt-get install libfuse2
       - name: LÖVE download
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           ./.github/workflows/get_love_linux.sh
       - name: rat-scratch init
         run: |
           git clone https://github.com/erinmaus/rat-scratch
-          ./bin/love rat-scratch bundle --meta=./.rsmeta
+          ./bin/love rat-scratch bundle --meta=$(pwd)/.rsmeta
       - name: Build (shared)
         run: |
           cd ./lib/meshoptimizer
           cmake -Bshared . -DMESHOPT_BUILD_SHARED_LIBS=ON -DMESHOPT_STABLE_EXPORTS=on
           cmake --build shared
       - name: Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-meshoptimizer
           path: |
-            lib/meshoptimizer/build/libmeshoptimizer.so
+            ./lib/meshoptimizer/shared/libmeshoptimizer.so
 
   macos:
     runs-on: macos-latest
@@ -41,6 +43,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: LÖVE download
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           ./.github/workflows/get_love_macos.sh
       - name: rat-scratch init
@@ -53,11 +57,11 @@ jobs:
           cmake -Bshared . -DMESHOPT_BUILD_SHARED_LIBS=ON -DMESHOPT_STABLE_EXPORTS=on
           cmake --build shared
       - name: Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-meshoptimizer
           path: |
-            lib/meshoptimizer/build/libmeshoptimizer.dylib
+            ./lib/meshoptimizer/shared/libmeshoptimizer.dylib
 
   windows:
     runs-on: windows-2022
@@ -71,22 +75,24 @@ jobs:
         with:
           msystem: mingw64
           update: true
-          install: git mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-glm make zip unzip
+          install: git mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-glm make zip unzip mingw-w64-x86_64-github-cli jq
       - name: LÖVE download
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           ./.github/workflows/get_love_windows.sh
       - name: rat-scratch init
         run: |
           git clone https://github.com/erinmaus/rat-scratch
-          ./bin/love.exe rat-scratch bundle --meta=./.rsmeta
+          ./bin/love.exe rat-scratch bundle --meta=$(pwd)/.rsmeta
       - name: Build (shared)
         run: |
           cd ./lib/meshoptimizer
           cmake -Bshared . -DMESHOPT_BUILD_SHARED_LIBS=ON -DMESHOPT_STABLE_EXPORTS=on
           cmake --build shared
       - name: Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-meshoptimizer
           path: |
-            lib/meshoptimizer/build/meshoptimizer.dll
+            ./lib/meshoptimizer/shared/libmeshoptimizer.dll
