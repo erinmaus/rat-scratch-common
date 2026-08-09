@@ -2,5 +2,6 @@
 	"*.lua": "npx @johnnymorganz/stylua-bin",
 	"*.(c|h|cpp|hpp|glsl)": "clang-format -i",
 	"*.json": "npx prettier -w",
+	"*.yml": "npx prettier -w",
 	"*.(ts|js)": "npx prettier -w"
 }
