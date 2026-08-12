@@ -165,6 +165,18 @@ function Vector3:clamp(min, max, result)
 	return self:min(max, result):max(min, result)
 end
 
+--- @param threshold RatScratch.Math.Vector3
+--- @param result RatScratch.Math.Vector3?
+--- @return RatScratch.Math.Vector3
+function Vector3:step(threshold, result)
+	result = result or Vector3()
+	return result:from(
+		Common.step(threshold.x, self.x),
+		Common.step(threshold.y, self.y),
+		Common.step(threshold.z, self.z)
+	)
+end
+
 --- @param transform love.Transform
 --- @param result RatScratch.Math.Vector3?
 --- @return RatScratch.Math.Vector3

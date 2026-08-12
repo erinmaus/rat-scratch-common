@@ -168,4 +168,12 @@ function Common.isEven(value)
 	return value % 2 == 0
 end
 
+function Common.step(threshold, value)
+	if value < threshold then
+		return 0
+	end
+
+	return 1
+end
+
 return Common
