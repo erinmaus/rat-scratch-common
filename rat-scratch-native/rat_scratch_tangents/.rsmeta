@@ -1,0 +1,10 @@
+name = rat_scratch_tangents
+version = 1.0.0
+source = rat_scratch_tangents
+
+[MikkTSpace]
+version = 1.0.0
+source = .
+url = https://github.com/mmikk/MikkTSpace/archive/3e895b4.zip
+hash = sha512:f703258936dcae5719e9692d97e01aeda910c8072230fb34f04bbaa31ec0348318776577b9a4612b779ca81f5e3148ef2c269c7f9e156f349c18d365c0ba970f
+root = ^MikkTSpace%-3e895b4([%w%a]*)$
