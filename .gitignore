@@ -3,6 +3,7 @@ build/
 lib/
 jit/
 bin/
+rat-scratch/
 .DS_Store
 *.tar.gz
 *.zip
