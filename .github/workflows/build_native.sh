@@ -1,13 +1,14 @@
 #!/bin/sh
 
-makefiles=./rat-scratch-native/*/Makefile
+makefiles="$(pwd)/rat-scratch-native/*/Makefile"
+
+set -x
 
 for makefile in ${makefiles}; do
 	dir=$(dirname -- "$makefile")
 
-	pushd "$dir" > /dev/null
+	cd "$dir"
 	echo "Building $($RAT_SCRATCH get --meta=./.rsmeta name)..."
 	$RAT_SCRATCH bundle --meta=./.rsmeta
 	make all -j$(nproc)
-	popd > /dev/null
 done

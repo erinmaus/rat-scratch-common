@@ -21,6 +21,8 @@ jobs:
         run: |
           sudo apt-get install libfuse2
       - name: LÖVE download
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           ./.github/workflows/get_love_linux.sh
       - name: rat-scratch init
@@ -42,6 +44,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: LÖVE download
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           ./.github/workflows/get_love_macos.sh
       - name: rat-scratch init
@@ -49,6 +53,7 @@ jobs:
           git clone https://github.com/erinmaus/rat-scratch
       - name: Build (shared)
         run: |
+          alias nproc='sysctl -n hw.logicalcpu'
           RAT_SCRATCH="$(pwd)/bin/love $(pwd)/rat-scratch" .github/workflows/build_native.sh
       - name: Artifact
         uses: actions/upload-artifact@v4
@@ -69,8 +74,10 @@ jobs:
         with:
           msystem: mingw64
           update: true
-          install: git mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-glm make zip unzip
+          install: git mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-glm make zip unzip mingw-w64-x86_64-github-cli jq
       - name: LÖVE download
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           ./.github/workflows/get_love_windows.sh
       - name: rat-scratch init
