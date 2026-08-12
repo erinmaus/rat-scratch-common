@@ -1,0 +1,87 @@
+name: build native libs
+
+on:
+  push:
+    branches:
+      - "main"
+      - "**-ci"
+    paths:
+      - "rat-scratch-native/**"
+      - "**/*.rsmeta"
+      - ".github/workflows/native.yml"
+  workflow_dispatch: null
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Set up
+        run: |
+          sudo apt-get install libfuse2
+      - name: LÖVE download
+        run: |
+          ./.github/workflows/get_love_linux.sh
+      - name: rat-scratch init
+        run: |
+          git clone https://github.com/erinmaus/rat-scratch
+      - name: Build (shared)
+        run: |
+          RAT_SCRATCH="$(pwd)/bin/love $(pwd)/rat-scratch" .github/workflows/build_native.sh
+      - name: Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-native
+          path: |
+            rat-scratch-native/*/bin/*.so
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: LÖVE download
+        run: |
+          ./.github/workflows/get_love_macos.sh
+      - name: rat-scratch init
+        run: |
+          git clone https://github.com/erinmaus/rat-scratch
+      - name: Build (shared)
+        run: |
+          RAT_SCRATCH="$(pwd)/bin/love $(pwd)/rat-scratch" .github/workflows/build_native.sh
+      - name: Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-native
+          path: |
+            rat-scratch-native/*/bin/*.dylib
+
+  windows:
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: mingw64
+          update: true
+          install: git mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-glm make zip unzip
+      - name: LÖVE download
+        run: |
+          ./.github/workflows/get_love_windows.sh
+      - name: rat-scratch init
+        run: |
+          git clone https://github.com/erinmaus/rat-scratch
+      - name: Build (shared)
+        run: |
+          RAT_SCRATCH="$(pwd)/bin/love $(pwd)/rat-scratch" .github/workflows/build_native.sh
+      - name: Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-native
+          path: |
+            rat-scratch-native/*/bin/*.dll
