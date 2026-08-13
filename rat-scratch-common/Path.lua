@@ -3,12 +3,27 @@ local Path = {}
 --- @param absolutePath string
 --- @param relativePath string
 --- @param rootPath? string
+--- @param rootPaths? table<string, string>
 --- @return string
-function Path.resolve(absolutePath, relativePath, rootPath)
+function Path.resolve(absolutePath, relativePath, rootPath, rootPaths)
+	if rootPaths then
+		local r = {}
+		for key, value in pairs(rootPaths) do
+			r[key] = "/" .. value
+			print("???", key, r[key])
+		end
+
+		absolutePath = absolutePath:gsub("^@([%w_%-]+)", r)
+		relativePath = relativePath:gsub("^@([%w_%-]+)", r)
+	end
+
 	if rootPath then
 		absolutePath = absolutePath:gsub("^(@)", "/" .. rootPath)
 		relativePath = relativePath:gsub("^(@)", "/" .. rootPath)
 	end
+
+	absolutePath = absolutePath:gsub("//+", "/")
+	relativePath = relativePath:gsub("//+", "/")
 
 	if relativePath:match("^/") then
 		local result = relativePath:gsub("^/", "")

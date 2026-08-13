@@ -7,6 +7,8 @@ local Path = require("rat-scratch-common").Path
 ---   safe?: boolean,
 ---   dependencies?: boolean,
 ---   rootPath?: string | false,
+---   rootPaths?: table<string, string> | false,
+---   variables?: table,
 --- }
 
 local DEFAULT_OPTIONS = {
@@ -15,6 +17,8 @@ local DEFAULT_OPTIONS = {
 	safe = true,
 	dependencies = false,
 	rootPath = false,
+	rootPaths = false,
+	variables = {},
 }
 
 --- @alias RatScratch.Graphics.ShaderPreprocessResult {
@@ -96,6 +100,9 @@ local INCLUDE_PATTERN = '^#include "([^"]+)"'
 local PRAGMA_OPTION_PATTERN = "^#pragma option%s+([%w_]+)%s*(.*)"
 local FUNCTION_OPTION_VALUE_PATTERN = "%((.-)%)"
 local PRAGMA_LANGUAGE_PATTERN = "^#pragma language%s+([^\n\r]+)"
+local TEMPLATE_INCLUDE_CAPTURE_PATTERN = '%$%("([^"]+)", %$([%w_]+)%$%)'
+local TEMPLATE_INCLUDE_PATTERN = '^.*(%$%("[^"]+", %$[%w_]+%$%))'
+local TEMPLATE_VARIABLE = "%$([%w_]+)%$"
 
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
 --- @param currentFile RatScratch.Graphics.impl.ShaderProcessFile
@@ -118,9 +125,11 @@ end
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
 --- @param parent? RatScratch.Graphics.impl.ShaderProcessFile
 --- @param filename string
+--- @param variables? table<string, table | string | number>
 --- @param rootPath? string
+--- @param rootPaths? table<string, string>
 --- @return string
-local function process(state, parent, filename, rootPath)
+local function process(state, parent, filename, variables, rootPath, rootPaths)
 	local currentFile = beginVisit(state, parent, filename)
 	if not currentFile then
 		return string.format('// file "%s" is recursively included', filename)
@@ -131,56 +140,159 @@ local function process(state, parent, filename, rootPath)
 	local content = readContent(state, currentFile)
 	local lines = {}
 	for line in content:gmatch(LINE_PATTERN) do
-		currentFile.currentLineNumber = currentFile.currentLineNumber + 1
-
 		local trimmedLine = line:gsub(TRIMMED_LINE_PATTERN, "%1")
 
-		local includeFilename = trimmedLine:match(INCLUDE_PATTERN)
-		local optionName, optionValue = trimmedLine:match(PRAGMA_OPTION_PATTERN)
+		if
+			trimmedLine:match(TEMPLATE_INCLUDE_CAPTURE_PATTERN)
+			or trimmedLine:match(TEMPLATE_VARIABLE)
+		then
+			for templateFilename, key in
+				trimmedLine:gmatch(TEMPLATE_INCLUDE_CAPTURE_PATTERN)
+			do
+				local resolvedPath = Path.resolve(
+					filename,
+					templateFilename,
+					rootPath,
+					rootPaths
+				)
 
-		if includeFilename then
-			local resolvedPath =
-				Path.resolve(filename, includeFilename, rootPath)
+				local templateVariables = variables and variables[key]
 
-			table.insert(lines, string.format("// %s", line))
-			local includedContent =
-				process(state, currentFile, resolvedPath, rootPath)
-
-			table.insert(lines, "#line 1")
-			table.insert(lines, includedContent)
-			table.insert(lines, string.format('// end "%s"', includeFilename))
-			table.insert(
-				lines,
-				string.format("#line %d\n", currentFile.currentLineNumber + 1)
-			)
-
-			state.include[resolvedPath] = true
-		elseif optionName and optionValue then
-			if state.hoistedOptions.keys[optionName] then
-				if state.options.warnings then
-					table.insert(
-						state.result.warnings,
-						string.format(
-							"%s:%d: duplicate option '%s'; ignoring",
-							filename,
-							currentFile.currentLineNumber,
-							optionName
-						)
-					)
+				--- @cast templateVariables table
+				if type(templateVariables) ~= "table" then
+					local message = ("no variable with key %s"):format(key)
+					if state.options.safe then
+						table.insert(state.result.errors, message)
+						templateVariables = {}
+					else
+						error(message)
+					end
 				end
-			else
-				table.insert(state.hoistedOptions.order, optionName)
+
+				local variables
+				if #templateVariables == 0 then
+					variables = { templateVariables }
+				else
+					variables = templateVariables
+				end
+
+				local content = {}
+				for i = 1, #variables do
+					local v = {}
+					for key, value in pairs(variables[i]) do
+						v[key] = value
+					end
+
+					v["COMMA"] = i < #variables and "," or ""
+					v["I"] = 1
+
+					local c = process(
+						state,
+						currentFile,
+						resolvedPath,
+						v,
+						rootPath,
+						rootPaths
+					)
+
+					table.insert(content, c)
+				end
+
+				trimmedLine = trimmedLine:gsub("^(/%*).*(/%*)$", "")
+				trimmedLine = trimmedLine:gsub(
+					TEMPLATE_INCLUDE_PATTERN,
+					table.concat(content, "")
+				)
 			end
 
-			state.hoistedOptions.keys[optionName] = {
-				value = optionValue,
-				filename = filename,
-				currentLine = currentFile.currentLineNumber,
-			}
+			if variables then
+				trimmedLine = trimmedLine:gsub(TEMPLATE_VARIABLE, function(key)
+					if
+						not variables[key]
+						or type(variables[key]) == "table"
+					then
+						local message = ("no variable with key %s"):format(key)
+						if state.options.safe then
+							table.insert(state.result.errors, message)
+							return ""
+						else
+							error(message)
+						end
+					end
 
-			table.insert(lines, string.format("// %s", line))
-		else
-			table.insert(lines, line)
+					return variables[key]
+				end)
+			end
+
+			trimmedLine = ("%s\n"):format(trimmedLine)
+			trimmedLine =
+				trimmedLine:gsub("^%s*(/%*%*%*)", ""):gsub("%*%*%*/%s*$", "")
+		end
+
+		for line in trimmedLine:gmatch(LINE_PATTERN) do
+			local trimmedLine = line:gsub(TRIMMED_LINE_PATTERN, "%1")
+			currentFile.currentLineNumber = currentFile.currentLineNumber + 1
+
+			local includeFilename = trimmedLine:match(INCLUDE_PATTERN)
+			local optionName, optionValue =
+				trimmedLine:match(PRAGMA_OPTION_PATTERN)
+
+			if includeFilename then
+				local resolvedPath =
+					Path.resolve(filename, includeFilename, rootPath, rootPaths)
+
+				table.insert(lines, string.format("// %s", line))
+				local includedContent = process(
+					state,
+					currentFile,
+					resolvedPath,
+					variables,
+					rootPath,
+					rootPaths
+				)
+
+				table.insert(lines, "#line 1")
+				table.insert(lines, includedContent)
+				table.insert(
+					lines,
+					string.format('// end "%s"', includeFilename)
+				)
+				table.insert(
+					lines,
+					string.format(
+						"#line %d\n",
+						currentFile.currentLineNumber + 1
+					)
+				)
+
+				state.include[resolvedPath] = true
+			elseif optionName and optionValue then
+				if state.hoistedOptions.keys[optionName] then
+					if state.options.warnings then
+						table.insert(
+							state.result.warnings,
+							string.format(
+								"%s:%d: duplicate option '%s'; ignoring",
+								filename,
+								currentFile.currentLineNumber,
+								optionName
+							)
+						)
+					end
+				else
+					table.insert(state.hoistedOptions.order, optionName)
+				end
+
+				state.hoistedOptions.keys[optionName] = {
+					value = optionValue,
+					filename = filename,
+					currentLine = currentFile.currentLineNumber,
+				}
+
+				table.insert(lines, string.format("// %s", line))
+			else
+				table.insert(lines, line)
+			end
 		end
 	end
 
@@ -272,9 +384,20 @@ function ShaderPreprocessor.preprocess(filename, options)
 		include = {},
 	}
 
-	local absoluteFilename = Path.resolve("", filename, mergedOptions.rootPath)
-	local processedContent =
-		process(processedState, nil, absoluteFilename, mergedOptions.rootPath)
+	local absoluteFilename = Path.resolve(
+		"",
+		filename,
+		mergedOptions.rootPath,
+		mergedOptions.rootPaths
+	)
+	local processedContent = process(
+		processedState,
+		nil,
+		absoluteFilename,
+		mergedOptions.variables,
+		mergedOptions.rootPath,
+		mergedOptions.rootPaths
+	)
 
 	local finalOutput = {}
 	tryHoistOptions(processedState, finalOutput)
