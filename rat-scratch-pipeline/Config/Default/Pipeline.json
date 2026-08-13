@@ -1,0 +1,114 @@
+{
+  "pipeline": {
+    "version": "1.0.0",
+    "meshletFormat": {
+      "triangleCount": 64
+    },
+    "vertexBuffers": [
+      {
+        "role": "static",
+        "format": [
+          {
+            "role": "VertexPosition",
+            "name": "position",
+            "buffer": "rat_VertexPositions",
+            "inputFormat": "floatvec3",
+            "vertexFormat": "floatvec3"
+          }
+        ]
+      },
+      {
+        "role": "static",
+        "format": [
+          {
+            "role": "VertexTexCoord",
+            "name": "textureCoordinate",
+            "buffer": "rat_VertexTextureCoordinates",
+            "inputFormat": "floatvec2",
+            "vertexFormat": "floatvec2"
+          }
+        ]
+      },
+      {
+        "role": "static",
+        "format": [
+          {
+            "role": "VertexColor",
+            "name": "color",
+            "buffer": "rat_VertexColors",
+            "inputFormat": "uint32",
+            "vertexFormat": "floatvec4",
+            "transform": {
+              "to": "packUnorm4x8",
+              "from": "unpackUnorm4x8"
+            }
+          }
+        ]
+      },
+      {
+        "role": "static",
+        "format": [
+          {
+            "role": "VertexNormal",
+            "name": "normal",
+            "buffer": "rat_VertexNormals",
+            "inputFormat": "floatvec2",
+            "vertexFormat": "floatvec3",
+            "transform": {
+              "to": "packNormal2",
+              "from": "unpackNormal2"
+            }
+          }
+        ]
+      },
+      {
+        "role": "static",
+        "format": [
+          {
+            "role": "VertexTangent",
+            "name": "tangent",
+            "buffer": "rat_VertexTangents",
+            "inputFormat": "floatvec3",
+            "vertexFormat": "floatvec4",
+            "transform": {
+              "to": "packTangent3",
+              "from": "unpackTangent3"
+            }
+          }
+        ]
+      },
+      {
+        "role": "skinned",
+        "format": [
+          {
+            "role": "VertexBoneIndex",
+            "name": "boneIndices",
+            "buffer": "rat_VertexBoneIndices",
+            "inputFormat": "uint32vec2",
+            "vertexFormat": "uint32vec4",
+            "transform": {
+              "to": "packBoneIndices2",
+              "from": "unpackBoneIndices2"
+            }
+          },
+          {
+            "role": "VertexBoneWeight",
+            "name": "boneWeights",
+            "buffer": "rat_VertexBoneWeights",
+            "inputFormat": "uint32",
+            "vertexFormat": "floatvec4",
+            "transform": {
+              "to": "packUnorm4x8",
+              "from": "unpackUnorm4x8"
+            }
+          }
+        ]
+      }
+    ],
+    "indexBuffer": {
+      "name": "index",
+      "buffer": "rat_Indices",
+      "format": "uint32"
+    }
+  }
+}

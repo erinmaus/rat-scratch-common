@@ -1,0 +1,1 @@
+ratGet$RAT_SCRATCH_ROLE$(vertex, index);
