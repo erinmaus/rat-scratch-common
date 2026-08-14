@@ -424,7 +424,7 @@ if jit.status() then
 	_dataGetPointer = function(data)
 		local pointer = dataPointerCache[data]
 		if not pointer then
-			pointer = ffi.cast("uint8_t*", data:getFFIPointer())
+			pointer = ffi.cast("uint8_t *", data:getFFIPointer())
 			dataPointerCache[data] = pointer
 		end
 
@@ -439,17 +439,17 @@ if jit.status() then
 	end
 
 	local function _dataGetFloat(data, offset, count, result, resultOffset)
-		local pointer = ffi.cast("float*", data + offset)
+		local pointer = ffi.cast("float *", data + offset)
 		return _get(pointer, count, result, resultOffset)
 	end
 
 	local function _dataGetUInt32(data, offset, count, result, resultOffset)
-		local pointer = ffi.cast("uint32_t*", data + offset)
+		local pointer = ffi.cast("uint32_t *", data + offset)
 		return _get(pointer, count, result, resultOffset)
 	end
 
 	local function _dataGetInt32(data, offset, count, result, resultOffset)
-		local pointer = ffi.cast("int32_t*", data + offset)
+		local pointer = ffi.cast("int32_t *", data + offset)
 		return _get(pointer, count, result, resultOffset)
 	end
 
@@ -509,17 +509,17 @@ if jit.status() then
 	end
 
 	local function _dataSetFloat(data, offset, count, source, sourceOffset)
-		local pointer = ffi.cast("float*", data + offset)
+		local pointer = ffi.cast("float *", data + offset)
 		return _set(pointer, count, source, sourceOffset)
 	end
 
 	local function _dataSetUInt32(data, offset, count, source, sourceOffset)
-		local pointer = ffi.cast("uint32_t*", data + offset)
+		local pointer = ffi.cast("uint32_t *", data + offset)
 		return _set(pointer, count, source, sourceOffset)
 	end
 
 	local function _dataSetInt32(data, offset, count, source, sourceOffset)
-		local pointer = ffi.cast("int32_t*", data + offset)
+		local pointer = ffi.cast("int32_t *", data + offset)
 		return _set(pointer, count, source, sourceOffset)
 	end
 

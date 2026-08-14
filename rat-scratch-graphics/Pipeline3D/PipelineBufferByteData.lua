@@ -39,7 +39,7 @@ function PipelineBufferByteData:resize(newCount)
 end
 
 function PipelineBufferByteData:initialize(index, count)
-	local pointer = ffi.cast("uint8_t*", self.bufferData:getFFIPointer())
+	local pointer = ffi.cast("uint8_t *", self.bufferData:getFFIPointer())
 	pointer = pointer + (index - 1) * self:getFormat():getStride()
 	ffi.fill(pointer, count * self:getFormat():getStride(), 0)
 end
@@ -72,11 +72,11 @@ end
 function PipelineBufferByteData:copyFromData(index, count, data, offset)
 	offset = offset or 0
 
-	local sourcePointer = ffi.cast("uint8_t*", data:getFFIPointer())
+	local sourcePointer = ffi.cast("uint8_t *", data:getFFIPointer())
 	sourcePointer = sourcePointer + offset
 
 	local destinationPointer =
-		ffi.cast("uint8_t*", self.bufferData:getFFIPointer())
+		ffi.cast("uint8_t *", self.bufferData:getFFIPointer())
 	destinationPointer = destinationPointer
 		+ (index - 1) * self:getFormat():getStride()
 
