@@ -136,7 +136,8 @@ local ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES = {
 	VertexPosition = { 0, 0, 0, 1 },
 	VertexTexCoord = { 0, 0, 0, 0 },
 	VertexColor = { 1, 1, 1, 1 },
-	VertexNormal = { 0, 0, 0, 0 },
+	VertexNormal = { 0, 0, 1, 0 },
+	VertexTangent = { 0, 0, 1, 1 },
 	VertexBoneIndex = { 0, 0, 0, 0 },
 	VertexBoneWeight = { 1, 0, 0, 0 },
 }
