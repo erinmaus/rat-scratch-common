@@ -10,7 +10,6 @@ function Path.resolve(absolutePath, relativePath, rootPath, rootPaths)
 		local r = {}
 		for key, value in pairs(rootPaths) do
 			r[key] = "/" .. value
-			print("???", key, r[key])
 		end
 
 		absolutePath = absolutePath:gsub("^@([%w_%-]+)", r)
