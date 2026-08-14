@@ -69,8 +69,8 @@ do
 	end
 
 	--- @param t any[]
-	--- @param i integer
-	--- @param j integer
+	--- @param i? integer
+	--- @param j? integer
 	--- @return ...
 	function Table.unpack(t, i, j)
 		i = i or 1
@@ -178,6 +178,53 @@ function Table.clone(t, o)
 	end
 
 	return result
+end
+
+--- @param value any
+--- @param e any
+--- @return any
+local function _deepClone(value, e)
+	if type(value) ~= "table" then
+		return value
+	end
+
+	if e[value] then
+		return e[value]
+	end
+
+	local result = {}
+	e[value] = result
+
+	local metatable = getmetatable(value)
+	if metatable then
+		setmetatable(result, metatable)
+	end
+
+	local n = 0
+	for i, v in ipairs(value) do
+		result[i] = _deepClone(v, e)
+		n = i
+	end
+
+	for k, v in pairs(value) do
+		if type(k) == "number" then
+			if k > n then
+				result[k] = _deepClone(v, e)
+			end
+		else
+			result[_deepClone(k, e)] = _deepClone(v, e)
+		end
+	end
+
+	return result
+end
+
+--- @generic T
+--- @param t T
+--- @return T
+function Table.deepClone(t)
+	local e = {}
+	return _deepClone(t, e)
 end
 
 --- @param index integer
