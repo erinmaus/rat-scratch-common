@@ -7,33 +7,52 @@ local Common = require("rat-scratch-math").Common
 local Quaternion = require("rat-scratch-math").Quaternion
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
-local ClusteredMesh = require("rat-scratch-graphics.Pipeline3D.ClusteredMesh")
+local ExtendedModel = require("rat-scratch-pipeline-tools").Model.ExtendedModel
+local PipelineConfig = require("rat-scratch-pipeline").PipelineConfig
+local ffi = require("ffi")
 
 local demo = {}
 
+local COLORS = {
+	{ 1, 0, 0, 1 },
+	{ 0, 1, 0, 1 },
+	{ 0, 0, 1, 1 },
+	{ 0, 1, 1, 1 },
+	{ 1, 0, 1, 1 },
+	{ 1, 1, 0, 1 },
+	{ 1, 0, 0.5, 1 },
+	{ 0.5, 0, 1, 1 },
+	{ 1, 0.5, 0, 1 },
+	{ 0.5, 1, 0, 1 },
+	--{ 0, 1, 0.5, 1 },
+	{ 0, 0.5, 1, 1 },
+	{ 1, 1, 1, 1 },
+}
+
 function demo.load()
 	local parser = GLTF.loadFromFilesystem("samples/assets/gltf/avocado.glb")
-	local sceneDefinition = parser:loadScene(1)
-	local scene = Scene.fromDefinition(sceneDefinition, false)
 
-	--- @diagnostic disable-next-line: assign-type-mismatch
-	local model = scene:getModel(1)
-	demo.gltf = { scene = scene, model = model }
+	local pipelineConfig = PipelineConfig.loadDefault()
+	local extendedModel = ExtendedModel(parser, 0)
+	extendedModel:build(pipelineConfig)
 
-	local clusteredMesh = ClusteredMesh(
-		sceneDefinition.models[1].meshes[1],
-		{ maxTriangles = 32 }
-	)
-	local clusteredMeshDefinition = clusteredMesh:getDefinition()
+	local meshDefinitions = parser:loadMesh(0)
+	local scene =
+		Scene.fromDefinition({ models = { { meshes = meshDefinitions } } })
+	demo.gltf = { scene = scene }
 
 	local indexBuffers = {}
-	for _, cluster in ipairs(clusteredMeshDefinition.clusters) do
+	local extendedMesh = extendedModel:getMesh(1)
+	for i = 1, extendedMesh:getMeshletCount() do
+		local meshlet = extendedMesh:getMeshlet(i)
+		local indexData = meshlet:getIndexData()
+
 		local indexBuffer = love.graphics.newBuffer(
 			Mesh.INDEX_FORMAT,
-			#cluster,
+			indexData:getSize() / ffi.sizeof("uint32_t"),
 			{ index = true }
 		)
-		indexBuffer:setArrayData(cluster)
+		indexBuffer:setArrayData(indexData)
 
 		table.insert(indexBuffers, indexBuffer)
 	end
@@ -41,6 +60,7 @@ function demo.load()
 	demo.indices = indexBuffers
 	demo.currentIndexBuffer = 1
 	demo.useDefaultIndexBuffer = false
+	demo.showTexture = true
 end
 
 function demo.keypressed(key, _, isRepeat)
@@ -54,6 +74,8 @@ function demo.keypressed(key, _, isRepeat)
 		demo.useDefaultIndexBuffer = false
 	elseif key == "a" then
 		demo.useDefaultIndexBuffer = not demo.useDefaultIndexBuffer
+	elseif key == "t" then
+		demo.showTexture = not demo.showTexture
 	end
 end
 
@@ -98,8 +120,10 @@ function demo.draw()
 		love.graphics.applyTransform(camera)
 
 		local loveMesh = mesh:getMesh()
-		if material and material:getTexture() then
+		if material and material:getTexture() and demo.showTexture then
 			loveMesh:setTexture(material:getTexture())
+		else
+			loveMesh:setTexture()
 		end
 
 		if material and material:getColor() then
@@ -108,10 +132,20 @@ function demo.draw()
 
 		if demo.useDefaultIndexBuffer then
 			for i = 1, #demo.indices do
+				if not demo.showTexture then
+					love.graphics.setColor(COLORS[Table.wrapIndex(i, #COLORS)])
+				end
+
 				loveMesh:setIndexBuffer(demo.indices[i])
 				love.graphics.draw(loveMesh)
 			end
 		else
+			if not demo.showTexture then
+				love.graphics.setColor(
+					COLORS[Table.wrapIndex(demo.currentIndexBuffer, #COLORS)]
+				)
+			end
+
 			loveMesh:setIndexBuffer(demo.indices[demo.currentIndexBuffer])
 			love.graphics.draw(loveMesh)
 		end

@@ -1,7 +1,6 @@
-name = rat-scratch-samples
+name = rat-scratch-pipeline-tools
 version = 1.0.0
-source = samples
-directory.build = ./build/rat-scratch-main
+source = rat-scratch-pipeline-tools
 
 [rat-scratch-common]
 version = *
@@ -9,16 +8,16 @@ source = rat-scratch-common
 url = rat-scratch-common.rsmeta
 root = staging/module/rat%-scratch
 
-[rat-scratch-graphics]
-version = *
-source = rat-scratch-graphics
-url = rat-scratch-graphics.rsmeta
-root = staging/module/rat%-scratch
-
 [rat-scratch-math]
 version = *
 source = rat-scratch-math
 url = rat-scratch-math.rsmeta
+root = staging/module/rat%-scratch
+
+[rat-scratch-graphics]
+version = *
+source = rat-scratch-graphics
+url = rat-scratch-graphics.rsmeta
 root = staging/module/rat%-scratch
 
 [json]
@@ -41,8 +40,8 @@ url = https://github.com/zeux/meshoptimizer/archive/refs/tags/v1.2.zip
 hash = sha512:82364e1c78dce46a28c81cf5736cd42a32ad229b43b22debb6d2797fd90866b630268e072443504659f9d8868514614b4ca96a1047f76d00cefadefa8f8a760d
 root = ^meshoptimizer%-v?1%.2$
 
-[rat-scratch-pipeline-tools]
-version = 1.0.0
-source = rat-scratch-pipeline-tools
-url = rat-scratch-pipeline-tools.rsmeta
+[rat-scratch-pipeline]
+version = *
+source = rat-scratch-pipeline
+url = rat-scratch-pipeline.rsmeta
 root = staging/module/rat%-scratch
