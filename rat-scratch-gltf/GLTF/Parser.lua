@@ -10,6 +10,7 @@ local Quaternion = require("rat-scratch-math").Quaternion
 local Transform = require("rat-scratch-math").Transform
 local Vector3 = require("rat-scratch-math").Vector3
 local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
+local Table = require("rat-scratch-common").Table
 
 --- @class RatScratch.GLTF.GLTFParser : RatScratch.Common.BaseObject
 --- @field public filename string
@@ -48,12 +49,36 @@ function GLTFParser:new(filename, json, binaryData)
 	self.attributes = GLTFAttributes.makeDefault()
 end
 
+--- @param cloneJson? boolean
+--- @param cloneData? boolean
+function GLTFParser:clone(cloneJson, cloneData)
+	local result = GLTFParser(
+		self.filename,
+		cloneJson and Table.deepClone(self.root) or self.root,
+		cloneData and self.data
+	)
+
+	if not cloneData then
+		result.data = self.data
+	end
+
+	return result
+end
+
 function GLTFParser:getAttributes()
 	return self.attributes
 end
 
 function GLTFParser:getFilename()
 	return self.filename
+end
+
+function GLTFParser:getData()
+	return self.data
+end
+
+function GLTFParser:getJSON()
+	return self.root
 end
 
 --- @class RatScratch.GLTF.GLTFAccessorComponentTypeInfo
