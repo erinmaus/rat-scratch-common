@@ -1,5 +1,5 @@
 local Object = require("rat-scratch-common").Object
-assert = require("rat-scratch-common").Debug.assert
+local assert = require("rat-scratch-common").Debug.assert
 
 --- @class RatScratch.GLTF.GLTFAttributes : RatScratch.Common.BaseObject
 --- @field private attributeToVertexElement table<string, string>
@@ -14,6 +14,7 @@ GLTFAttributes.DEFAULT_VERTEX_ELEMENT_TO_GLTF_ATTRIBUTE = {
 	VertexTexCoord = "TEXCOORD_0",
 	VertexColor = "COLOR_0",
 	VertexNormal = "NORMAL",
+	VertexTangent = "TANGENT",
 	VertexBoneIndex = "JOINTS_0",
 	VertexBoneWeight = "WEIGHTS_0",
 }
@@ -33,6 +34,7 @@ function GLTFAttributes.makeDefault()
 	result:defineAttribute("TEXCOORD_0", "VertexTexCoord", 1, "floatvec4")
 	result:defineAttribute("COLOR_0", "VertexColor", 2, "floatvec4")
 	result:defineAttribute("NORMAL", "VertexNormal", 10, "floatvec4")
+	result:defineAttribute("TANGENT", "VertexTangent", 11, "floatvec4")
 	result:defineAttribute("JOINTS_0", "VertexBoneIndex", 20, "uint32vec4")
 	result:defineAttribute("WEIGHTS_0", "VertexBoneWeight", 21, "floatvec4")
 
