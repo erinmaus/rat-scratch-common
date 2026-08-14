@@ -19,6 +19,7 @@ local PipelineDefinitionMeshleftFormat = {}
 
 --- @class RatScratch.Pipeline.PipelineDefinitionVertexBuffer
 --- @field public role RatScratch.Pipeline.PipelineDefinitionVertexBufferRole
+--- @field public buffer string
 --- @field public format RatScratch.Pipeline.PipelineDefinitionVertexBufferAttribute[]
 local PipelineDefinitionVertexBuffer = {}
 

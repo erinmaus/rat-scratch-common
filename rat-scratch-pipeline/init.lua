@@ -1,7 +1,7 @@
 return {
-	IndexBufferFormat = require("rat-scratch-pipeline.IndexBufferFormat"),
+	IndexBufferInfo = require("rat-scratch-pipeline.IndexBufferInfo"),
 	Utility = require("rat-scratch-pipeline.Utility"),
 	MeshletFormat = require("rat-scratch-pipeline.MeshletFormat"),
 	PipelineConfig = require("rat-scratch-pipeline.PipelineConfig"),
-	VertexBufferFormat = require("rat-scratch-pipeline.VertexBufferFormat"),
+	VertexBufferInfo = require("rat-scratch-pipeline.VertexBufferInfo"),
 }
