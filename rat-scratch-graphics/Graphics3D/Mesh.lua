@@ -267,6 +267,9 @@ function Mesh:new(name, buffers, format, vertices, indices, material)
 		self.indexBuffer:setArrayData(indices)
 	end
 
+	local formatInstance = BufferFormat(format)
+	self.format = formatInstance:getFormat()
+
 	self.mesh =
 		love.graphics.newMesh(format, numVertices, "triangles", "static")
 	do
@@ -275,8 +278,15 @@ function Mesh:new(name, buffers, format, vertices, indices, material)
 
 		if staticBuffer and staticBufferInfo then
 			for _, attribute in ipairs(staticBufferInfo.format) do
-				self.mesh:setAttributeEnabled(attribute.location, true)
-				self.mesh:attachAttribute(attribute.location, staticBuffer)
+				if
+					formatInstance:hasAttribute(
+						attribute.location,
+						attribute.name
+					)
+				then
+					self.mesh:setAttributeEnabled(attribute.location, true)
+					self.mesh:attachAttribute(attribute.location, staticBuffer)
+				end
 			end
 		end
 
@@ -285,8 +295,15 @@ function Mesh:new(name, buffers, format, vertices, indices, material)
 
 		if inputBuffer and inputBufferInfo then
 			for _, attribute in ipairs(inputBufferInfo.format) do
-				self.mesh:setAttributeEnabled(attribute.location, true)
-				self.mesh:attachAttribute(attribute.location, inputBuffer)
+				if
+					formatInstance:hasAttribute(
+						attribute.location,
+						attribute.name
+					)
+				then
+					self.mesh:setAttributeEnabled(attribute.location, true)
+					self.mesh:attachAttribute(attribute.location, inputBuffer)
+				end
 			end
 		end
 
@@ -295,8 +312,15 @@ function Mesh:new(name, buffers, format, vertices, indices, material)
 
 		if outputBuffer and outputBufferInfo then
 			for _, attribute in ipairs(outputBufferInfo.format) do
-				self.mesh:setAttributeEnabled(attribute.location, true)
-				self.mesh:attachAttribute(attribute.location, outputBuffer)
+				if
+					formatInstance:hasAttribute(
+						attribute.location,
+						attribute.name
+					)
+				then
+					self.mesh:setAttributeEnabled(attribute.location, true)
+					self.mesh:attachAttribute(attribute.location, outputBuffer)
+				end
 			end
 		end
 
