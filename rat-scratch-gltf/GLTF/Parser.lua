@@ -583,12 +583,42 @@ function GLTFParser:loadScenes(options)
 	return scenes
 end
 
+--- @param mesh integer
+--- @param options? RatScratch.GLTF.SceneLoadOptions
+--- @return RatScratch.Graphics.Graphics3D.MeshDefinition[]?
+function GLTFParser:loadMesh(mesh, options)
+	local model = self:_loadMesh(
+		self:getMesh(mesh),
+		nil,
+		options or DefaultSceneLoadOptions
+	)
+
+	return model and model.meshes
+end
+
+--- @param node integer
+--- @param options? RatScratch.GLTF.SceneLoadOptions
+function GLTFParser:loadModel(node, options)
+	local result = self:_tryLoadNode(
+		{},
+		{},
+		{},
+		self:getNode(node - 1),
+		love.math.newTransform(),
+		false,
+		options or DefaultSceneLoadOptions
+	)
+
+	return result[1]
+end
+
 --- @private
 --- @param modelDefinitions table<integer, RatScratch.Graphics.Graphics3D.ModelDefinition>
 --- @param skeletonDefinitions table<integer, RatScratch.Graphics.Graphics3D.SkeletonDefinition>
 --- @param animationDefinitions table<integer, RatScratch.Graphics.Graphics3D.AnimationDefinition>
 --- @param node RatScratch.GLTF.Node
 --- @param parentTransform love.Transform
+--- @param recursive boolean
 --- @param options RatScratch.GLTF.SceneLoadOptions
 --- @return RatScratch.Graphics.Graphics3D.ModelDefinition[]
 function GLTFParser:_tryLoadNode(
@@ -597,6 +627,7 @@ function GLTFParser:_tryLoadNode(
 	animationDefinitions,
 	node,
 	parentTransform,
+	recursive,
 	options
 )
 	local models = {}
@@ -621,7 +652,7 @@ function GLTFParser:_tryLoadNode(
 	end
 
 	local transform = parentTransform * nodeTransform
-	if node.children then
+	if node.children and recursive then
 		for _, child in ipairs(node.children) do
 			local childNode = self:getNode(child)
 			local childModels = self:_tryLoadNode(
@@ -630,6 +661,7 @@ function GLTFParser:_tryLoadNode(
 				animationDefinitions,
 				childNode,
 				transform,
+				true,
 				options
 			)
 
@@ -687,6 +719,7 @@ function GLTFParser:_loadScene(sceneData, options)
 			animationDefinitions,
 			self:getNode(nodeIndex),
 			love.math.newTransform(),
+			true,
 			options
 		)
 
@@ -804,7 +837,7 @@ end
 
 --- @private
 --- @param meshData RatScratch.GLTF.Mesh
---- @param isSkinned boolean
+--- @param isSkinned? boolean
 --- @param options RatScratch.GLTF.SceneLoadOptions
 --- @return RatScratch.Graphics.Graphics3D.ModelDefinition
 function GLTFParser:_loadMesh(meshData, isSkinned, options)
@@ -823,6 +856,17 @@ function GLTFParser:_loadMesh(meshData, isSkinned, options)
 				indicesAccessor:read(i, value)
 				table.insert(indices, value[1])
 			end
+		end
+
+		if isSkinned == nil then
+			local hasBoneIndex = primitiveData.attributes[self.attributes:getAttributeFromVertexElement(
+				"VertexBoneIndex"
+			)] ~= nil
+			local hasBoneWeight = primitiveData.attributes[self.attributes:getAttributeFromVertexElement(
+				"VertexBoneWeight"
+			)] ~= nil
+
+			isSkinned = hasBoneIndex and hasBoneWeight
 		end
 
 		--- @type RatScratch.Graphics.Graphics3D.MeshFormatAttribute[]
@@ -880,7 +924,7 @@ function GLTFParser:_loadMesh(meshData, isSkinned, options)
 		if isSkinned then
 			local targetFormat, targetRoles = _tryGetFormatsAndRoles(
 				options.attributes and options.attributes.skinned,
-				Mesh.SKINNED_MESH_FORMAT,
+				format,
 				{
 					Mesh.CONSTANT_BUFFER_DEFINITION,
 					Mesh.TRANSFORM_INPUT_BUFFER_DEFINITION,
@@ -894,7 +938,7 @@ function GLTFParser:_loadMesh(meshData, isSkinned, options)
 		else
 			local targetFormat, targetRoles = _tryGetFormatsAndRoles(
 				options.attributes and options.attributes.static,
-				Mesh.STATIC_MESH_FORMAT,
+				format,
 				{ Mesh.STATIC_BUFFER_DEFINITION }
 			)
 
