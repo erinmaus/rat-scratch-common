@@ -14,7 +14,8 @@ local Common = require("rat-scratch-math").Common
 local BufferFormatAttribute = {}
 
 --- @class RatScratch.Graphics.Graphics3D.BufferFormat : RatScratch.Common.BaseObject
---- @overload fun(format: RatScratch.Graphics.Graphics3D.BufferFormatAttribute[]): RatScratch.Graphics.Graphics3D.BufferFormat
+--- @overload fun(format: RatScratch.Graphics.Graphics3D.BufferFormatAttribute[], packed?: boolean): RatScratch.Graphics.Graphics3D.BufferFormat
+--- @field private format RatScratch.Graphics.Graphics3D.BufferFormatAttribute[]
 --- @field private locationToAttribute table<integer, string>
 --- @field private attributeToLocation table<string, integer>
 --- @field private index table<string | integer, integer>
@@ -172,8 +173,9 @@ function BufferFormat.getFormatComponentCount(format)
 end
 
 --- @param format RatScratch.Graphics.Graphics3D.BufferFormatAttribute[]
+--- @param packed? boolean
 --- @return integer
-function BufferFormat.getFormatStride(format)
+function BufferFormat.getFormatStride(format, packed)
 	local stride = 0
 	local totalComponentCount = 0
 	local largestAlignment = 0
@@ -190,32 +192,38 @@ function BufferFormat.getFormatStride(format)
 			attribute.format
 		)
 
-		local adjustedComponentCount
-		if
-			not Common.isMultipleOf(componentCount, 4)
-			and not Common.isMultipleOf(componentCount, 2)
-			and componentCount ~= 1
-		then
-			adjustedComponentCount = 4
-		else
-			adjustedComponentCount = math.min(componentCount, 4)
-		end
+		if not packed then
+			local adjustedComponentCount
+			if
+				not Common.isMultipleOf(componentCount, 4)
+				and not Common.isMultipleOf(componentCount, 2)
+				and componentCount ~= 1
+			then
+				adjustedComponentCount = 4
+			else
+				adjustedComponentCount = math.min(componentCount, 4)
+			end
 
-		local alignmentBytes = adjustedComponentCount * 4
-		local nextStride = stride
+			local alignmentBytes = adjustedComponentCount * 4
+			local nextStride = stride
 
-		local strideRemainder = nextStride % alignmentBytes
-		if strideRemainder == 0 then
-			stride = nextStride
-		else
-			stride = nextStride + alignmentBytes - strideRemainder
+			local strideRemainder = nextStride % alignmentBytes
+			if strideRemainder == 0 then
+				stride = nextStride
+			else
+				stride = nextStride + alignmentBytes - strideRemainder
+			end
+
+			largestAlignment = math.max(largestAlignment, alignmentBytes)
 		end
 
 		stride = stride + componentCount * 4
-		largestAlignment = math.max(largestAlignment, alignmentBytes)
 	end
 
-	if not Common.isMultipleOf(stride, largestAlignment) then
+	if
+		largestAlignment > 0
+		and not Common.isMultipleOf(stride, largestAlignment)
+	then
 		stride = Common.nextMultiple(stride, largestAlignment)
 	end
 
@@ -224,8 +232,9 @@ end
 
 --- @param format RatScratch.Graphics.Graphics3D.BufferFormatAttribute[]
 --- @param attributeName string
+--- @param packed? boolean
 --- @return integer?
-function BufferFormat.getFormatByteOffset(format, attributeName)
+function BufferFormat.getFormatByteOffset(format, attributeName, packed)
 	local byteIndex = 0
 	for i, attribute in ipairs(format) do
 		local componentCount = ATTRIBUTE_COMPONENTS[attribute.format]
@@ -237,25 +246,27 @@ function BufferFormat.getFormatByteOffset(format, attributeName)
 			attribute.format
 		)
 
-		local adjustedComponentCount
-		if
-			not Common.isMultipleOf(componentCount, 4)
-			and not Common.isMultipleOf(componentCount, 2)
-			and componentCount ~= 1
-		then
-			adjustedComponentCount = 4
-		else
-			adjustedComponentCount = math.min(componentCount, 4)
-		end
+		if not packed then
+			local adjustedComponentCount
+			if
+				not Common.isMultipleOf(componentCount, 4)
+				and not Common.isMultipleOf(componentCount, 2)
+				and componentCount ~= 1
+			then
+				adjustedComponentCount = 4
+			else
+				adjustedComponentCount = math.min(componentCount, 4)
+			end
 
-		local alignmentBytes = adjustedComponentCount * 4
-		local nextByteIndex = byteIndex
+			local alignmentBytes = adjustedComponentCount * 4
+			local nextByteIndex = byteIndex
 
-		local bytesRemainder = nextByteIndex % alignmentBytes
-		if bytesRemainder == 0 then
-			byteIndex = nextByteIndex
-		else
-			byteIndex = nextByteIndex + alignmentBytes - bytesRemainder
+			local bytesRemainder = nextByteIndex % alignmentBytes
+			if bytesRemainder == 0 then
+				byteIndex = nextByteIndex
+			else
+				byteIndex = nextByteIndex + alignmentBytes - bytesRemainder
+			end
 		end
 
 		if attribute.name == attributeName then
@@ -773,9 +784,11 @@ function BufferFormat.copyFromByteDataToTable(
 end
 
 --- @param format RatScratch.Graphics.Graphics3D.BufferFormatAttribute[]
-function BufferFormat:new(format)
+--- @param packed? boolean
+function BufferFormat:new(format, packed)
+	self.packed = not not packed
 	self.format = Table.new(#format, 0)
-	self.stride = BufferFormat.getFormatStride(format)
+	self.stride = BufferFormat.getFormatStride(format, self.packed)
 	self.componentCount = BufferFormat.getFormatComponentCount(format)
 
 	self.locationToAttribute = {}
@@ -798,8 +811,11 @@ function BufferFormat:new(format)
 			attribute.name
 		)
 
-		local byteOffset =
-			BufferFormat.getFormatByteOffset(format, attribute.name)
+		local byteOffset = BufferFormat.getFormatByteOffset(
+			format,
+			attribute.name,
+			self.packed
+		)
 
 		assert(
 			not self.locationToAttribute[attribute.location],
