@@ -279,6 +279,7 @@ end
 local COMMON_IMAGE_MIME_TYPES_DEFAULT_FILE_EXTENSIONS = {
 	["image/png"] = "png",
 	["image/webp"] = "webp",
+	["image/jpeg"] = "jpg",
 }
 
 --- @param mimeType string
