@@ -54,7 +54,7 @@ jobs:
       - name: Build (shared)
         run: |
           cd ./lib/meshoptimizer
-          cmake -Bshared . -DMESHOPT_BUILD_SHARED_LIBS=ON -DMESHOPT_STABLE_EXPORTS=on
+          cmake -Bshared . -DMESHOPT_BUILD_SHARED_LIBS=ON -DMESHOPT_STABLE_EXPORTS=on -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
           cmake --build shared
       - name: Artifact
         uses: actions/upload-artifact@v7
