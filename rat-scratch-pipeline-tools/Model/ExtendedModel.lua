@@ -373,7 +373,7 @@ function ExtendedModel:_transformIndexData(
 	local vertexData = mesh:getVertexAttributeBufferData("VertexPosition")
 	local vertexFormat = mesh:getVertexAttributeBufferInfo("VertexPosition")
 		:getInputFormat()
-	local meshlets = MeshOptimizerFFI.buildMeshletsFlex(
+	local meshlets, meshletBounds = MeshOptimizerFFI.buildMeshletsFlex(
 		indexData,
 		#meshDefinition.indices,
 		vertexData,
@@ -387,12 +387,16 @@ function ExtendedModel:_transformIndexData(
 	)
 
 	local totalIndexBufferSize = 0
-	for _, meshletIndexData in ipairs(meshlets) do
+	for i, meshletIndexData in ipairs(meshlets) do
 		local meshlet = ExtendedMeshMeshlet.fromMesh(
 			pipelineConfig,
 			meshletIndexData,
 			mesh,
 			meshDefinition
+		)
+		meshlet:setStaticBounds(
+			meshletBounds[i].position,
+			meshletBounds[i].radius
 		)
 		totalIndexBufferSize = totalIndexBufferSize
 			+ meshlet:getIndexData():getSize()

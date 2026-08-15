@@ -2,7 +2,7 @@ local ffi = require("ffi")
 local Object = require("rat-scratch-common").Object
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local Mesh = require("rat-scratch-graphics").Graphics3D.Mesh
-local Table = require("rat-scratch-common").Table
+local Vector3 = require("rat-scratch-math").Vector3
 
 --- @class RatScratch.Pipeline.ExtendedMeshMeshlet : RatScratch.Common.BaseObject
 --- @overload fun(mesh: RatScratch.Pipeline.ExtendedMesh, indexData: love.ByteData): RatScratch.Pipeline.ExtendedMeshMeshlet
@@ -10,6 +10,8 @@ local Table = require("rat-scratch-common").Table
 --- @field private indexData love.ByteData
 --- @field private vertexIndices integer[]
 --- @field private boneIndices integer[]
+--- @field private staticBoundsPosition RatScratch.Math.Vector3
+--- @field private staticBoundsRadius number
 local ExtendedMeshMeshlet = Object()
 
 --- @param mesh RatScratch.Pipeline.ExtendedMesh
@@ -19,6 +21,20 @@ function ExtendedMeshMeshlet:new(mesh, indexData)
 	self.indexData = indexData
 	self.vertexIndices = {}
 	self.boneIndices = {}
+	self.bounds = {}
+	self.staticBoundsPosition = Vector3()
+	self.staticBoundsRadius = 0
+end
+
+function ExtendedMeshMeshlet:getStaticBounds()
+	return self.staticBoundsPosition, self.staticBoundsRadius
+end
+
+--- @param position RatScratch.Math.Vector3
+--- @param radius number
+function ExtendedMeshMeshlet:setStaticBounds(position, radius)
+	self.staticBoundsPosition:from(position:get())
+	self.staticBoundsRadius = radius
 end
 
 function ExtendedMeshMeshlet:getIndexData()
@@ -39,6 +55,10 @@ end
 
 function ExtendedMeshMeshlet:getUniqueBone(index)
 	return self.boneIndices[index]
+end
+
+function ExtendedMeshMeshlet:getIsSkinned()
+	return #self.boneIndices > 0
 end
 
 --- @param pipelineConfig RatScratch.Pipeline.PipelineConfig

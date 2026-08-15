@@ -6,14 +6,17 @@ ifneq ($(MSYS_VERSION),0)
 	RAT_SCRATCH_SHARED_LIB_EXT := dll
 	RAT_SCRATCH_STATIC_LIB_EXT := a
 	LDFLAGS += -shared
-	CPPFLAGS += -DRAT_SCRATCH_WINDOWS
+	CPPFLAGS += -DRAT_SCRATCH_WINDOWS '-DRAT_SCRATCH_CALLING_CONVENTION=__declspec(dllimport)'
 else
+	CPPFLAGS += '-DRAT_SCRATCH_CALLING_CONVENTION=__attribute__((visibility("default")))'
+
 	ifeq ($(shell uname),Darwin)
 		RAT_SCRATCH_SHARED_LIB_EXT := dylib
 		RAT_SCRATCH_STATIC_LIB_EXT := a
 		CFLAGS += -arch x86_64 -arch arm64
 		CXXFLAGS += -arch x86_64 -arch arm64
 		LDFLAGS += -arch x86_64 -arch arm64 -dynamiclib
+		CMAKE_GENERATE_OPTS := -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
 	else
 		RAT_SCRATCH_SHARED_LIB_EXT := so
 		RAT_SCRATCH_STATIC_LIB_EXT := a
