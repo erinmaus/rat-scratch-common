@@ -9,6 +9,7 @@ local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
 local ExtendedModel = require("rat-scratch-pipeline-tools").Model.ExtendedModel
 local PipelineConfig = require("rat-scratch-pipeline").PipelineConfig
+local ShaderPreprocessor = require("rat-scratch-graphics.ShaderPreprocessor")
 local ffi = require("ffi")
 
 local demo = {}
@@ -30,13 +31,20 @@ local COLORS = {
 }
 
 function demo.load()
-	local parser = GLTF.loadFromFilesystem("samples/assets/gltf/avocado.glb")
+	local parser = GLTF.loadFromFilesystem("samples/assets/gltf/shoe.glb")
 
 	local pipelineConfig = PipelineConfig.loadDefault()
 	local extendedModel = ExtendedModel(parser, 0)
 	extendedModel:build(pipelineConfig)
 
-	local meshDefinitions = parser:loadMesh(0)
+	local meshDefinitions = parser:loadMesh(0, {
+		attributes = {
+			static = {
+				output = parser:getAttributes(),
+				static = parser:getAttributes(),
+			},
+		},
+	})
 	local scene =
 		Scene.fromDefinition({ models = { { meshes = meshDefinitions } } })
 	demo.gltf = { scene = scene }
@@ -59,8 +67,18 @@ function demo.load()
 
 	demo.indices = indexBuffers
 	demo.currentIndexBuffer = 1
-	demo.useDefaultIndexBuffer = false
+	demo.useDefaultIndexBuffer = true
 	demo.showTexture = true
+
+	demo.simpleShader = ShaderPreprocessor.newShader(
+		"samples/assets/shaders/Bump/Bump.frag.glsl",
+		"samples/assets/shaders/Bump/Bump.vert.glsl",
+		{
+			rootPath = "/rat-scratch-graphics/Shaders",
+		}
+	)
+
+	demo.lightDirection = Vector3()
 end
 
 function demo.keypressed(key, _, isRepeat)
@@ -102,7 +120,7 @@ function demo.draw()
 		do
 			local _, my = love.mouse.getPosition()
 			local delta = Common.saturate((my - 32) / love.graphics.getHeight())
-			scale = Common.lerp(0.15, 0.25, delta ^ 2)
+			scale = Common.lerp(0.5, 3, delta ^ 2)
 		end
 
 		local projection = Transform.makePerspectiveTransform(
@@ -122,6 +140,26 @@ function demo.draw()
 		local loveMesh = mesh:getMesh()
 		if material and material:getTexture() and demo.showTexture then
 			loveMesh:setTexture(material:getTexture())
+			love.graphics.setShader(demo.simpleShader)
+
+			if material:getNormalTexture() then
+				demo.simpleShader:send(
+					"rat_NormalImage",
+					material:getNormalTexture()
+				)
+			end
+
+			demo.lightDirection
+				:from(
+					math.cos(love.timer.getTime()),
+					0.25,
+					math.sin(love.timer.getTime())
+				)
+				:normalize(demo.lightDirection)
+			demo.simpleShader:send(
+				"rat_LightDirection",
+				{ demo.lightDirection:get() }
+			)
 		else
 			loveMesh:setTexture()
 		end
