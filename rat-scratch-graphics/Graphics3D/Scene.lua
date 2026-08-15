@@ -84,6 +84,8 @@ function Scene.fromDefinition(sceneDefinition, yield)
 				_maybeYield(yield, "begin", Material, meshDefinition.material)
 
 				local texture = meshDefinition.material.texture
+				local normalTexture = meshDefinition.material.normalTexture
+
 				if texture and texture:typeOf("ImageData") then
 					--- @cast texture love.ImageData
 					texture = love.graphics.newTexture(
@@ -91,12 +93,24 @@ function Scene.fromDefinition(sceneDefinition, yield)
 						{ mipmaps = meshDefinition.material.mipmaps }
 					)
 
+					normalTexture = normalTexture
+						and love.graphics.newTexture(normalTexture, {
+							mipmaps = meshDefinition.material.mipmaps,
+						})
+
 					--- @cast texture love.Texture
+					--- @cast normalTexture love.Texture
 
 					if meshDefinition.material.mipmapFilter then
 						texture:setMipmapFilter(
 							meshDefinition.material.mipmapFilter
 						)
+
+						if normalTexture then
+							normalTexture:setMipmapFilter(
+								meshDefinition.material.mipmapFilter
+							)
+						end
 					end
 
 					texture:setWrap(
@@ -104,13 +118,32 @@ function Scene.fromDefinition(sceneDefinition, yield)
 						meshDefinition.material.verticalWrapMode or "repeat"
 					)
 
+					if normalTexture then
+						normalTexture:setWrap(
+							meshDefinition.material.horizontalWrapMode
+								or "repeat",
+							meshDefinition.material.verticalWrapMode or "repeat"
+						)
+					end
+
 					texture:setFilter(
 						meshDefinition.material.minFilter or "linear",
 						meshDefinition.material.magFilter or "linear"
 					)
+
+					if normalTexture then
+						normalTexture:setFilter(
+							meshDefinition.material.minFilter or "linear",
+							meshDefinition.material.magFilter or "linear"
+						)
+					end
 				end
 
-				material = Material(texture, meshDefinition.material.color)
+				material = Material(
+					texture,
+					meshDefinition.material.color,
+					normalTexture
+				)
 
 				_maybeYield(yield, "load", material)
 			end

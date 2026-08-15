@@ -1,6 +1,7 @@
 --- @class RatScratch.GLTF.Object
 --- @field public extension? table
 --- @field public extras? table | number | string | boolean
+--- @field public extensions? table
 local Object = {}
 
 --- @class RatScratch.GLTF.NamedObject : RatScratch.GLTF.Object
@@ -160,8 +161,8 @@ local Image = {}
 
 --- @class RatScratch.GLTF.Material : RatScratch.GLTF.NamedObject
 --- @field public pbrMetallicRoughness? RatScratch.GLTF.MaterialPBRMetallicRoughness
---- @field public normalTextureInfo? RatScratch.GLTF.MaterialNormalTextureInfo
---- @field public occlusionTextureInfo? RatScratch.GLTF.MaterialOcclusionTextureInfo
+--- @field public normalTexture? RatScratch.GLTF.MaterialNormalTexture
+--- @field public occlusionTexture? RatScratch.GLTF.MaterialOcclusionTexture
 --- @field public emissiveTexture? RatScratch.GLTF.TextureInfo
 --- @field public emissiveFactor? number[]
 --- @field public alphaMode? RatScratch.GLTF.MaterialAlphaMode
@@ -177,17 +178,17 @@ local Material = {}
 --- @field public metallicRoughnessTexture? RatScratch.GLTF.TextureInfo
 local MaterialPBRMetallicRoughness = {}
 
---- @class RatScratch.GLTF.MaterialNormalTextureInfo : RatScratch.GLTF.Object
+--- @class RatScratch.GLTF.MaterialNormalTexture : RatScratch.GLTF.Object
 --- @field public index integer
 --- @field public texCoord? integer
 --- @field public scale? number
-local MaterialNormalTextureInfo = {}
+local MaterialNormalTexture = {}
 
---- @class RatScratch.GLTF.MaterialOcclusionTextureInfo : RatScratch.GLTF.Object
+--- @class RatScratch.GLTF.MaterialOcclusionTexture : RatScratch.GLTF.Object
 --- @field public index integer
 --- @field public texCoord? integer
 --- @field public strength? number
-local MaterialOcclusionTextureInfo = {}
+local MaterialOcclusionTexture = {}
 
 --- @class RatScratch.GLTF.Mesh : RatScratch.GLTF.NamedObject
 --- @field public primitives RatScratch.GLTF.MeshPrimitive[]
@@ -270,6 +271,7 @@ local Skin = {}
 --- @class RatScratch.GLTF.Texture : RatScratch.GLTF.Object
 --- @field public sampler? integer
 --- @field public source? integer
+--- @field public extensions { EXT_texture_webp: RatScratch.GLTF.Texture }
 local Texture = {}
 
 --- @class RatScratch.GLTF.TextureInfo : RatScratch.GLTF.Object
@@ -310,8 +312,8 @@ return {
 	Image = Image,
 	Material = Material,
 	MaterialPBRMetallicRoughness = MaterialPBRMetallicRoughness,
-	MaterialNormalTextureInfo = MaterialNormalTextureInfo,
-	MaterialOcclusionTextureInfo = MaterialOcclusionTextureInfo,
+	MaterialNormalTexture = MaterialNormalTexture,
+	MaterialOcclusionTexture = MaterialOcclusionTexture,
 	Mesh = Mesh,
 	MeshPrimitiveMode = MeshPrimitiveMode,
 	MeshPrimitive = MeshPrimitive,

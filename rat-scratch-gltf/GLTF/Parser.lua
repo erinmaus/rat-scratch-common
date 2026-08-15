@@ -278,6 +278,7 @@ end
 
 local COMMON_IMAGE_MIME_TYPES_DEFAULT_FILE_EXTENSIONS = {
 	["image/png"] = "png",
+	["image/webp"] = "webp",
 }
 
 --- @param mimeType string
@@ -1266,9 +1267,9 @@ function GLTFParser:_loadMaterial(index)
 		and material.pbrMetallicRoughness.baseColorFactor
 	color = color and { unpack(color) }
 
-	local textureInfo = material.pbrMetallicRoughness
+	local colorTextureInfo = material.pbrMetallicRoughness
 		and material.pbrMetallicRoughness.baseColorTexture
-	if not textureInfo then
+	if not colorTextureInfo then
 		if color then
 			return { color = color }
 		end
@@ -1276,9 +1277,21 @@ function GLTFParser:_loadMaterial(index)
 		return nil
 	end
 
-	local texture = self:getTexture(textureInfo.index)
+	local normalTextureInfo = material.normalTexture
+
+	local texture = self:getTexture(colorTextureInfo.index)
+	texture = texture
+			and (texture.extensions and texture.extensions.EXT_texture_webp)
+		or texture
+	local normalTexture = normalTextureInfo
+		and self:getTexture(normalTextureInfo.index)
+	normalTexture = normalTexture
+			and (normalTexture.extensions and normalTexture.extensions.EXT_texture_webp)
+		or normalTexture
 	local sampler = texture.sampler and self:getSampler(texture.sampler)
-	local image = self:getImageData(texture.source)
+	local image = texture and self:getImageData(texture.source)
+	local normalImage = normalTexture
+		and self:getImageData(normalTexture.source)
 
 	local horizontalWrapMode =
 		GLTF_WRAP_MODE_TO_NECRONOMICON[sampler and sampler.wrapS or GLTF.SamplerWrap.REPEAT]
@@ -1293,6 +1306,7 @@ function GLTFParser:_loadMaterial(index)
 
 	return {
 		texture = image,
+		normalTexture = normalImage,
 		minFilter = minFilter or "linear",
 		magFilter = magFilter,
 		mipmapFilter = mipmapMinFilter or nil,

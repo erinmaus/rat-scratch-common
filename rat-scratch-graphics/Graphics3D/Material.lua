@@ -1,14 +1,16 @@
 local Object = require("rat-scratch-common").Object
 
 --- @class RatScratch.Graphics.Graphics3D.Material : RatScratch.Common.BaseObject
---- @overload fun(texture?: love.graphics.Texture, color?: number[]): RatScratch.Graphics.Graphics3D.Material
+--- @overload fun(texture?: love.graphics.Texture, color?: number[], normalTexture?: love.graphics.Texture): RatScratch.Graphics.Graphics3D.Material
 --- @field private texture? love.graphics.Texture
+--- @field private normalTexture? love.graphics.Texture
 --- @field private color number[]
 local Material = Object()
 
 --- @param texture? love.graphics.Texture
 --- @param color? number[]
-function Material:new(texture, color)
+--- @param normalTexture? love.graphics.Texture
+function Material:new(texture, color, normalTexture)
 	local outputColor
 	if not color then
 		outputColor = { 1, 1, 1, 1 }
@@ -18,11 +20,17 @@ function Material:new(texture, color)
 
 	self.texture = texture
 	self.color = outputColor
+	self.normalTexture = normalTexture
 end
 
 --- @return love.graphics.Texture
 function Material:getTexture()
 	return self.texture
+end
+
+--- @return love.graphics.Texture
+function Material:getNormalTexture()
+	return self.normalTexture
 end
 
 --- @return number, number, number, number
