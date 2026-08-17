@@ -13,8 +13,14 @@ local Common = require("rat-scratch-math").Common
 --- @field public format RatScratch.Graphics.Graphics3D.BufferAttributeFormat | string
 local BufferFormatAttribute = {}
 
+--- @class RatScratch.Graphics.Graphics3D.InputBufferFormatAttribute
+--- @field public location? integer
+--- @field public name RatScratch.Graphics.Graphics3D.BufferAttributeName | string
+--- @field public format RatScratch.Graphics.Graphics3D.BufferAttributeFormat | string
+local InputBufferFormatAttribute = {}
+
 --- @class RatScratch.Graphics.Graphics3D.BufferFormat : RatScratch.Common.BaseObject
---- @overload fun(format: RatScratch.Graphics.Graphics3D.BufferFormatAttribute[], packed?: boolean): RatScratch.Graphics.Graphics3D.BufferFormat
+--- @overload fun(format: RatScratch.Graphics.Graphics3D.InputBufferFormatAttribute[], packed?: boolean): RatScratch.Graphics.Graphics3D.BufferFormat
 --- @field private format RatScratch.Graphics.Graphics3D.BufferFormatAttribute[]
 --- @field private locationToAttribute table<integer, string>
 --- @field private attributeToLocation table<string, integer>
@@ -71,6 +77,12 @@ local ATTRIBUTE_COMPONENTS = {
 	uint32vec2 = 2,
 	uint32vec3 = 3,
 	uint32vec4 = 4,
+	int16 = 1,
+	int16vec2 = 2,
+	int16vec4 = 4,
+	uint16 = 1,
+	uint16vec2 = 2,
+	uint16vec4 = 4,
 	floatmat2x2 = 4,
 	floatmat2x3 = 6,
 	floatmat2x4 = 8,
@@ -96,6 +108,12 @@ local EXPANDED_ATTRIBUTE_FORMAT = {
 	uint32vec2 = "uint32vec4",
 	uint32vec3 = "uint32vec4",
 	uint32vec4 = "uint32vec4",
+	int16 = "int16vec4",
+	int16vec2 = "int16vec4",
+	int16vec4 = "int16vec4",
+	uint16 = "uint16vec4",
+	uint16vec2 = "uint16vec4",
+	uint16vec4 = "uint16vec4",
 	floatmat2x2 = "floatmat4x4",
 	floatmat2x3 = "floatmat4x4",
 	floatmat2x4 = "floatmat4x4",
@@ -106,6 +124,14 @@ local EXPANDED_ATTRIBUTE_FORMAT = {
 	floatmat4x2 = "floatmat4x4",
 	floatmat4x3 = "floatmat4x4",
 	floatmat4x4 = "floatmat4x4",
+}
+
+local SCALAR_SIZE = {
+	float = 4,
+	int32 = 4,
+	uint32 = 4,
+	int16 = 2,
+	uint16 = 2,
 }
 
 local SCALAR_TYPE = {
@@ -121,6 +147,12 @@ local SCALAR_TYPE = {
 	uint32vec2 = "uint32",
 	uint32vec3 = "uint32",
 	uint32vec4 = "uint32",
+	int16 = "int16",
+	int16vec2 = "int16",
+	int16vec4 = "int16",
+	uint16 = "uint16",
+	uint16vec2 = "uint16",
+	uint16vec4 = "uint16",
 	floatmat2x2 = "float",
 	floatmat2x3 = "float",
 	floatmat2x4 = "float",
@@ -131,6 +163,39 @@ local SCALAR_TYPE = {
 	floatmat4x2 = "float",
 	floatmat4x3 = "float",
 	floatmat4x4 = "float",
+}
+
+local SCALAR_TO_FORMAT = {
+	float = {
+		"float",
+		"floatvec2",
+		"floatvec3",
+		"floatvec4",
+	},
+	int32 = {
+		"int32",
+		"int32vec2",
+		"int32vec3",
+		"int32vec4",
+	},
+	uint32 = {
+		"uint32",
+		"uint32vec2",
+		"uint32vec3",
+		"uint32vec4",
+	},
+	int16 = {
+		"int16",
+		"int16vec2",
+		"int16vec4",
+		"int16vec4",
+	},
+	uint16 = {
+		"uint16",
+		"uint16vec2",
+		"uint16vec4",
+		"uint16vec4",
+	},
 }
 
 local ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES = {
@@ -151,11 +216,30 @@ function BufferFormat.getFormatScalar(format)
 	return SCALAR_TYPE[format] or "float"
 end
 
---- @param format RatScratch.Graphics.Graphics3D.BufferFormatAttribute[]
+--- @param scalar string
+--- @return integer
+function BufferFormat.getScalarSize(scalar)
+	return SCALAR_SIZE[scalar] or 4
+end
+
+--- @param scalar string
+--- @param componentCount integer
+--- @return string?
+function BufferFormat.getFormatFromScalarComponentCount(scalar, componentCount)
+	return SCALAR_TO_FORMAT[scalar] and SCALAR_TO_FORMAT[scalar][componentCount]
+end
+
+--- @param format RatScratch.Graphics.Graphics3D.BufferFormatAttribute[] | string
 --- @return integer
 function BufferFormat.getFormatComponentCount(format)
-	local count = 0
+	local count = ATTRIBUTE_COMPONENTS[format]
+	if count then
+		return count
+	else
+		count = 0
+	end
 
+	--- @cast format RatScratch.Graphics.Graphics3D.BufferFormatAttribute[]
 	for i, attribute in ipairs(format) do
 		local componentCount = ATTRIBUTE_COMPONENTS[attribute.format]
 		assert(
@@ -184,6 +268,10 @@ function BufferFormat.getFormatStride(format, packed)
 		local componentCount = ATTRIBUTE_COMPONENTS[attribute.format]
 		totalComponentCount = totalComponentCount + componentCount
 
+		local componentSize = BufferFormat.getScalarSize(
+			BufferFormat.getFormatScalar(attribute.format)
+		)
+
 		assert(
 			componentCount,
 			"attribute %s (index = %d) does not have a valid format: %s",
@@ -204,7 +292,7 @@ function BufferFormat.getFormatStride(format, packed)
 				adjustedComponentCount = math.min(componentCount, 4)
 			end
 
-			local alignmentBytes = adjustedComponentCount * 4
+			local alignmentBytes = adjustedComponentCount * componentSize
 			local nextStride = stride
 
 			local strideRemainder = nextStride % alignmentBytes
@@ -217,7 +305,7 @@ function BufferFormat.getFormatStride(format, packed)
 			largestAlignment = math.max(largestAlignment, alignmentBytes)
 		end
 
-		stride = stride + componentCount * 4
+		stride = stride + componentCount * componentSize
 	end
 
 	if
@@ -246,6 +334,10 @@ function BufferFormat.getFormatByteOffset(format, attributeName, packed)
 			attribute.format
 		)
 
+		local componentSize = BufferFormat.getScalarSize(
+			BufferFormat.getFormatScalar(attribute.format)
+		)
+
 		if not packed then
 			local adjustedComponentCount
 			if
@@ -258,7 +350,7 @@ function BufferFormat.getFormatByteOffset(format, attributeName, packed)
 				adjustedComponentCount = math.min(componentCount, 4)
 			end
 
-			local alignmentBytes = adjustedComponentCount * 4
+			local alignmentBytes = adjustedComponentCount * componentSize
 			local nextByteIndex = byteIndex
 
 			local bytesRemainder = nextByteIndex % alignmentBytes
@@ -273,7 +365,7 @@ function BufferFormat.getFormatByteOffset(format, attributeName, packed)
 			return byteIndex
 		end
 
-		byteIndex = byteIndex + componentCount * 4
+		byteIndex = byteIndex + componentCount * componentSize
 	end
 
 	return nil
@@ -320,7 +412,7 @@ end
 
 local FORMAT_POOL = setmetatable({}, { __mode = "k" })
 
---- @param format RatScratch.Graphics.Graphics3D.BufferFormatAttribute[]
+--- @param format RatScratch.Graphics.Graphics3D.InputBufferFormatAttribute[]
 --- @return RatScratch.Graphics.Graphics3D.BufferFormat
 function BufferFormat.get(format)
 	local result = FORMAT_POOL[format]
@@ -465,10 +557,22 @@ if jit.status() then
 		return _get(pointer, count, result, resultOffset)
 	end
 
+	local function _dataGetUInt16(data, offset, count, result, resultOffset)
+		local pointer = ffi.cast("uint16_t *", data + offset)
+		return _get(pointer, count, result, resultOffset)
+	end
+
+	local function _dataGetInt16(data, offset, count, result, resultOffset)
+		local pointer = ffi.cast("int16_t *", data + offset)
+		return _get(pointer, count, result, resultOffset)
+	end
+
 	GET_FUNCS = {
 		float = _dataGetFloat,
 		uint32 = _dataGetUInt32,
 		int32 = _dataGetInt32,
+		uint16 = _dataGetUInt16,
+		int16 = _dataGetInt16,
 	}
 else
 	_dataGetPointer = function(data)
@@ -502,10 +606,30 @@ else
 		)
 	end
 
+	local function _dataGetUInt16(data, offset, count, result, resultOffset)
+		return Table.copy(
+			result,
+			resultOffset,
+			resultOffset + count - 1,
+			data:getUInt16(offset, count)
+		)
+	end
+
+	local function _dataGetInt16(data, offset, count, result, resultOffset)
+		return Table.copy(
+			result,
+			resultOffset,
+			resultOffset + count - 1,
+			data:getInt16(offset, count)
+		)
+	end
+
 	GET_FUNCS = {
 		float = _dataGetFloat,
 		uint32 = _dataGetUInt32,
 		int32 = _dataGetInt32,
+		uint16 = _dataGetUInt16,
+		int16 = _dataGetInt16,
 	}
 end
 
@@ -535,10 +659,22 @@ if jit.status() then
 		return _set(pointer, count, source, sourceOffset)
 	end
 
+	local function _dataSetUInt16(data, offset, count, source, sourceOffset)
+		local pointer = ffi.cast("uint16_t *", data + offset)
+		return _set(pointer, count, source, sourceOffset)
+	end
+
+	local function _dataSetInt16(data, offset, count, source, sourceOffset)
+		local pointer = ffi.cast("int16_t *", data + offset)
+		return _set(pointer, count, source, sourceOffset)
+	end
+
 	SET_FUNCS = {
 		float = _dataSetFloat,
 		uint32 = _dataSetUInt32,
 		int32 = _dataSetInt32,
+		uint16 = _dataSetUInt16,
+		int16 = _dataSetInt16,
 	}
 else
 	local function _dataSetFloat(data, offset, count, source, sourceOffset)
@@ -562,10 +698,26 @@ else
 		)
 	end
 
+	local function _dataSetUInt16(data, offset, count, source, sourceOffset)
+		data:setUInt16(
+			offset,
+			Table.unpack(source, sourceOffset, sourceOffset + count - 1)
+		)
+	end
+
+	local function _dataSetInt16(data, offset, count, source, sourceOffset)
+		data:setInt16(
+			offset,
+			Table.unpack(source, sourceOffset, sourceOffset + count - 1)
+		)
+	end
+
 	SET_FUNCS = {
 		float = _dataSetFloat,
 		uint32 = _dataSetUInt32,
 		int32 = _dataSetInt32,
+		uint16 = _dataSetUInt16,
+		int16 = _dataSetInt16,
 	}
 end
 
@@ -783,13 +935,11 @@ function BufferFormat.copyFromByteDataToTable(
 	end
 end
 
---- @param format RatScratch.Graphics.Graphics3D.BufferFormatAttribute[]
+--- @param format RatScratch.Graphics.Graphics3D.InputBufferFormatAttribute[]
 --- @param packed? boolean
 function BufferFormat:new(format, packed)
 	self.packed = not not packed
 	self.format = Table.new(#format, 0)
-	self.stride = BufferFormat.getFormatStride(format, self.packed)
-	self.componentCount = BufferFormat.getFormatComponentCount(format)
 
 	self.locationToAttribute = {}
 	self.attributeToLocation = {}
@@ -797,45 +947,59 @@ function BufferFormat:new(format, packed)
 	self.attributeInfo = Table.new(#format, 0)
 
 	for i, attribute in ipairs(format) do
-		self.format[i] = {
-			location = attribute.location,
+		local remappedAttribute = {
+			location = attribute.location
+				or BufferFormat.getFormatAttributeLocationFromName(
+					attribute.name
+				),
 			name = attribute.name,
 			format = attribute.format,
 		}
 
-		local count, offset =
-			BufferFormat.getFormatAttributeCountOffset(format, attribute.name)
+		assert(
+			remappedAttribute.location,
+			"attribute %s missing location",
+			attribute.name
+		)
+		table.insert(self.format, remappedAttribute)
+
+		local count, offset = BufferFormat.getFormatAttributeCountOffset(
+			self.format,
+			remappedAttribute.name
+		)
 		assert(
 			count and offset,
 			"expected count and offset for attribute '%s'",
-			attribute.name
+			remappedAttribute.name
 		)
 
 		local byteOffset = BufferFormat.getFormatByteOffset(
 			format,
-			attribute.name,
+			remappedAttribute.name,
 			self.packed
 		)
 
 		assert(
-			not self.locationToAttribute[attribute.location],
+			not self.locationToAttribute[remappedAttribute.location],
 			"attribute location '%d' already reserved",
-			attribute.location
+			remappedAttribute.location
 		)
 		assert(
-			not self.attributeToLocation[attribute.name],
+			not self.attributeToLocation[remappedAttribute.name],
 			"attribute name '%s' already reserved",
-			attribute.name
+			remappedAttribute.name
 		)
 
-		self.locationToAttribute[attribute.location] = attribute.name
-		self.attributeToLocation[attribute.name] = attribute.location
+		self.locationToAttribute[remappedAttribute.location] =
+			remappedAttribute.name
+		self.attributeToLocation[remappedAttribute.name] =
+			remappedAttribute.location
 
-		self.index[attribute.location] = i
-		self.index[attribute.name] = i
+		self.index[remappedAttribute.location] = i
+		self.index[remappedAttribute.name] = i
 
 		local defaultValues =
-			ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES[attribute.name]
+			ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES[remappedAttribute.name]
 		if not defaultValues then
 			defaultValues = Table.new(count, 0)
 			for i = 1, count do
@@ -844,10 +1008,10 @@ function BufferFormat:new(format, packed)
 		end
 
 		self.attributeInfo[i] = {
-			location = attribute.location,
-			name = attribute.name,
-			format = attribute.format,
-			scalar = BufferFormat.getFormatScalar(attribute.format),
+			location = remappedAttribute.location,
+			name = remappedAttribute.name,
+			format = remappedAttribute.format,
+			scalar = BufferFormat.getFormatScalar(remappedAttribute.format),
 			count = count,
 			offset = offset,
 			byteOffset = byteOffset,
@@ -855,7 +1019,12 @@ function BufferFormat:new(format, packed)
 		}
 	end
 
+	self.stride = BufferFormat.getFormatStride(self.format, self.packed)
+	self.componentCount = BufferFormat.getFormatComponentCount(self.format)
+
 	self.preprocessedAttributes = _preprocessAttributeFormat(self)
+
+	FORMAT_POOL[self.format] = self
 end
 
 function BufferFormat:getFormat()
