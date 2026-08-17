@@ -63,8 +63,9 @@ local KeyFramesDefinition = {}
 local KeyFrameDefinition = {}
 
 --- @class RatScratch.Graphics.Graphics3D.MaterialDefinition
---- @field public texture? love.image.ImageData | love.graphics.Texture
---- @field public normalTexture? love.image.ImageData | love.graphics.Texture
+--- @field public id? integer
+--- @field public texture? love.ImageData | love.Texture
+--- @field public normalTexture? love.ImageData | love.Texture
 --- @field public minFilter? "linear" | "nearest"
 --- @field public magFilter? "linear" | "nearest"
 --- @field public mipmaps? boolean
