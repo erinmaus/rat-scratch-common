@@ -55,7 +55,7 @@ function EventScope.create(name)
 		end
 	end
 
-	return Object(name, 1)
+	return Object(EventScope, 0)(name)
 end
 
 return EventScope
