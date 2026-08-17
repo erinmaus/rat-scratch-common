@@ -1,5 +1,4 @@
 --- @class RatScratch.GLTF.Object
---- @field public extension? table
 --- @field public extras? table | number | string | boolean
 --- @field public extensions? table
 local Object = {}
@@ -82,14 +81,14 @@ local AnimationChannelTarget = {}
 local AnimationChannelSampler = {}
 
 --- @class RatScratch.GLTF.Asset : RatScratch.GLTF.Object
---- @field public copyright string
---- @field public generator string
+--- @field public copyright? string
+--- @field public generator? string
 --- @field public version string
---- @field public minVersion string
+--- @field public minVersion? string
 local Asset = {}
 
 --- @class RatScratch.GLTF.Buffer : RatScratch.GLTF.NamedObject
---- @field public uri string
+--- @field public uri? string
 --- @field public byteLength integer
 local Buffer = {}
 
@@ -103,8 +102,8 @@ local BufferViewTarget = {
 --- @field public buffer integer
 --- @field public byteOffset? integer
 --- @field public byteLength integer
---- @field public byteStride integer
---- @field public target RatScratch.GLTF.BufferViewTarget
+--- @field public byteStride? integer
+--- @field public target? RatScratch.GLTF.BufferViewTarget
 local BufferView = {}
 
 --- @alias RatScratch.GLTF.Camera RatScratch.GLTF.PerspectiveCamera | RatScratch.GLTF.OrthographicCamera
@@ -133,7 +132,7 @@ local PerspectiveCamera = {}
 local PerspectiveCameraProperties = {}
 
 --- @class RatScratch.GLTF.GLTF : RatScratch.GLTF.Object
---- @field public extensions? string[]
+--- @field public extensionsUsed? string[]
 --- @field public extensionsRequired? string[]
 --- @field public accessors? RatScratch.GLTF.Accessor[]
 --- @field public animations? RatScratch.GLTF.Animation[]
@@ -146,8 +145,9 @@ local PerspectiveCameraProperties = {}
 --- @field public meshes? RatScratch.GLTF.Mesh[]
 --- @field public nodes? RatScratch.GLTF.Node[]
 --- @field public samplers? RatScratch.GLTF.Sampler[]
---- @field public skins? RatScratch.GLTF.Skin[]
+--- @field public scene? integer
 --- @field public scenes? RatScratch.GLTF.Scene[]
+--- @field public skins? RatScratch.GLTF.Skin[]
 --- @field public textures? RatScratch.GLTF.Texture[]
 local GLTF = {}
 
@@ -212,14 +212,14 @@ local MeshPrimitiveMode = {
 --- @field public attributes table<string, integer>
 --- @field public indices? number
 --- @field public material? number
---- @field public mode RatScratch.GLTF.MeshPrimitiveMode
---- @field public targets table<RatScratch.GLTF.MeshPrimitiveMorphTarget, integer>
+--- @field public mode? RatScratch.GLTF.MeshPrimitiveMode
+--- @field public targets? table<RatScratch.GLTF.MeshPrimitiveMorphTarget, integer>
 local MeshPrimitive = {}
 
 --- @class RatScratch.GLTF.Node : RatScratch.GLTF.NamedObject
 --- @field public camera? number?
 --- @field public children? number[]
---- @field public skin number
+--- @field public skin? number
 --- @field public matrix? number[]
 --- @field public mesh? number
 --- @field public rotation? number[]
@@ -271,12 +271,12 @@ local Skin = {}
 --- @class RatScratch.GLTF.Texture : RatScratch.GLTF.Object
 --- @field public sampler? integer
 --- @field public source? integer
---- @field public extensions { EXT_texture_webp: RatScratch.GLTF.Texture }
+--- @field public extensions? { EXT_texture_webp: RatScratch.GLTF.Texture }
 local Texture = {}
 
 --- @class RatScratch.GLTF.TextureInfo : RatScratch.GLTF.Object
 --- @field public index integer
---- @field public texCoord integer
+--- @field public texCoord? integer
 local TextureInfo = {}
 
 --- @enum RatScratch.GLTF.GLBChunkTypes

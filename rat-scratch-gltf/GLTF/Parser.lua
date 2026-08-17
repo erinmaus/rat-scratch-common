@@ -551,10 +551,14 @@ end
 --- @field public forceSkinning? boolean
 local DefaultSceneLoadOptions = {}
 
---- @param key string | number
+--- @param key? string | number
 --- @param options? RatScratch.GLTF.SceneLoadOptions
 --- @return RatScratch.Graphics.Graphics3D.SceneDefinition
 function GLTFParser:loadScene(key, options)
+	if not key then
+		key = (self.root.scene or 0) + 1
+	end
+
 	local index
 	if type(key) == "string" then
 		index = self:getIndexFromName("scenes", key)
@@ -605,7 +609,7 @@ function GLTFParser:loadModel(node, options)
 		{},
 		{},
 		{},
-		self:getNode(node - 1),
+		self:getNode(node),
 		love.math.newTransform(),
 		false,
 		options or DefaultSceneLoadOptions
@@ -691,7 +695,11 @@ function GLTFParser:_tryLoadNode(
 		local animations = node.skin
 			and (
 				animationDefinitions[node.skin]
-				or self:_loadAnimations(skeleton, skinData.skeleton)
+				or self:_loadAnimations(
+					skeleton,
+					skinData.skeleton
+						or self:getNodeParent(skeleton.bones[1].id)
+				)
 			)
 		model.animations = model.animations or animations
 		model.transform = transform
@@ -764,7 +772,7 @@ function GLTFParser:_loadVertices(format, vertices, vertexElementName, accessor)
 	end
 end
 
-local GLTF_PRIMITIVE_MODE_TO_NECRO = {
+local GLTF_PRIMITIVE_MODE_TO_RAT_SCRATCH = {
 	[GLTF.MeshPrimitiveMode.LINES] = "lines",
 	[GLTF.MeshPrimitiveMode.LINE_LOOP] = "linesloop",
 	[GLTF.MeshPrimitiveMode.LINE_STRIP] = "linestrip",
@@ -920,7 +928,7 @@ function GLTFParser:_loadMesh(meshData, isSkinned, options)
 			material = self:_loadMaterial(primitiveData.material)
 		end
 
-		local indexMode = GLTF_PRIMITIVE_MODE_TO_NECRO[primitiveData.mode]
+		local indexMode = GLTF_PRIMITIVE_MODE_TO_RAT_SCRATCH[primitiveData.mode]
 
 		local outputBuffers, outputIndices, outputFormat
 		if isSkinned then
@@ -1078,7 +1086,7 @@ end
 --- @private
 --- @param skeletonNodeMap table<integer, true>
 --- @param animationNodesMap table<integer, true>
---- @param root integer
+--- @param root? integer
 --- @return boolean
 function GLTFParser:_isAnimationNodeMapMatch(
 	skeletonNodeMap,
@@ -1086,7 +1094,7 @@ function GLTFParser:_isAnimationNodeMapMatch(
 	root
 )
 	for id in pairs(animationNodesMap) do
-		if not (skeletonNodeMap[id] or id == root) then
+		if not (skeletonNodeMap[id] or (root and id == root)) then
 			return false
 		end
 	end
@@ -1096,14 +1104,18 @@ end
 
 --- @private
 --- @param skeleton RatScratch.Graphics.Graphics3D.SkeletonDefinition
---- @param root integer
+--- @param root? integer
 --- @return RatScratch.Graphics.Graphics3D.AnimationDefinition[]?
 function GLTFParser:_loadAnimations(skeleton, root)
 	if not self.root.animations then
 		return nil
 	end
 
-	local skeletonNodeMap = { [root] = true }
+	local skeletonNodeMap = {}
+	if root then
+		skeletonNodeMap[root] = true
+	end
+
 	for _, bone in ipairs(skeleton.bones) do
 		skeletonNodeMap[bone.id] = true
 	end
@@ -1132,15 +1144,15 @@ function GLTFParser:_loadAnimations(skeleton, root)
 end
 
 --- @type table<RatScratch.GLTF.AnimationChannelSamplerInterpolation, RatScratch.Graphics.Graphics3D.InterpolatorType>
-local GLTF_INTERPOLATION_MODE_TO_NECRO = {
+local GLTF_INTERPOLATION_MODE_TO_RAT_SCRATCH = {
 	STEP = "step",
 	LINEAR = "linear",
 	CUBICSPLINE = "cubicSpline",
 }
 
 --- @type table<RatScratch.GLTF.AnimationChannelTargetPath, RatScratch.Graphics.Graphics3D.KeyFramePropertyType>
-local GLTF_INTERPOLATION_PROPERTY_TYPES_TO_NECRO = {
-	position = "position",
+local GLTF_INTERPOLATION_PROPERTY_TYPES_TO_RAT_SCRATCH = {
+	translation = "position",
 	rotation = "rotation",
 	scale = "scale",
 }
@@ -1154,8 +1166,8 @@ function GLTFParser:_loadAnimationChannel(animationData, channelData)
 
 	--- @type RatScratch.Graphics.Graphics3D.KeyFramesDefinition
 	local keyFrames = {
-		interpolation = GLTF_INTERPOLATION_MODE_TO_NECRO[samplerData.interpolation or "LINEAR"],
-		property = GLTF_INTERPOLATION_PROPERTY_TYPES_TO_NECRO[channelData.target.path],
+		interpolation = GLTF_INTERPOLATION_MODE_TO_RAT_SCRATCH[samplerData.interpolation or "LINEAR"],
+		property = GLTF_INTERPOLATION_PROPERTY_TYPES_TO_RAT_SCRATCH[channelData.target.path],
 		frames = {},
 	}
 
@@ -1207,7 +1219,7 @@ function GLTFParser:_loadAnimation(animationData)
 
 	for _, channelData in ipairs(animationData.channels) do
 		local propertyType =
-			GLTF_INTERPOLATION_PROPERTY_TYPES_TO_NECRO[channelData.target.path]
+			GLTF_INTERPOLATION_PROPERTY_TYPES_TO_RAT_SCRATCH[channelData.target.path]
 		local boneID = channelData.target.node
 		if propertyType then
 			local channelDefinition = channelsByBone[boneID]
@@ -1230,7 +1242,7 @@ function GLTFParser:_loadAnimation(animationData)
 	return channels
 end
 
-local GLTF_MIN_FILTER_TO_NECRONOMICON = {
+local GLTF_MIN_FILTER_TO_RAT_SCRATCH = {
 	[GLTF.SamplerMinFilter.LINEAR] = { "linear", false },
 	[GLTF.SamplerMinFilter.LINEAR_MIPMAP_LINEAR] = { "linear", "linear" },
 	[GLTF.SamplerMinFilter.LINEAR_MIPMAP_NEAREST] = { "linear", "nearest" },
@@ -1239,12 +1251,12 @@ local GLTF_MIN_FILTER_TO_NECRONOMICON = {
 	[GLTF.SamplerMinFilter.NEAREST_MIPMAP_NEAREST] = { "nearest", "nearest" },
 }
 
-local GLTF_MAG_FILTER_TO_NECRONOMICON = {
+local GLTF_MAG_FILTER_TO_RAT_SCRATCH = {
 	[GLTF.SamplerMagFilter.LINEAR] = "linear",
 	[GLTF.SamplerMagFilter.NEAREST] = "nearest",
 }
 
-local GLTF_WRAP_MODE_TO_NECRONOMICON = {
+local GLTF_WRAP_MODE_TO_RAT_SCRATCH = {
 	[GLTF.SamplerWrap.CLAMP_TO_EDGE] = "clamp",
 	[GLTF.SamplerWrap.MIRRORED_REPEAT] = "mirroredrepeat",
 	[GLTF.SamplerWrap.REPEAT] = "repeat",
@@ -1295,13 +1307,13 @@ function GLTFParser:_loadMaterial(index)
 		and self:getImageData(normalTexture.source)
 
 	local horizontalWrapMode =
-		GLTF_WRAP_MODE_TO_NECRONOMICON[sampler and sampler.wrapS or GLTF.SamplerWrap.REPEAT]
+		GLTF_WRAP_MODE_TO_RAT_SCRATCH[sampler and sampler.wrapS or GLTF.SamplerWrap.REPEAT]
 	local verticalWrapMode =
-		GLTF_WRAP_MODE_TO_NECRONOMICON[sampler and sampler.wrapT or GLTF.SamplerWrap.REPEAT]
-	local magFilter = GLTF_MAG_FILTER_TO_NECRONOMICON[sampler and sampler.magFilter or GLTF.SamplerMagFilter.LINEAR]
+		GLTF_WRAP_MODE_TO_RAT_SCRATCH[sampler and sampler.wrapT or GLTF.SamplerWrap.REPEAT]
+	local magFilter = GLTF_MAG_FILTER_TO_RAT_SCRATCH[sampler and sampler.magFilter or GLTF.SamplerMagFilter.LINEAR]
 		or "linear"
 	local minFilter, mipmapMinFilter = unpack(
-		GLTF_MIN_FILTER_TO_NECRONOMICON[sampler and sampler.minFilter or GLTF.SamplerMinFilter.LINEAR]
+		GLTF_MIN_FILTER_TO_RAT_SCRATCH[sampler and sampler.minFilter or GLTF.SamplerMinFilter.LINEAR]
 	)
 	--- @cast minFilter string
 
