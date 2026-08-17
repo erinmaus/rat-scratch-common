@@ -141,14 +141,12 @@ function Common.nextPowerOfTwo(value)
 	end
 
 	value = value - 1
-	value = bit.bor(
-		value,
-		bit.rshift(value, 1),
-		bit.rshift(value, 2),
-		bit.rshift(value, 4),
-		bit.rshift(value, 8),
-		bit.rshift(value, 16)
-	)
+	value = bit.bor(value, bit.rshift(value, 1))
+	value = bit.bor(value, bit.rshift(value, 2))
+	value = bit.bor(value, bit.rshift(value, 4))
+	value = bit.bor(value, bit.rshift(value, 8))
+	value = bit.bor(value, bit.rshift(value, 16))
+
 	return value + 1
 end
 
