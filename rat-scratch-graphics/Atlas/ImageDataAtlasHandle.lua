@@ -2,8 +2,8 @@ local Object = require("rat-scratch-common").Object
 local EventSource = require("rat-scratch-common").EventSource
 local AtlasHandle = require("rat-scratch-graphics.Atlas.AtlasHandle")
 
---- @class RatScratch.Graphics.Atlas.ImageHandleAtlasHandle : RatScratch.Graphics.Atlas.AtlasHandle
---- @overload fun(imageData?: love.ImageData): RatScratch.Graphics.Atlas.ImageHandleAtlasHandle
+--- @class RatScratch.Graphics.Atlas.ImageDataAtlasHandle : RatScratch.Graphics.Atlas.AtlasHandle
+--- @overload fun(imageData?: love.ImageData): RatScratch.Graphics.Atlas.ImageDataAtlasHandle
 --- @field private imageData? love.ImageData
 local ImageDataAtlasHandle = Object(AtlasHandle)
 

@@ -4,6 +4,7 @@ local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
 local AtlasEvent = require("rat-scratch-graphics.Atlas.AtlasEvent")
+local Common = require("rat-scratch-math").Common
 
 --- @class RatScratch.Graphics.Atlas : RatScratch.Common.BaseObject
 --- @overload fun(width: integer, height: integer, maxLayers?: integer): RatScratch.Graphics.Atlas
@@ -26,6 +27,22 @@ function Atlas:new(width, height, maxLayers)
 
 	self.entries = setmetatable({}, { __mode = "k" })
 	self.roots = {}
+end
+
+function Atlas:getWidth()
+	return self.width
+end
+
+function Atlas:getHeight()
+	return self.height
+end
+
+function Atlas:getLayers()
+	return self.layers
+end
+
+function Atlas:getMaxLayers()
+	return self.maxLayers
 end
 
 function Atlas:hasTexture()
@@ -78,7 +95,6 @@ function Atlas:_allocateLayer()
 	end
 
 	self.canvas = newCanvas
-
 	table.insert(self.roots, AtlasPackingNode(0, 0, self.width, self.height))
 end
 
@@ -143,14 +159,9 @@ function Atlas:add(handle)
 
 	local width = handle:getWidth()
 	local height = handle:getHeight()
-	assert(
-		width <= self.width and height <= self.height,
-		"texture dimensions (%d, %d) are too big to fit in atlas (%d, %d)",
-		width,
-		height,
-		self.width,
-		self.height
-	)
+	if not (width <= self.width and height <= self.height) then
+		return false
+	end
 
 	local targetLayer, targetNode = self:_findTargetLayerNode(width, height)
 	if not (targetLayer and targetNode) then
@@ -256,6 +267,22 @@ function Atlas:getTextureCoordinates(handle)
 	return left, right, top, bottom, entry:getLayer()
 end
 
+--- @param handle RatScratch.Graphics.Atlas.AtlasHandle
+--- @param s number
+--- @param t number
+--- @return number?, number?, number?
+function Atlas:wrapTextureCoordinates(handle, s, t)
+	local left, right, top, bottom, layer = self:getTextureCoordinates(handle)
+	if not (left and right and top and bottom and layer) then
+		return nil, nil, nil
+	end
+
+	s = Common.saturate(s) * (right - left) + left
+	t = Common.saturate(t) * (bottom - top) + top
+
+	return s, t, layer
+end
+
 do
 	--- @alias RatScratch.Graphics.Atlas.TextureEntryCache {
 	---   texture: RatScratch.Graphics.Atlas.AtlasHandle,
@@ -296,7 +323,11 @@ do
 		Table.clear(self.roots)
 
 		self.layers = 0
-		self.canvas:release()
+
+		if self.canvas then
+			self.canvas:release()
+			self.canvas = nil
+		end
 
 		table.sort(textureEntries, _sort)
 
