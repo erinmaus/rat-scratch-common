@@ -54,26 +54,19 @@ end
 
 function AnimationInstance:reset()
 	for _, boneInstance in ipairs(self.boneInstances) do
-		local bone = boneInstance:getBone()
-		boneInstance:setTranslation(bone:getTranslation())
-		boneInstance:setRotation(bone:getRotation())
-		boneInstance:setScale(bone:getScale())
+		boneInstance:reset()
 	end
 end
 
 function AnimationInstance:identity()
 	for _, boneInstance in ipairs(self.boneInstances) do
-		boneInstance:setTranslation(Vector3.ZERO)
-		boneInstance:setRotation(Quaternion.IDENTITY)
-		boneInstance:setScale(Vector3.ONE)
+		boneInstance:identity()
 	end
 end
 
 function AnimationInstance:zero()
 	for _, boneInstance in ipairs(self.boneInstances) do
-		boneInstance:setTranslation(Vector3.ZERO)
-		boneInstance:setRotation(Quaternion.ZERO)
-		boneInstance:setScale(Vector3.ZERO)
+		boneInstance:zero()
 	end
 end
 

@@ -60,8 +60,11 @@ end
 do
 	local workingTransform = love.math.newTransform()
 
-	--- @param transform love.Transform
+	--- @param transform? love.Transform
+	--- @return love.Transform
 	function BoneInstance:composeTransform(transform)
+		transform = transform or love.math.newTransform()
+
 		Transform.compose(
 			self.translation,
 			self.rotation,
@@ -69,7 +72,27 @@ do
 			workingTransform
 		)
 		transform:apply(workingTransform)
+
+		return transform
 	end
+end
+
+function BoneInstance:zero()
+	self.translation:from(Vector3.ZERO:get())
+	self.rotation:from(Quaternion.ZERO:get())
+	self.scale:from(Vector3.ZERO:get())
+end
+
+function BoneInstance:identity()
+	self.translation:from(Vector3.ZERO:get())
+	self.rotation:from(Quaternion.IDENTITY:get())
+	self.scale:from(Vector3.ONE:get())
+end
+
+function BoneInstance:reset()
+	self.translation:from(self.bone:getTranslation():get())
+	self.rotation:from(self.bone:getRotation():get())
+	self.scale:from(self.bone:getScale():get())
 end
 
 return BoneInstance

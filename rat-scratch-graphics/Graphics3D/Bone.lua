@@ -83,8 +83,11 @@ end
 do
 	local workingTransform = love.math.newTransform()
 
-	--- @param transform love.Transform
+	--- @param transform? love.Transform
+	--- @return love.Transform
 	function Bone:composeTransform(transform)
+		transform = transform or love.math.newTransform()
+
 		Transform.compose(
 			self.translation,
 			self.rotation,
@@ -95,6 +98,8 @@ do
 		transform:reset()
 		transform:apply(self.transform)
 		transform:apply(workingTransform)
+
+		return transform
 	end
 end
 
