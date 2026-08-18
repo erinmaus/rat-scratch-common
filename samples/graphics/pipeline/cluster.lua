@@ -32,6 +32,7 @@ local COLORS = {
 
 function demo.load()
 	local parser = GLTF.loadFromFilesystem("samples/assets/gltf/shoe.glb")
+	local baseScene = parser:loadScene(1)
 
 	local pipelineConfig = PipelineConfig.loadDefault()
 	local extendedModel = ExtendedModel(parser, 0)
@@ -45,27 +46,46 @@ function demo.load()
 			},
 		},
 	})
-	local scene =
-		Scene.fromDefinition({ models = { { meshes = meshDefinitions } } })
+	local scene = Scene.fromDefinition({
+		models = {
+			{
+				meshes = meshDefinitions,
+				transform = baseScene.models[1].transform,
+			},
+		},
+	})
 	demo.gltf = { scene = scene }
 
-	local indexBuffers = {}
-	local extendedMesh = extendedModel:getMesh(1)
-	for i = 1, extendedMesh:getMeshletCount() do
-		local meshlet = extendedMesh:getMeshlet(i)
-		local indexData = meshlet:getIndexData()
+	demo.indices = {}
+	for i = 1, extendedModel:getMeshCount() do
+		local indexBuffers = {}
+		local extendedMesh = extendedModel:getMesh(i)
 
-		local indexBuffer = love.graphics.newBuffer(
+		for j = 1, extendedMesh:getMeshletCount() do
+			local meshlet = extendedMesh:getMeshlet(j)
+			local indexData = meshlet:getIndexData()
+
+			local indexBuffer = love.graphics.newBuffer(
+				Mesh.INDEX_FORMAT,
+				indexData:getSize() / ffi.sizeof("uint32_t"),
+				{ index = true }
+			)
+			indexBuffer:setArrayData(indexData)
+
+			table.insert(indexBuffers, indexBuffer)
+		end
+
+		indexBuffers.root = love.graphics.newBuffer(
 			Mesh.INDEX_FORMAT,
-			indexData:getSize() / ffi.sizeof("uint32_t"),
+			extendedMesh:getIndexBufferData():getSize() / ffi.sizeof("uint32_t"),
 			{ index = true }
 		)
-		indexBuffer:setArrayData(indexData)
+		indexBuffers.root:setArrayData(extendedMesh:getIndexBufferData())
 
-		table.insert(indexBuffers, indexBuffer)
+		demo.indices[i] = indexBuffers
 	end
 
-	demo.indices = indexBuffers
+	demo.currentModel = 1
 	demo.currentIndexBuffer = 1
 	demo.useDefaultIndexBuffer = true
 	demo.showTexture = true
@@ -87,8 +107,12 @@ function demo.keypressed(key, _, isRepeat)
 	end
 
 	if key == "n" then
-		demo.currentIndexBuffer =
-			Table.wrapIndex(demo.currentIndexBuffer + 1, #demo.indices)
+		demo.currentIndexBuffer = demo.currentIndexBuffer + 1
+		if demo.currentIndexBuffer > #demo.indices[demo.currentModel] then
+			demo.currentIndexBuffer = 1
+			demo.currentModel =
+				Table.wrapIndex(demo.currentModel + 1, #demo.indices)
+		end
 		demo.useDefaultIndexBuffer = false
 	elseif key == "a" then
 		demo.useDefaultIndexBuffer = not demo.useDefaultIndexBuffer
@@ -120,7 +144,7 @@ function demo.draw()
 		do
 			local _, my = love.mouse.getPosition()
 			local delta = Common.saturate((my - 32) / love.graphics.getHeight())
-			scale = Common.lerp(0.5, 3, delta ^ 2)
+			scale = Common.lerp(0.5, 20, delta ^ 2)
 		end
 
 		local projection = Transform.makePerspectiveTransform(
@@ -136,6 +160,7 @@ function demo.draw()
 		love.graphics.setDepthMode("lequal", true)
 		love.graphics.setProjection(projection)
 		love.graphics.applyTransform(camera)
+		love.graphics.applyTransform(model:getTransform())
 
 		local loveMesh = mesh:getMesh()
 		if material and material:getTexture() and demo.showTexture then
@@ -169,12 +194,12 @@ function demo.draw()
 		end
 
 		if demo.useDefaultIndexBuffer then
-			for i = 1, #demo.indices do
+			for j = 1, #demo.indices[i] do
 				if not demo.showTexture then
-					love.graphics.setColor(COLORS[Table.wrapIndex(i, #COLORS)])
+					love.graphics.setColor(COLORS[Table.wrapIndex(j, #COLORS)])
 				end
 
-				loveMesh:setIndexBuffer(demo.indices[i])
+				loveMesh:setIndexBuffer(demo.indices[i][j])
 				love.graphics.draw(loveMesh)
 			end
 		else
@@ -184,8 +209,12 @@ function demo.draw()
 				)
 			end
 
-			loveMesh:setIndexBuffer(demo.indices[demo.currentIndexBuffer])
-			love.graphics.draw(loveMesh)
+			if i == demo.currentModel then
+				loveMesh:setIndexBuffer(
+					demo.indices[demo.currentModel][demo.currentIndexBuffer]
+				)
+				love.graphics.draw(loveMesh)
+			end
 		end
 
 		love.graphics.pop()
@@ -193,10 +222,11 @@ function demo.draw()
 
 	local width, height = love.graphics.getDimensions()
 	love.graphics.printf(
-		("frame: %.2f ms, index %d/%d"):format(
+		("frame: %.2f ms, model %d, index %d/%d"):format(
 			love.timer.getAverageDelta() * 1000,
+			demo.currentModel,
 			demo.currentIndexBuffer,
-			#demo.indices
+			#demo.indices[demo.currentModel]
 		),
 		0,
 		height - 16,

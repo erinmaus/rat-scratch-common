@@ -3,13 +3,21 @@ local Object = require("rat-scratch-common").Object
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local Mesh = require("rat-scratch-graphics").Graphics3D.Mesh
 local Vector3 = require("rat-scratch-math").Vector3
+local Search = require("rat-scratch-common").Search
+local Common = require("rat-scratch-math").Common
+local BoneInstance = require("rat-scratch-graphics").Graphics3D.BoneInstance
+local Quaternion = require("rat-scratch-math").Quaternion
+local Table = require("rat-scratch-common").Table
 
 --- @class RatScratch.Pipeline.ExtendedMeshMeshlet : RatScratch.Common.BaseObject
 --- @overload fun(mesh: RatScratch.Pipeline.ExtendedMesh, indexData: love.ByteData): RatScratch.Pipeline.ExtendedMeshMeshlet
 --- @field private mesh RatScratch.Pipeline.ExtendedMesh
 --- @field private indexData love.ByteData
 --- @field private vertexIndices integer[]
+--- @field private vertices RatScratch.Math.Vector3[]
+--- @field private vertexBones table<integer, { index: number[], weight: number[] }>
 --- @field private boneIndices integer[]
+--- @field private primaryBone integer
 --- @field private staticBoundsPosition RatScratch.Math.Vector3
 --- @field private staticBoundsRadius number
 local ExtendedMeshMeshlet = Object()
@@ -20,6 +28,8 @@ function ExtendedMeshMeshlet:new(mesh, indexData)
 	self.mesh = mesh
 	self.indexData = indexData
 	self.vertexIndices = {}
+	self.vertices = {}
+	self.vertexBones = {}
 	self.boneIndices = {}
 	self.bounds = {}
 	self.staticBoundsPosition = Vector3()
@@ -77,12 +87,15 @@ function ExtendedMeshMeshlet.fromMesh(
 	local indexDataPointer = ffi.cast("uint32_t *", indexData:getFFIPointer())
 	local indexCount = indexData:getSize() / indexFormat:getStride()
 
-	local bones
+	local bones, vertexBones
 	if
 		meshFormat:hasAttribute("VertexBoneIndex")
 		and meshFormat:hasAttribute("VertexBoneWeight")
 	then
+		vertexBones = {}
+
 		local bonesByIndex = {}
+		local boneWeights = {}
 
 		local boneIndexCount, boneIndexOffset =
 			meshFormat:getCountOffset("VertexBoneIndex")
@@ -103,7 +116,27 @@ function ExtendedMeshMeshlet.fromMesh(
 
 				if weight > 0 then
 					bonesByIndex[bone] = true
+					boneWeights[bone] = (boneWeights[bone] or 0) + weight
 				end
+			end
+
+			if not vertexBones[index] then
+				vertexBones[index] = {
+					indices = {
+						Table.unpack(
+							vertex,
+							boneIndexOffset,
+							boneIndexOffset + boneIndexCount - 1
+						),
+					},
+					weight = {
+						Table.unpack(
+							vertex,
+							boneWeightOffset,
+							boneWeightOffset + boneWeightCount - 1
+						),
+					},
+				}
 			end
 		end
 
@@ -111,7 +144,9 @@ function ExtendedMeshMeshlet.fromMesh(
 		for bone in pairs(bonesByIndex) do
 			table.insert(bones, bone)
 		end
-		table.sort(bones)
+		table.sort(bones, function(a, b)
+			return boneWeights[a] < boneWeights[b]
+		end)
 	end
 
 	local verticesByIndex = {}
@@ -120,11 +155,24 @@ function ExtendedMeshMeshlet.fromMesh(
 		verticesByIndex[index] = true
 	end
 
-	local vertices = {}
+	local vertexIndices = {}
 	for index in ipairs(verticesByIndex) do
-		table.insert(vertices, index)
+		table.insert(vertexIndices, index)
 	end
-	table.sort(vertices)
+	table.sort(vertexIndices)
+
+	local vertices = {}
+	do
+		local _, vertexPositionOffset =
+			meshFormat:getCountOffset("VertexPosition")
+		local vi, vj = vertexPositionOffset, vertexPositionOffset + 2
+
+		for _, index in ipairs(vertexIndices) do
+			local inputVertex = meshDefinition.vertices[index + 1]
+			local vertexPosition = Vector3(Table.unpack(inputVertex, vi, vj))
+			table.insert(vertices, vertexPosition)
+		end
+	end
 
 	local meshletIndexData
 	do
@@ -159,9 +207,410 @@ function ExtendedMeshMeshlet.fromMesh(
 
 	local mesh = ExtendedMeshMeshlet(mesh, meshletIndexData)
 	mesh.boneIndices = bones or mesh.boneIndices
-	mesh.vertexIndices = vertices
+	mesh.vertexIndices = vertexIndices
+	mesh.vertices = vertices
+	mesh.vertexBones = vertexBones
+	mesh.primaryBone = mesh.boneIndices[#mesh.boneIndices]
 
 	return mesh
+end
+
+ExtendedMeshMeshlet.PROPERTIES = {
+	"position",
+	"rotation",
+	"scale",
+}
+
+--- @param a number
+--- @param b number
+local function _compareTime(a, b)
+	return Common.zerosign(a - b, 0)
+end
+
+--- @param axis RatScratch.Math.Vector3
+--- @param vertex RatScratch.Math.Vector3
+local function _getAxisExtentAngles(axis, vertex)
+	local v = axis:cross(vertex)
+		:divide(axis:scale(axis:dot(vertex)):subtract(vertex))
+	return v:from(-math.atan(v.x), -math.atan(v.y), -math.atan(v.z))
+end
+
+--- @param rotation RatScratch.Math.Quaternion
+--- @param vertex RatScratch.Math.Vector3
+local function _getRotationMinMax(rotation, vertex)
+	local axis, angle = rotation:normalize():toAxisAngle()
+	local extentAngles = _getAxisExtentAngles(axis, vertex)
+
+	local minAngle = math.min(angle, 0)
+	local maxAngle = math.max(0, angle)
+
+	local angles = {
+		Common.clamp(extentAngles.x, minAngle, maxAngle),
+		Common.clamp(extentAngles.x - math.pi, minAngle, maxAngle),
+		Common.clamp(extentAngles.x + math.pi, minAngle, maxAngle),
+		Common.clamp(extentAngles.y, minAngle, maxAngle),
+		Common.clamp(extentAngles.y - math.pi, minAngle, maxAngle),
+		Common.clamp(extentAngles.y + math.pi, minAngle, maxAngle),
+		Common.clamp(extentAngles.z, minAngle, maxAngle),
+		Common.clamp(extentAngles.z - math.pi, minAngle, maxAngle),
+		Common.clamp(extentAngles.z + math.pi, minAngle, maxAngle),
+	}
+
+	local rotation = Quaternion()
+	local transformedVertex = Vector3()
+
+	local min, max = Vector3(math.huge), Vector3(-math.huge)
+	for _, extentAngle in ipairs(angles) do
+		Quaternion.fromAxisAngle(axis, extentAngle, rotation)
+
+		rotation:transformVector(vertex, transformedVertex)
+
+		min:min(transformedVertex, min)
+		max:max(transformedVertex, max)
+	end
+
+	return min, max
+end
+
+--- @param min RatScratch.Math.Vector3
+--- @param max RatScratch.Math.Vector3
+local function _getCorners(min, max)
+	return {
+		Vector3(min.x, min.y, min.z),
+		Vector3(max.x, min.y, min.z),
+		Vector3(min.x, max.y, min.z),
+		Vector3(min.x, min.y, max.z),
+		Vector3(max.x, max.y, min.z),
+		Vector3(max.x, min.y, max.z),
+		Vector3(min.x, max.y, max.z),
+		Vector3(max.x, max.y, max.z),
+	}
+end
+
+--- @param min RatScratch.Math.Vector3
+--- @param max RatScratch.Math.Vector3
+--- @param transform love.Transform
+local function _transformAABB(min, max, transform)
+	local corners = _getCorners(min, max)
+
+	local min, max = Vector3(math.huge), Vector3(-math.huge)
+	for _, corner in ipairs(corners) do
+		min:min(corner:transform(transform), min)
+		max:max(corner:transform(transform), max)
+	end
+
+	return min, max
+end
+
+--- @param min RatScratch.Math.Vector3
+--- @param max RatScratch.Math.Vector3
+--- @param rotation RatScratch.Math.Quaternion
+local function _rotateAABB(min, max, rotation)
+	local corners = _getCorners(min, max)
+
+	local min, max = Vector3(math.huge), Vector3(-math.huge)
+	for _, corner in ipairs(corners) do
+		local cornerMin, cornerMax = _getRotationMinMax(rotation, corner)
+		min:min(cornerMin, min)
+		max:max(cornerMax, max)
+	end
+
+	return min, max
+end
+
+--- @param min RatScratch.Math.Vector3
+--- @param max RatScratch.Math.Vector3
+--- @param direction? "up" | "down"
+--- @param t1BoneInstance RatScratch.Graphics.Graphics3D.BoneInstance
+--- @param t2BoneInstance RatScratch.Graphics.Graphics3D.BoneInstance
+local function _extendAABB(min, max, direction, t1BoneInstance, t2BoneInstance)
+	local deltaRotation = t2BoneInstance:getRotation():product(
+		t1BoneInstance:getRotation():normalize():conjugate()
+	)
+
+	local deltaTranslation = t2BoneInstance
+		:getTranslation()
+		:subtract(t1BoneInstance:getTranslation())
+
+	local deltaScale
+	if t2BoneInstance:getScale():getLength() < Common.EPSILON then
+		deltaScale = Vector3(0)
+	else
+		deltaScale = t2BoneInstance:getScale():divide(t1BoneInstance:getScale())
+	end
+
+	if direction then
+		local localToParent = t1BoneInstance:composeTransform()
+		if direction == "down" then
+			localToParent = localToParent:inverse()
+		end
+
+		min, max = _transformAABB(min, max, localToParent)
+	end
+
+	min:min(min:product(deltaScale):add(deltaTranslation), min)
+	max:max(max:product(deltaScale):add(deltaTranslation), max)
+	min, max = _rotateAABB(min, max, deltaRotation)
+
+	return min, max
+end
+
+--- @param currentBone RatScratch.Graphics.Graphics3D.Bone
+--- @param primaryBone RatScratch.Graphics.Graphics3D.Bone
+--- @return RatScratch.Graphics.Graphics3D.Bone[], ("up" | "down")[]
+local function _getBonePath(currentBone, primaryBone)
+	if currentBone == primaryBone then
+		return { currentBone }, { "up" }
+	end
+
+	local currentBoneAncestors = {}
+	do
+		--- @type RatScratch.Graphics.Graphics3D.Bone?
+		local c = currentBone
+		while c do
+			currentBoneAncestors[c] = true
+			c = c:getParent()
+		end
+	end
+
+	local lowestCommonAncestor
+	do
+		--- @type RatScratch.Graphics.Graphics3D.Bone?
+		local c = primaryBone
+		while c do
+			if currentBoneAncestors[c] then
+				lowestCommonAncestor = c
+				break
+			end
+
+			c = c:getParent()
+		end
+	end
+
+	if not lowestCommonAncestor then
+		return {}, {}
+	end
+
+	local path = {}
+	local direction = {}
+	do
+		do
+			--- @type RatScratch.Graphics.Graphics3D.Bone?
+			local c = currentBone
+
+			while c and c ~= lowestCommonAncestor do
+				table.insert(direction, "up")
+				table.insert(path, c)
+				c = c:getParent()
+			end
+
+			table.insert(path, lowestCommonAncestor)
+		end
+
+		do
+			local i = #path + 1
+
+			--- @type RatScratch.Graphics.Graphics3D.Bone?
+			local c = primaryBone
+			while c and c ~= lowestCommonAncestor do
+				table.insert(direction, "down")
+				table.insert(path, i, c)
+				c = c:getParent()
+			end
+		end
+	end
+
+	return path, direction
+end
+
+--- @private
+--- @param skeleton RatScratch.Graphics.Graphics3D.Skeleton
+--- @param animation RatScratch.Graphics.Graphics3D.Animation
+--- @return number[]
+function ExtendedMeshMeshlet:_getTimestamps(skeleton, animation)
+	--- @type number[]
+	local timestamps = {}
+
+	for _, boneIndex in ipairs(self.boneIndices) do
+		local bone = skeleton:getBone(boneIndex)
+
+		--- @type RatScratch.Graphics.Graphics3D.Bone?
+		local current = bone
+		while current do
+			local channel = animation:getChannel(current)
+			for _, propertyName in ipairs(ExtendedMeshMeshlet.PROPERTIES) do
+				local keyedProperty = channel:getKeyedProperty(propertyName)
+
+				for j = 1, keyedProperty:getFrameCount() do
+					local frame = keyedProperty:getFrame(j)
+					table.insert(timestamps, frame.time)
+				end
+			end
+
+			current = current:getParent()
+		end
+	end
+
+	table.sort(timestamps)
+	return timestamps
+end
+
+--- @private
+--- @param skeleton RatScratch.Graphics.Graphics3D.Skeleton
+function ExtendedMeshMeshlet:_calculateInitialSkinnedBounds(skeleton)
+	local bone = skeleton:getBone(self.primaryBone + 1)
+
+	local min, max = Vector3(math.huge), Vector3(-math.huge)
+	for _, vertex in ipairs(self.vertices) do
+		local localVertex = vertex:transform(bone:getInverseBindPoseTransform())
+		min:min(localVertex, min)
+		max:max(localVertex, max)
+	end
+
+	local center = max:subtract(min):scale(0.5):add(min)
+	local radius = 0
+	for _, vertex in ipairs(self.vertices) do
+		local localVertex = vertex:transform(bone:getInverseBindPoseTransform())
+		local distance = localVertex:distance(center)
+
+		radius = math.max(radius, distance)
+	end
+
+	return center, radius
+end
+
+--- @private
+--- @param bounds RatScratch.Math.Vector3[][]
+--- @param center RatScratch.Math.Vector3
+--- @param radius number
+function ExtendedMeshMeshlet:_recalculateSkinnedBounds(bounds, center, radius)
+	local min, max = Vector3(math.huge), Vector3(-math.huge)
+	for _, vertexBounds in ipairs(bounds) do
+		local vertexMin, vertexMax = vertexBounds[1], vertexBounds[2]
+		min:min(vertexMin, min)
+		max:max(vertexMax, max)
+	end
+
+	local corners = _getCorners(min, max)
+
+	for _, corner in ipairs(corners) do
+		local distance = corner:distance(center)
+		radius = math.max(radius, distance)
+	end
+
+	return radius
+end
+
+--- @private
+--- @param skeleton RatScratch.Graphics.Graphics3D.Skeleton
+--- @param animation RatScratch.Graphics.Graphics3D.Animation
+--- @param t1? number
+--- @param t2? number
+--- @return RatScratch.Math.Vector3[][]?
+function ExtendedMeshMeshlet:_computeVerticesBounds(skeleton, animation, t1, t2)
+	if not (t1 and t2) then
+		return nil
+	end
+
+	local vertexBounds = {}
+
+	local primaryBone = skeleton:getBone(self.primaryBone + 1)
+	for i, vertexIndex in ipairs(self.vertexIndices) do
+		local vertex = self.vertices[i]
+		local vertexBone = self.vertexBones[vertexIndex]
+
+		local vertexMin, vertexMax = Vector3(), Vector3()
+		for j, boneIndex in ipairs(vertexBone.index) do
+			local bone = skeleton:getBone(boneIndex + 1)
+			local boneWeight = vertexBone.weight[j]
+
+			local path, directions = _getBonePath(bone, primaryBone)
+			if #path >= 1 then
+				local boneMin, boneMax
+				do
+					local localVertex =
+						vertex:transform(path[1]:getInverseBindPoseTransform())
+
+					local t1BoneInstance = BoneInstance(path[1])
+					local t2BoneInstance = BoneInstance(path[1])
+
+					local channel = animation:getChannel(path[1])
+					channel:computePropertiesAtTime(t1BoneInstance, t1)
+					channel:computePropertiesAtTime(t2BoneInstance, t2)
+
+					localVertex:transform(
+						t1BoneInstance:composeTransform(),
+						localVertex
+					)
+					boneMin, boneMax = _extendAABB(
+						localVertex,
+						localVertex,
+						nil,
+						t1BoneInstance,
+						t2BoneInstance
+					)
+				end
+
+				for k = 2, #path do
+					local channel = animation:getChannel(path[k])
+					if channel then
+						local t1BoneInstance = BoneInstance(path[k])
+						local t2BoneInstance = BoneInstance(path[k])
+
+						channel:computePropertiesAtTime(t1BoneInstance, t1)
+						channel:computePropertiesAtTime(t2BoneInstance, t2)
+
+						boneMin, boneMax = _extendAABB(
+							boneMin,
+							boneMax,
+							directions[k],
+							t1BoneInstance,
+							t2BoneInstance
+						)
+					end
+				end
+
+				boneMin:scale(boneWeight):add(vertexMin)
+				boneMax:scale(boneWeight):add(vertexMax)
+			end
+		end
+
+		vertexBounds[i] = { vertexMin, vertexMax }
+	end
+
+	return vertexBounds
+end
+
+--- @param skeleton RatScratch.Graphics.Graphics3D.Skeleton
+--- @param animation RatScratch.Graphics.Graphics3D.Animation
+--- @return RatScratch.Math.Vector3, number
+function ExtendedMeshMeshlet:computeSkinnedBounds(skeleton, animation)
+	--- Implementation based on "Conservative Meshlet Bounds for Robust Culling of Skinned Meshes"
+	--- by Johannes Unterguggenberger, Bernhard Kerbl, Jakob Pernsteiner, and Michael Wimme
+	--- URL: https://www.cg.tuwien.ac.at/research/publications/2021/unterguggenberger-2021-msh/
+
+	assert(self:getIsSkinned(), "meshlet is not skinned")
+
+	local timestamps = self:_getTimestamps(skeleton, animation)
+	local center, radius = self:_calculateInitialSkinnedBounds(skeleton)
+
+	local t1Index = 1
+	while t1Index < #timestamps do
+		local t1 = timestamps[t1Index]
+
+		local t2Index =
+			Search.greaterThan(timestamps, t1, _compareTime, t1Index)
+		local t2 = timestamps[t2Index]
+
+		local bounds = self:_computeVerticesBounds(skeleton, animation, t1, t2)
+		if bounds then
+			radius = self:_recalculateSkinnedBounds(bounds, center, radius)
+		end
+
+		t1Index = t2Index
+	end
+
+	return center, radius
 end
 
 return ExtendedMeshMeshlet

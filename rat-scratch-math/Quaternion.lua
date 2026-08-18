@@ -57,6 +57,22 @@ do
 	end
 end
 
+--- @param result? RatScratch.Math.Vector3
+--- @return RatScratch.Math.Vector3, number
+function Quaternion:toAxisAngle(result)
+	result = result or Vector3()
+
+	local angle = 2 * math.acos(self.w)
+	local s = math.sqrt(1 - (self.w ^ 2))
+	if s < Common.EPSILON then
+		result:from(1, 0, 0)
+	else
+		result:from(self.x / s, self.y / s, self.z / s)
+	end
+
+	return result, angle
+end
+
 do
 	local F = Vector3()
 	local R = Vector3()
@@ -281,7 +297,7 @@ do
 	end
 end
 
---- @param result RatScratch.Math.Quaternion?
+--- @param result? RatScratch.Math.Quaternion
 --- @return RatScratch.Math.Quaternion
 function Quaternion:normalize(result)
 	result = result or Quaternion()
