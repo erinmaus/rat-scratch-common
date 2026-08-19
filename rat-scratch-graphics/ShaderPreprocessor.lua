@@ -8,6 +8,7 @@ local Path = require("rat-scratch-common").Path
 ---   dependencies?: boolean,
 ---   rootPath?: string | false,
 ---   rootPaths?: table<string, string> | false,
+---   virtualPaths?: table<string, string> | false,
 ---   variables?: table,
 --- }
 
@@ -18,6 +19,7 @@ local DEFAULT_OPTIONS = {
 	dependencies = false,
 	rootPath = false,
 	rootPaths = false,
+	virtualPaths = false,
 	variables = {},
 }
 
@@ -107,7 +109,10 @@ local TEMPLATE_VARIABLE = "%$([%w_]+)%$"
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
 --- @param currentFile RatScratch.Graphics.impl.ShaderProcessFile
 local function readContent(state, currentFile)
-	local content = love.filesystem.read(currentFile.filename)
+	local content = (
+		state.options.virtualPaths
+		and state.options.virtualPaths[currentFile.filename]
+	) or love.filesystem.read(currentFile.filename)
 	if content then
 		return content
 	end
@@ -126,10 +131,8 @@ end
 --- @param parent? RatScratch.Graphics.impl.ShaderProcessFile
 --- @param filename string
 --- @param variables? table<string, table | string | number>
---- @param rootPath? string
---- @param rootPaths? table<string, string>
 --- @return string
-local function process(state, parent, filename, variables, rootPath, rootPaths)
+local function process(state, parent, filename, variables)
 	local currentFile = beginVisit(state, parent, filename)
 	if not currentFile then
 		return string.format('// file "%s" is recursively included', filename)
@@ -152,8 +155,8 @@ local function process(state, parent, filename, variables, rootPath, rootPaths)
 				local resolvedPath = Path.resolve(
 					filename,
 					templateFilename,
-					rootPath,
-					rootPaths
+					state.options.rootPath,
+					state.options.rootPaths
 				)
 
 				local templateVariables = variables and variables[key]
@@ -186,14 +189,7 @@ local function process(state, parent, filename, variables, rootPath, rootPaths)
 					v["COMMA"] = i < #variables and "," or ""
 					v["I"] = 1
 
-					local c = process(
-						state,
-						currentFile,
-						resolvedPath,
-						v,
-						rootPath,
-						rootPaths
-					)
+					local c = process(state, currentFile, resolvedPath, v)
 
 					table.insert(content, c)
 				end
@@ -238,18 +234,16 @@ local function process(state, parent, filename, variables, rootPath, rootPaths)
 				trimmedLine:match(PRAGMA_OPTION_PATTERN)
 
 			if includeFilename then
-				local resolvedPath =
-					Path.resolve(filename, includeFilename, rootPath, rootPaths)
+				local resolvedPath = Path.resolve(
+					filename,
+					includeFilename,
+					state.options.rootPath,
+					state.options.rootPaths
+				)
 
 				table.insert(lines, string.format("// %s", line))
-				local includedContent = process(
-					state,
-					currentFile,
-					resolvedPath,
-					variables,
-					rootPath,
-					rootPaths
-				)
+				local includedContent =
+					process(state, currentFile, resolvedPath, variables)
 
 				table.insert(lines, "#line 1")
 				table.insert(lines, includedContent)
@@ -396,7 +390,8 @@ function ShaderPreprocessor.preprocess(filename, options)
 		absoluteFilename,
 		mergedOptions.variables,
 		mergedOptions.rootPath,
-		mergedOptions.rootPaths
+		mergedOptions.rootPaths,
+		mergedOptions.virtualPaths
 	)
 
 	local finalOutput = {}
