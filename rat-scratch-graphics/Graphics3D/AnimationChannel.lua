@@ -58,6 +58,18 @@ function AnimationChannel:getKeyedPropertyCount()
 end
 
 --- @param key number | string
+--- @return boolean
+function AnimationChannel:hasKeyedProperty(key)
+	if type(key) == "number" then
+		return self.keyedProperties[key] ~= nil
+	elseif type(key) == "string" then
+		return self.keyedPropertiesByName[key] ~= nil
+	end
+
+	return false
+end
+
+--- @param key number | string
 function AnimationChannel:getKeyedProperty(key)
 	if type(key) == "number" then
 		assert(

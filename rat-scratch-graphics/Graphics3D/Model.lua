@@ -12,8 +12,6 @@ local Model = Object()
 --- @param inputMeshes RatScratch.Graphics.Graphics3D.Mesh[]
 --- @return RatScratch.Graphics.Graphics3D.Mesh[], table<string, RatScratch.Graphics.Graphics3D.Mesh>
 function Model.validateMeshes(inputMeshes)
-	assert(#inputMeshes > 0, "must have one or more meshes")
-
 	local meshes = {}
 	local meshesByName = {}
 	for _, mesh in ipairs(inputMeshes) do
