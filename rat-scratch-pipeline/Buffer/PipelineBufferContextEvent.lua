@@ -2,8 +2,8 @@ local Object = require("rat-scratch-common").Object
 local Event = require("rat-scratch-common").Event
 local EventScope = require("rat-scratch-common.EventScope")
 
---- @class RatScratch.Graphics.Pipeline3D.PipelineBufferContextEvent : RatScratch.Common.Event
---- @overload fun(scope: RatScratch.Common.EventScope): RatScratch.Graphics.Pipeline3D.PipelineBufferContextEvent
+--- @class RatScratch.Pipeline.Buffer.PipelineBufferContextEvent : RatScratch.Common.Event
+--- @overload fun(scope: RatScratch.Common.EventScope): RatScratch.Pipeline.Buffer.PipelineBufferContextEvent
 --- @field private newIndex integer
 --- @field private oldIndex integer
 --- @field private count integer
@@ -52,7 +52,7 @@ function PipelineBufferContextEvent:getOldCount()
 end
 
 --- @param count integer
---- @return RatScratch.Graphics.Pipeline3D.PipelineBufferContextEvent
+--- @return RatScratch.Pipeline.Buffer.PipelineBufferContextEvent
 function PipelineBufferContextEvent.fromCompact(
 	instance,
 	newIndex,
@@ -72,7 +72,7 @@ end
 
 --- @param oldCount integer
 --- @param newCount integer
---- @return RatScratch.Graphics.Pipeline3D.PipelineBufferContextEvent
+--- @return RatScratch.Pipeline.Buffer.PipelineBufferContextEvent
 function PipelineBufferContextEvent.fromResize(oldCount, newCount)
 	local event =
 		Event.get(PipelineBufferContextEvent, PipelineBufferContextEvent.RESIZE)

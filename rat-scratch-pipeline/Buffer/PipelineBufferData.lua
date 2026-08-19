@@ -1,8 +1,8 @@
 local Object = require("rat-scratch-common").Object
 local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
 
---- @class RatScratch.Graphics.Pipeline3D.PipelineBufferData : RatScratch.Common.BaseObject
---- @overload fun(format: RatScratch.Graphics.Graphics3D.MeshFormatAttribute[], count: integer, dirtyContext: RatScratch.Graphics.Pipeline3D.PipelineBufferDirtyContext): RatScratch.Graphics.Pipeline3D.PipelineBufferData
+--- @class RatScratch.Pipeline.Buffer.PipelineBufferData : RatScratch.Common.BaseObject
+--- @overload fun(format: RatScratch.Graphics.Graphics3D.MeshFormatAttribute[], count: integer, dirtyContext: RatScratch.Pipeline.Buffer.PipelineBufferDirtyContext): RatScratch.Pipeline.Buffer.PipelineBufferData
 --- @field private format RatScratch.Graphics.Graphics3D.BufferFormat
 --- @field private count integer
 local PipelineBufferData = Object()

@@ -92,7 +92,7 @@ local AnimatorGroup = {}
 --- @field private boneOverrides table<integer, love.Transform>
 --- @field private groupsByKey table<number | string, RatScratch.Graphics.Graphics3D.AnimatorGroup>
 --- @field private groups RatScratch.Graphics.Graphics3D.AnimatorGroup[]
---- @field private pipelines RatScratch.Graphics.Pipeline3D.AnimationPipeline[]
+--- @field private pipelines RatScratch.Pipeline.AnimationPipeline[]
 local Animator = Object()
 
 Animator.DEFAULT_GROUP = 1
@@ -610,13 +610,13 @@ function Animator:getBoneTransform(boneKey, result)
 	return result
 end
 
---- @param pipeline RatScratch.Graphics.Pipeline3D.AnimationPipeline
+--- @param pipeline RatScratch.Pipeline.AnimationPipeline
 function Animator:attachToAnimationPipeline(pipeline)
 	self:detachFromAnimationPipeline(pipeline)
 	table.insert(self.pipelines, pipeline)
 end
 
---- @param pipeline RatScratch.Graphics.Pipeline3D.AnimationPipeline
+--- @param pipeline RatScratch.Pipeline.AnimationPipeline
 function Animator:detachFromAnimationPipeline(pipeline)
 	Table.remove(self.pipelines, pipeline)
 end

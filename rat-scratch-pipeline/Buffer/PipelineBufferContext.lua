@@ -4,15 +4,13 @@ local Search = require("rat-scratch-common").Search
 local Table = require("rat-scratch-common").Table
 local TablePool = require("rat-scratch-common").TablePool
 local Common = require("rat-scratch-math").Common
-local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
-local EventSource = require("rat-scratch-common.EventSource")
-local Mesh = require("rat-scratch-graphics.Graphics3D.Mesh")
+local EventSource = require("rat-scratch-common").EventSource
 local PipelineBufferContextEvent =
-	require("rat-scratch-graphics.Pipeline3D.PipelineBufferContextEvent")
+	require("rat-scratch-pipeline.Buffer.PipelineBufferContextEvent")
 
 --- @generic T
---- @class RatScratch.Graphics.Pipeline3D.PipelineBufferContext<T> : RatScratch.Common.BaseObject
---- @overload fun(count: integer): RatScratch.Graphics.Pipeline3D.PipelineBufferContext<T>
+--- @class RatScratch.Pipeline.Buffer.PipelineBufferContext<T> : RatScratch.Common.BaseObject
+--- @overload fun(count: integer): RatScratch.Pipeline.Buffer.PipelineBufferContext<T>
 --- @field private instances any[][]
 --- @field private indexCountByInstance table<T, number[]>
 --- @field private tablePool RatScratch.Common.TablePool<table>
@@ -289,7 +287,7 @@ function PipelineBufferContext:_recalculateCount()
 end
 
 --- @generic T
---- @param self RatScratch.Graphics.Pipeline3D.PipelineBufferContext<T>
+--- @param self RatScratch.Pipeline.Buffer.PipelineBufferContext<T>
 --- @param instance T
 --- @return boolean
 function PipelineBufferContext:has(instance)
@@ -297,7 +295,7 @@ function PipelineBufferContext:has(instance)
 end
 
 --- @generic T
---- @param self RatScratch.Graphics.Pipeline3D.PipelineBufferContext<T>
+--- @param self RatScratch.Pipeline.Buffer.PipelineBufferContext<T>
 --- @param instance T
 --- @param count integer
 function PipelineBufferContext:registerOrResize(instance, count)
@@ -312,7 +310,7 @@ function PipelineBufferContext:registerOrResize(instance, count)
 end
 
 --- @generic T
---- @param self RatScratch.Graphics.Pipeline3D.PipelineBufferContext<T>
+--- @param self RatScratch.Pipeline.Buffer.PipelineBufferContext<T>
 --- @param instance T
 --- @param count integer
 --- @return integer, integer
@@ -344,7 +342,7 @@ function PipelineBufferContext:register(instance, count)
 end
 
 --- @generic T : RatScratch.Common.BaseObject
---- @param self RatScratch.Graphics.Pipeline3D.PipelineBufferContext<T>
+--- @param self RatScratch.Pipeline.Buffer.PipelineBufferContext<T>
 --- @param instance T
 --- @param newCount integer
 --- @return integer, integer
@@ -385,7 +383,7 @@ function PipelineBufferContext:resize(instance, newCount)
 end
 
 --- @generic T : RatScratch.Common.BaseObject
---- @param self RatScratch.Graphics.Pipeline3D.PipelineBufferContext<T>
+--- @param self RatScratch.Pipeline.Buffer.PipelineBufferContext<T>
 --- @param instance T
 function PipelineBufferContext:unregister(instance)
 	local instanceInfo = self.indexCountByInstance[instance]
@@ -416,7 +414,7 @@ function PipelineBufferContext:unregister(instance)
 end
 
 --- @generic T : RatScratch.Common.BaseObject
---- @param self RatScratch.Graphics.Pipeline3D.PipelineBufferContext<T>
+--- @param self RatScratch.Pipeline.Buffer.PipelineBufferContext<T>
 --- @param instance T
 --- @return integer, integer
 --- @overload fun(): integer, integer

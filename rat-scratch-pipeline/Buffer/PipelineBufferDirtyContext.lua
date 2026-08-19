@@ -4,8 +4,8 @@ local Table = require("rat-scratch-common").Table
 local TablePool = require("rat-scratch-common").TablePool
 local Common = require("rat-scratch-math").Common
 
---- @class RatScratch.Graphics.Pipeline3D.PipelineBufferDirtyContext : RatScratch.Common.BaseObject
---- @overload fun(): RatScratch.Graphics.Pipeline3D.PipelineBufferDirtyContext
+--- @class RatScratch.Pipeline.Buffer.PipelineBufferDirtyContext : RatScratch.Common.BaseObject
+--- @overload fun(): RatScratch.Pipeline.Buffer.PipelineBufferDirtyContext
 --- @field private tablePool RatScratch.Common.TablePool
 --- @field private dirtyInstances number[][]
 local PipelineBufferDirtyContext = Object()

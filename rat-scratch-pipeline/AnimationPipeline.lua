@@ -2,45 +2,45 @@ local PATH = ...
 local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
-local BoneInstance = require("rat-scratch-graphics.Graphics3D.BoneInstance")
+local BoneInstance = require("rat-scratch-graphics").Graphics3D.BoneInstance
 local Module = require("lib.rat-scratch-module")
-local PipelineBuffer = require("rat-scratch-graphics.Pipeline3D.PipelineBuffer")
-local ShaderPreprocessor = require("rat-scratch-graphics.ShaderPreprocessor")
-local Transform = require("rat-scratch-math.Transform")
+local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
+local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
+local Transform = require("rat-scratch-math").Transform
 
---- @alias RatScratch.Graphics.Pipeline3D.AnimationPipelineShaderRole
+--- @alias RatScratch.Pipeline.AnimationPipelineShaderRole
 --- | "evaluate"
 --- | "copy"
 --- | "blend"
 --- | "compose"
 --- | "apply_inverse_bind_pose"
 
---- @class RatScratch.Graphics.Pipeline3D.AnimationPipeline : RatScratch.Common.BaseObject
---- @overload fun(): RatScratch.Graphics.Pipeline3D.AnimationPipeline
+--- @class RatScratch.Pipeline.AnimationPipeline : RatScratch.Common.BaseObject
+--- @overload fun(): RatScratch.Pipeline.AnimationPipeline
 --- @field private skeletons table<RatScratch.Graphics.Graphics3D.Skeleton, { animations: RatScratch.Graphics.Graphics3D.Animation[] }>
 --- @field private skeletonsByIndex RatScratch.Graphics.Graphics3D.Skeleton[]
---- @field private skeletonsBuffer RatScratch.Graphics.Pipeline3D.PipelineBuffer<RatScratch.Graphics.Graphics3D.Skeleton>
---- @field private skeletonBonesBuffer RatScratch.Graphics.Pipeline3D.PipelineBuffer<RatScratch.Graphics.Graphics3D.Skeleton>
+--- @field private skeletonsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Graphics.Graphics3D.Skeleton>
+--- @field private skeletonBonesBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Graphics.Graphics3D.Skeleton>
 --- @field private animations table<RatScratch.Graphics.Graphics3D.Animation, { skeleton: RatScratch.Graphics.Graphics3D.Skeleton }>
 --- @field private animationsByIndex RatScratch.Graphics.Graphics3D.Animation[]
---- @field private animationChannelsBuffer RatScratch.Graphics.Pipeline3D.PipelineBuffer<RatScratch.Graphics.Graphics3D.Animation>
---- @field private animationChannelKeyFramesBuffer RatScratch.Graphics.Pipeline3D.PipelineBuffer<RatScratch.Graphics.Graphics3D.KeyFrames>
+--- @field private animationChannelsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Graphics.Graphics3D.Animation>
+--- @field private animationChannelKeyFramesBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Graphics.Graphics3D.KeyFrames>
 --- @field private animators table<RatScratch.Graphics.Graphics3D.Animator, { groups: table<RatScratch.Graphics.Graphics3D.AnimatorGroup, boolean> }>
---- @field private playbackStatesBuffer RatScratch.Graphics.Pipeline3D.PipelineBuffer<RatScratch.Graphics.Graphics3D.AnimatorGroup>
---- @field private playbackTransformsBuffer RatScratch.Graphics.Pipeline3D.PipelineBuffer<RatScratch.Graphics.Graphics3D.BoneInstance>
---- @field private playbackGroupTransformsBuffer RatScratch.Graphics.Pipeline3D.PipelineBuffer<RatScratch.Graphics.Graphics3D.AnimatorGroup>
---- @field private playbackTransformInfoBuffer RatScratch.Graphics.Pipeline3D.PipelineBuffer<RatScratch.Graphics.Graphics3D.BoneInstance>
---- @field private playbackGroupBonesBuffer RatScratch.Graphics.Pipeline3D.PipelineBuffer<RatScratch.Graphics.Graphics3D.AnimatorGroup>
---- @field private boneTransformsBuffer RatScratch.Graphics.Pipeline3D.PipelineBuffer<RatScratch.Graphics.Graphics3D.Animator>
---- @field private globalBoneMapBuffer RatScratch.Graphics.Pipeline3D.PipelineBuffer<RatScratch.Graphics.Graphics3D.Animator>
+--- @field private playbackStatesBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Graphics.Graphics3D.AnimatorGroup>
+--- @field private playbackTransformsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Graphics.Graphics3D.BoneInstance>
+--- @field private playbackGroupTransformsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Graphics.Graphics3D.AnimatorGroup>
+--- @field private playbackTransformInfoBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Graphics.Graphics3D.BoneInstance>
+--- @field private playbackGroupBonesBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Graphics.Graphics3D.AnimatorGroup>
+--- @field private boneTransformsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Graphics.Graphics3D.Animator>
+--- @field private globalBoneMapBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Graphics.Graphics3D.Animator>
 --- @field private animatorsByIndex RatScratch.Graphics.Graphics3D.Animator[]
 --- @field private animatorGroupBones table<RatScratch.Graphics.Graphics3D.AnimatorGroup, { bones: RatScratch.Graphics.Graphics3D.BoneInstance[], boneToInstance: table<RatScratch.Graphics.Graphics3D.Bone, RatScratch.Graphics.Graphics3D.BoneInstance> }>
 --- @field private animatorGroups table<RatScratch.Graphics.Graphics3D.AnimatorGroup, RatScratch.Graphics.Graphics3D.Animator>
 --- @field private dirtyAnimatorGroups table<RatScratch.Graphics.Graphics3D.AnimatorGroup, boolean>
 --- @field private dirtyAnimatorGroupsByIndex RatScratch.Graphics.Graphics3D.AnimatorGroup[]
---- @field private boneMapBuffers RatScratch.Graphics.Pipeline3D.PipelineBuffer<RatScratch.Graphics.Graphics3D.Animator>[]
+--- @field private boneMapBuffers RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Graphics.Graphics3D.Animator>[]
 --- @field private boneMapBufferCount integer
---- @field private shaders table<RatScratch.Graphics.Pipeline3D.AnimationPipelineShaderRole, love.Shader>
+--- @field private shaders table<RatScratch.Pipeline.AnimationPipelineShaderRole, love.Shader>
 local AnimationPipeline = Object()
 
 AnimationPipeline.SKELETON_BONE_FORMAT = {
@@ -773,7 +773,7 @@ function AnimationPipeline:clearAnimatorGroup(animator, group)
 	self.animatorGroups[group] = nil
 end
 
---- @param role RatScratch.Graphics.Pipeline3D.AnimationPipelineShaderRole
+--- @param role RatScratch.Pipeline.AnimationPipelineShaderRole
 --- @param shader love.Shader
 function AnimationPipeline:setShader(role, shader)
 	self.shaders[role] = shader or nil
@@ -785,23 +785,28 @@ local shaderOptions = {}
 AnimationPipeline.DEFAULT_SHADERS = {
 	{
 		role = "evaluate",
-		filename = "@/Pipeline3D/Animation/Evaluate.compute.glsl",
+		filename = "@Pipeline/Animation/Evaluate.compute.glsl",
 	},
-	{ role = "copy", filename = "@/Pipeline3D/Animation/Copy.compute.glsl" },
-	{ role = "blend", filename = "@/Pipeline3D/Animation/Blend.compute.glsl" },
+	{ role = "copy", filename = "@Pipeline/Animation/Copy.compute.glsl" },
+	{ role = "blend", filename = "@Pipeline/Animation/Blend.compute.glsl" },
 	{
 		role = "compose",
-		filename = "@/Pipeline3D/Animation/Compose.compute.glsl",
+		filename = "@Pipeline/Animation/Compose.compute.glsl",
 	},
 	{
 		role = "apply_inverse_bind_pose",
-		filename = "@/Pipeline3D/Animation/ApplyInverseBindPose.compute.glsl",
+		filename = "@Pipeline/Animation/ApplyInverseBindPose.compute.glsl",
 	},
 }
 
 function AnimationPipeline:loadDefaultShaders()
 	if not shaderOptions.rootPath then
-		shaderOptions.rootPath = ("%s/Shaders"):format(Module.getSelfPath(PATH))
+		shaderOptions.rootPath = ("%s/Shaders"):format(
+			Module.getSelfPath("rat-scratch-graphics")
+		)
+		shaderOptions.rootPaths = {
+			Pipeline = ("%s/Shaders"):format(Module.getSelfPath(PATH)),
+		}
 	end
 
 	for _, shader in ipairs(self.DEFAULT_SHADERS) do

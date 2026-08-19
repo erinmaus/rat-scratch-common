@@ -384,15 +384,8 @@ function ShaderPreprocessor.preprocess(filename, options)
 		mergedOptions.rootPath,
 		mergedOptions.rootPaths
 	)
-	local processedContent = process(
-		processedState,
-		nil,
-		absoluteFilename,
-		mergedOptions.variables,
-		mergedOptions.rootPath,
-		mergedOptions.rootPaths,
-		mergedOptions.virtualPaths
-	)
+	local processedContent =
+		process(processedState, nil, absoluteFilename, mergedOptions.variables)
 
 	local finalOutput = {}
 	tryHoistOptions(processedState, finalOutput)

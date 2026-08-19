@@ -7,8 +7,7 @@ local Common = require("rat-scratch-math").Common
 local Quaternion = require("rat-scratch-math").Quaternion
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
-local AnimationPipeline =
-	require("rat-scratch-graphics.Pipeline3D.AnimationPipeline")
+local AnimationPipeline = require("rat-scratch-pipeline").AnimationPipeline
 local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
 
 local demo = {}

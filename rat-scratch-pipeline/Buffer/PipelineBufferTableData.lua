@@ -3,10 +3,10 @@ local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
 local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
 local PipelineBufferData =
-	require("rat-scratch-graphics.Pipeline3D.PipelineBufferData")
+	require("rat-scratch-pipeline.Buffer.PipelineBufferData")
 
---- @class RatScratch.Graphics.Pipeline3D.PipelineBufferTableData : RatScratch.Graphics.Pipeline3D.PipelineBufferData
---- @overload fun(format: RatScratch.Graphics.Graphics3D.MeshFormatAttribute[], count: integer): RatScratch.Graphics.Pipeline3D.PipelineBufferTableData
+--- @class RatScratch.Pipeline.Buffer.PipelineBufferTableData : RatScratch.Pipeline.Buffer.PipelineBufferData
+--- @overload fun(format: RatScratch.Graphics.Graphics3D.MeshFormatAttribute[], count: integer): RatScratch.Pipeline.Buffer.PipelineBufferTableData
 --- @field private count integer
 --- @field private bufferData number[][]
 local PipelineBufferTableData = Object(PipelineBufferData)
