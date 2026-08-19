@@ -7,7 +7,7 @@
     "vertexBuffers": [
       {
         "role": "static",
-        "buffer": "rat_VertexPositions",
+        "buffer": "VertexPositions",
         "format": [
           {
             "role": "VertexPosition",
@@ -19,7 +19,7 @@
       },
       {
         "role": "static",
-        "buffer": "rat_VertexTextureCoordinates",
+        "buffer": "VertexTextureCoordinates",
         "format": [
           {
             "role": "VertexTexCoord",
@@ -31,7 +31,7 @@
       },
       {
         "role": "static",
-        "buffer": "rat_VertexColors",
+        "buffer": "VertexColors",
         "format": [
           {
             "role": "VertexColor",
@@ -47,7 +47,7 @@
       },
       {
         "role": "static",
-        "buffer": "rat_VertexNormals",
+        "buffer": "VertexNormals",
         "format": [
           {
             "role": "VertexNormal",
@@ -63,7 +63,7 @@
       },
       {
         "role": "static",
-        "buffer": "rat_VertexTangents",
+        "buffer": "VertexTangents",
         "format": [
           {
             "role": "VertexTangent",
@@ -79,7 +79,7 @@
       },
       {
         "role": "skinned",
-        "buffer": "rat_VertexBoneIndicesWeights",
+        "buffer": "VertexBoneIndicesWeights",
         "format": [
           {
             "role": "VertexBoneIndex",
@@ -106,7 +106,7 @@
     ],
     "indexBuffer": {
       "name": "index",
-      "buffer": "rat_Indices",
+      "buffer": "Indices",
       "format": "uint32"
     }
   }

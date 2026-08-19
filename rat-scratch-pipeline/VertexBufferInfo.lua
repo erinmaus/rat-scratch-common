@@ -7,7 +7,7 @@ local Pack = require("rat-scratch-pipeline.Utility.Pack")
 --- @overload fun(info: RatScratch.Pipeline.PipelineDefinitionVertexBuffer): RatScratch.Pipeline.VertexBufferInfo
 --- @field private inputFormatInstance RatScratch.Graphics.Graphics3D.BufferFormat
 --- @field private vertexFormatInstance RatScratch.Graphics.Graphics3D.BufferFormat
---- @field private transforms table<string, { pack: fun(...: number): ...: number; unpack: fun(...: number): ...: number }>
+--- @field private transforms table<string, { packName: string, unpackName: string, pack: fun(...: number): ...: number; unpack: fun(...: number): ...: number }>
 --- @field private buffer string
 local VertexBufferInfo = Object()
 
@@ -45,7 +45,7 @@ function VertexBufferInfo:new(info)
 			location = BufferFormat.getFormatAttributeLocationFromName(
 				attribute.role
 			),
-			name = attribute.role,
+			name = attribute.name,
 			format = attribute.vertexFormat,
 		}
 		table.insert(vertexFormat, vertexAttribute)
@@ -68,7 +68,9 @@ function VertexBufferInfo:new(info)
 
 			self.transforms[attribute.role] = {
 				pack = pack,
+				packName = attribute.transform.to,
 				unpack = unpack,
+				unpackName = attribute.transform.from,
 			}
 		end
 	end
@@ -88,6 +90,20 @@ end
 --- @return string
 function VertexBufferInfo:getBufferName()
 	return self.buffer
+end
+
+--- @param role string
+--- @return string
+function VertexBufferInfo:getPackTransform(role)
+	local transform = self.transforms[role]
+	return transform and transform.packName
+end
+
+--- @param role string
+--- @return string
+function VertexBufferInfo:getUnpackTransform(role)
+	local transform = self.transforms[role]
+	return transform and transform.unpackName
 end
 
 --- @param role string
