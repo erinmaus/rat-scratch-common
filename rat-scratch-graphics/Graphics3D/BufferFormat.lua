@@ -89,7 +89,6 @@ local ATTRIBUTE_COMPONENTS = {
 	floatmat3x2 = 6,
 	floatmat3x3 = 9,
 	floatmat3x4 = 12,
-	floatmat4x1 = 4,
 	floatmat4x2 = 8,
 	floatmat4x3 = 12,
 	floatmat4x4 = 16,
@@ -120,7 +119,6 @@ local EXPANDED_ATTRIBUTE_FORMAT = {
 	floatmat3x2 = "floatmat4x4",
 	floatmat3x3 = "floatmat4x4",
 	floatmat3x4 = "floatmat4x4",
-	floatmat4x1 = "floatmat4x4",
 	floatmat4x2 = "floatmat4x4",
 	floatmat4x3 = "floatmat4x4",
 	floatmat4x4 = "floatmat4x4",
@@ -132,6 +130,30 @@ local SCALAR_SIZE = {
 	uint32 = 4,
 	int16 = 2,
 	uint16 = 2,
+}
+
+local SHADER_TYPE = {
+	float = "float",
+	floatvec2 = "vec2",
+	floatvec3 = "vec3",
+	floatvec4 = "vec4",
+	int32 = "uint",
+	int32vec2 = "uvec2",
+	int32vec3 = "uvec3",
+	int32vec4 = "uvec4",
+	uint32 = "uint",
+	uint32vec2 = "uvec2",
+	uint32vec3 = "uvec3",
+	uint32vec4 = "uvec4",
+	floatmat2x2 = "mat2",
+	floatmat2x3 = "max2x3",
+	floatmat2x4 = "mat2x4",
+	floatmat3x2 = "mat3x2",
+	floatmat3x3 = "mat3",
+	floatmat3x4 = "mat3x4",
+	floatmat4x2 = "mat4x2",
+	floatmat4x3 = "mat4x3",
+	floatmat4x4 = "mat4",
 }
 
 local SCALAR_TYPE = {
@@ -159,7 +181,6 @@ local SCALAR_TYPE = {
 	floatmat3x2 = "float",
 	floatmat3x3 = "float",
 	floatmat3x4 = "float",
-	floatmat4x1 = "float",
 	floatmat4x2 = "float",
 	floatmat4x3 = "float",
 	floatmat4x4 = "float",
@@ -214,6 +235,11 @@ local DEFAULT_MISSING_COMPONENT_VALUES =
 --- @param format string
 function BufferFormat.getFormatScalar(format)
 	return SCALAR_TYPE[format] or "float"
+end
+
+--- @param format string
+function BufferFormat.getFormatShaderType(format)
+	return SHADER_TYPE[format]
 end
 
 --- @param scalar string
@@ -1012,6 +1038,9 @@ function BufferFormat:new(format, packed)
 			name = remappedAttribute.name,
 			format = remappedAttribute.format,
 			scalar = BufferFormat.getFormatScalar(remappedAttribute.format),
+			shaderType = BufferFormat.getFormatShaderType(
+				remappedAttribute.format
+			),
 			count = count,
 			offset = offset,
 			byteOffset = byteOffset,
@@ -1096,6 +1125,19 @@ function BufferFormat:getCountOffset(key)
 	)
 
 	return attributeInfo.count, attributeInfo.offset
+end
+
+--- @param key string | integer
+--- @return string
+function BufferFormat:getShaderType(key)
+	local attributeInfo = self.attributeInfo[self.index[key]]
+	assert(
+		attributeInfo,
+		"attribute location/name '%s' not valid for format",
+		key
+	)
+
+	return attributeInfo.shaderType
 end
 
 --- @param key string | integer
