@@ -526,6 +526,29 @@ function GLTFBuilder.getDefaultRoot()
 end
 
 --- @private
+--- @param object RatScratch.GLTF.Object
+--- @param index integer
+--- @param definition RatScratch.Graphics.Graphics3D.Definition
+function GLTFBuilder:_trySerialize(object, index, definition)
+	--- @type RatScratch.GLTF.Extra.RAT_extras_serialize?
+	local serialize = definition.extras
+		and definition.extras.RAT_extras_serialize
+	if serialize then
+		if serialize.userdata then
+			serialize.serialize(
+				serialize.userdata,
+				self,
+				object,
+				index,
+				definition
+			)
+		else
+			serialize.serialize(self, object, index, definition)
+		end
+	end
+end
+
+--- @private
 --- @param skeletonDefinition RatScratch.Graphics.Graphics3D.SkeletonDefinition
 --- @return integer, table<integer, integer>
 function GLTFBuilder:_addSkeletonDefinition(skeletonDefinition)
@@ -536,17 +559,26 @@ function GLTFBuilder:_addSkeletonDefinition(skeletonDefinition)
 	local boneIDToNodeIndex = {}
 	for i, boneDefinition in ipairs(skeletonDefinition.bones) do
 		local nodeIndex, node = self:addNode({ name = boneDefinition.name })
+		self:_trySerialize(node, nodeIndex, boneDefinition)
+
 		boneIDToNodeIndex[boneDefinition.id] = nodeIndex
+	end
+
+	for i, boneDefinition in ipairs(skeletonDefinition.bones) do
+		local nodeIndex = boneIDToNodeIndex[boneDefinition.id]
+		local node = self:getNode(nodeIndex)
 
 		if boneDefinition.parentID then
 			local parentNodeIndex = boneIDToNodeIndex[boneDefinition.parentID]
-			local parentNode = self:getNode(parentNodeIndex)
+			if parentNodeIndex then
+				local parentNode = self:getNode(parentNodeIndex)
 
-			if not parentNode.children then
-				parentNode.children = {}
+				if not parentNode.children then
+					parentNode.children = {}
+				end
+
+				table.insert(parentNode.children, nodeIndex)
 			end
-
-			table.insert(parentNode.children, nodeIndex)
 		end
 
 		if node.matrix then
@@ -589,7 +621,9 @@ function GLTFBuilder:_addSkeletonDefinition(skeletonDefinition)
 		type = "MAT4",
 	})
 
-	local skinIndex = self:addSkin(skin)
+	local skinIndex, skinObject = self:addSkin(skin)
+	self:_trySerialize(skinObject, skinIndex, skeletonDefinition)
+
 	return skinIndex, boneIDToNodeIndex
 end
 
@@ -707,6 +741,8 @@ function GLTFBuilder:_addAnimationDefinition(animationDefinition, bones)
 		end
 	end
 
+	self:_trySerialize(animation, animationIndex, animationDefinition)
+
 	return animationIndex
 end
 
@@ -766,13 +802,15 @@ function GLTFBuilder:_addMaterialDefinition(materialDefinition)
 		source = imageSource,
 	})
 
-	local materialIndex = self:addMaterial({
+	local materialIndex, material = self:addMaterial({
 		pbrMetallicRoughness = {
 			baseColorTexture = {
 				index = textureIndex,
 			},
 		},
 	})
+
+	self:_trySerialize(material, materialIndex, materialDefinition)
 
 	return materialIndex
 end
@@ -919,20 +957,22 @@ function GLTFBuilder:fromSceneDefinition(sceneDefinition)
 			matrix = { transform:getMatrix() }
 		end
 
-		local nodeIndex = self:addNode({
+		local nodeIndex, node = self:addNode({
 			mesh = mesh,
 			skin = skin,
 			matrix = matrix,
 		})
 
+		self:_trySerialize(node, nodeIndex, modelDefinition)
 		table.insert(nodes, nodeIndex)
 	end
 
-	local sceneIndex = self:addScene({
+	local sceneIndex, scene = self:addScene({
 		name = sceneDefinition.name,
 		nodes = nodes,
 	})
 
+	self:_trySerialize(scene, sceneIndex, sceneDefinition)
 	return sceneIndex
 end
 

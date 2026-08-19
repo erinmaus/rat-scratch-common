@@ -8,6 +8,7 @@ local Quaternion = require("rat-scratch-math").Quaternion
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
 local ExtendedModel = require("rat-scratch-pipeline-tools").Model.ExtendedModel
+local ExtendedScene = require("rat-scratch-pipeline-tools").Model.ExtendedScene
 local PipelineConfig = require("rat-scratch-pipeline").PipelineConfig
 local ShaderPreprocessor = require("rat-scratch-graphics.ShaderPreprocessor")
 local ffi = require("ffi")
@@ -35,8 +36,8 @@ function demo.load()
 	local baseScene = parser:loadScene(1)
 
 	local pipelineConfig = PipelineConfig.loadDefault()
-	local extendedModel = ExtendedModel(parser, 0)
-	extendedModel:build(pipelineConfig)
+	local extendedScene = ExtendedScene(baseScene, pipelineConfig)
+	local extendedModel = extendedScene:getModel(1)
 
 	local meshDefinitions = parser:loadMesh(0, {
 		attributes = {

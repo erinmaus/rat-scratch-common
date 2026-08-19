@@ -12,40 +12,30 @@ local RSTangentFFI = require("rat-scratch-pipeline-tools.impl.RSTangentFFI")
 local ffi = require("ffi")
 
 --- @class RatScratch.Pipeline.ExtendedModel : RatScratch.Common.BaseObject
---- @overload fun(parser: RatScratch.GLTF.GLTFParser, meshIndex: integer): RatScratch.Pipeline.ExtendedModel
---- @field private parser RatScratch.GLTF.GLTFParser
---- @field private meshDefinitions RatScratch.Graphics.Graphics3D.MeshDefinition[]
+--- @overload fun(modelDefinition: RatScratch.Graphics.Graphics3D.ModelDefinition): RatScratch.Pipeline.ExtendedModel
+--- @field private modelDefinition RatScratch.Graphics.Graphics3D.ModelDefinition
 --- @field private meshes RatScratch.Pipeline.ExtendedMesh[]
 --- @field private meshIndex integer
 local ExtendedModel = Object()
 
---- @param parser RatScratch.GLTF.GLTFParser
---- @param meshIndex integer
-function ExtendedModel:new(parser, meshIndex)
-	self.parser = parser
-	self.meshIndex = meshIndex
-	self.meshDefinitions = self.parser:loadMesh(meshIndex) or {}
+--- @param modelDefinition RatScratch.Graphics.Graphics3D.ModelDefinition
+function ExtendedModel:new(modelDefinition)
+	self.modelDefinition = modelDefinition
 	self.meshes = {}
 end
 
-function ExtendedModel:getMeshIndex()
-	return self.meshIndex
-end
-
 function ExtendedModel:getMeshCount()
-	return #self.meshDefinitions
-end
-
---- @param index integer
---- @return RatScratch.Graphics.Graphics3D.MeshDefinition
-function ExtendedModel:getMeshDefinition(index)
-	return self.meshDefinitions[index]
+	return #self.meshes
 end
 
 --- @param index integer
 --- @return RatScratch.Pipeline.ExtendedMesh
 function ExtendedModel:getMesh(index)
 	return self.meshes[index]
+end
+
+function ExtendedModel:getModelDefinition()
+	return self.modelDefinition
 end
 
 ExtendedModel.POSITION_FORMAT = {
@@ -391,7 +381,6 @@ function ExtendedModel:_transformIndexData(
 		local meshlet = ExtendedMeshMeshlet.fromMesh(
 			pipelineConfig,
 			meshletIndexData,
-			mesh,
 			meshDefinition
 		)
 		meshlet:setStaticBounds(
@@ -424,7 +413,7 @@ end
 
 --- @param pipelineConfig RatScratch.Pipeline.PipelineConfig
 function ExtendedModel:build(pipelineConfig)
-	for _, meshDefinition in ipairs(self.meshDefinitions) do
+	for _, meshDefinition in ipairs(self.modelDefinition.meshes) do
 		local mesh = ExtendedMesh(#meshDefinition.vertices)
 
 		local meshFormat = BufferFormat.get(meshDefinition.format)
@@ -461,10 +450,10 @@ function ExtendedModel:build(pipelineConfig)
 	end
 
 	assert(
-		#self.meshes == #self.meshDefinitions,
-		"mesh (%d) / mesh definition (%s) count mis-match",
+		#self.meshes == #self.modelDefinition.meshes,
+		"mesh (%d) / model mesh definition (%s) count mis-match",
 		#self.meshes,
-		#self.meshDefinitions
+		#self.modelDefinition.meshes
 	)
 end
 

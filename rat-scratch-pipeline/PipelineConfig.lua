@@ -1,6 +1,7 @@
 local PATH = ...
 local Object = require("rat-scratch-common").Object
 local assert = require("rat-scratch-common").Debug.assert
+local Table = require("rat-scratch-common").Table
 local IndexBufferInfo = require("rat-scratch-pipeline.IndexBufferInfo")
 local MeshletFormat = require("rat-scratch-pipeline.MeshletFormat")
 local RatScratchModule = require("lib.rat-scratch-module")
@@ -13,6 +14,7 @@ local json = require("lib.json")
 --- @field private vertexBufferByRole table<RatScratch.Pipeline.PipelineDefinitionVertexBufferRole, RatScratch.Pipeline.VertexBufferInfo[]>
 --- @field private indexBuffer RatScratch.Pipeline.IndexBufferInfo
 --- @field private meshletFormat RatScratch.Pipeline.MeshletFormat
+--- @field private definition RatScratch.Pipeline.PipelineDefinitionConfig
 local PipelineConfig = Object()
 
 --- @param definition RatScratch.Pipeline.PipelineDefinitionConfig
@@ -54,6 +56,8 @@ function PipelineConfig:new(definition)
 
 	self.indexFormat = IndexBufferInfo(definition.indexBuffer)
 	self.meshletFormat = MeshletFormat(definition.meshletFormat)
+
+	self.definition = Table.deepClone(definition)
 end
 
 function PipelineConfig:getMeshletFormat()
@@ -88,6 +92,11 @@ end
 --- @return RatScratch.Pipeline.IndexBufferInfo
 function PipelineConfig:getIndexFormat()
 	return self.indexFormat
+end
+
+--- @return RatScratch.Pipeline.PipelineDefinitionConfig
+function PipelineConfig:serialize()
+	return { pipeline = Table.deepClone(self.definition) }
 end
 
 function PipelineConfig.loadDefault()

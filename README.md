@@ -8,4 +8,4 @@ This is a README for `rat-scratch-common`.
 
 ## Credits
 
-* Skinned meshlet bounds algorithm implementation in `rat-scratch-pipeline-tools` module based on: ["Conservative Meshlet Bounds for Robust Culling of Skinned Meshes"](https://www.cg.tuwien.ac.at/research/publications/2021/unterguggenberger-2021-msh/) by Johannes Unterguggenberger, Bernhard Kerbl, Jakob Pernsteiner, and Michael Wimme.
+* Skinned meshlet bounds algorithm implementation in `rat-scratch-pipeline-tools` module based on: ["Conservative Meshlet Bounds for Robust Culling of Skinned Meshes"](https://www.cg.tuwien.ac.at/research/publications/2021/unterguggenberger-2021-msh/) by Johannes Unterguggenberger, Bernhard Kerbl, Jakob Pernsteiner, and Michael Wimme. DOI: https://doi.org/10.1111/cgf.14401

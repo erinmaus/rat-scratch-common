@@ -9,9 +9,19 @@ local BoneInstance = require("rat-scratch-graphics").Graphics3D.BoneInstance
 local Quaternion = require("rat-scratch-math").Quaternion
 local Table = require("rat-scratch-common").Table
 
+--- @class RatScratch.Pipeline.SerializedExtendedMeshMeshlet
+--- @field public indexData love.ByteData
+--- @field public vertexIndices integer[]
+--- @field public vertices number[][]
+--- @field public vertexBones table<integer, { index: number[], weight: number[] }>
+--- @field public boneIndices integer[]
+--- @field public primaryBone integer
+--- @field public staticBoundsPosition number[]
+--- @field public staticBoundsRadius number
+local SerializedExtendedMeshMeshlet = {}
+
 --- @class RatScratch.Pipeline.ExtendedMeshMeshlet : RatScratch.Common.BaseObject
---- @overload fun(mesh: RatScratch.Pipeline.ExtendedMesh, indexData: love.ByteData): RatScratch.Pipeline.ExtendedMeshMeshlet
---- @field private mesh RatScratch.Pipeline.ExtendedMesh
+--- @overload fun(indexData: love.ByteData): RatScratch.Pipeline.ExtendedMeshMeshlet
 --- @field private indexData love.ByteData
 --- @field private vertexIndices integer[]
 --- @field private vertices RatScratch.Math.Vector3[]
@@ -22,18 +32,35 @@ local Table = require("rat-scratch-common").Table
 --- @field private staticBoundsRadius number
 local ExtendedMeshMeshlet = Object()
 
---- @param mesh RatScratch.Pipeline.ExtendedMesh
 --- @param indexData love.ByteData
-function ExtendedMeshMeshlet:new(mesh, indexData)
-	self.mesh = mesh
+function ExtendedMeshMeshlet:new(indexData)
 	self.indexData = indexData
 	self.vertexIndices = {}
 	self.vertices = {}
 	self.vertexBones = {}
 	self.boneIndices = {}
-	self.bounds = {}
+	self.primaryBone = 0
 	self.staticBoundsPosition = Vector3()
 	self.staticBoundsRadius = 0
+end
+
+--- @return RatScratch.Pipeline.SerializedExtendedMeshMeshlet
+function ExtendedMeshMeshlet:serialize()
+	local vertices = {}
+	for _, vertex in ipairs(self.vertices) do
+		table.insert(vertices, { vertex:get() })
+	end
+
+	return {
+		indexData = self.indexData,
+		vertexIndices = self.vertexIndices,
+		vertices = vertices,
+		vertexBones = self.vertexBones,
+		boneIndices = self.boneIndices,
+		primaryBone = self.primaryBone,
+		staticBoundsPosition = { self.staticBoundsPosition:get() },
+		staticBoundsRadius = self.staticBoundsRadius,
+	}
 end
 
 function ExtendedMeshMeshlet:getStaticBounds()
@@ -67,20 +94,19 @@ function ExtendedMeshMeshlet:getUniqueBone(index)
 	return self.boneIndices[index]
 end
 
+--- @return integer
+function ExtendedMeshMeshlet:getPrimaryBone()
+	return self.primaryBone or self.boneIndices[#self.boneIndices] or 0
+end
+
 function ExtendedMeshMeshlet:getIsSkinned()
 	return #self.boneIndices > 0
 end
 
 --- @param pipelineConfig RatScratch.Pipeline.PipelineConfig
 --- @param indexData love.ByteData
---- @param mesh RatScratch.Pipeline.ExtendedMesh
 --- @param meshDefinition RatScratch.Graphics.Graphics3D.MeshDefinition
-function ExtendedMeshMeshlet.fromMesh(
-	pipelineConfig,
-	indexData,
-	mesh,
-	meshDefinition
-)
+function ExtendedMeshMeshlet.fromMesh(pipelineConfig, indexData, meshDefinition)
 	local indexFormat = BufferFormat.get(Mesh.INDEX_FORMAT)
 	local meshFormat = BufferFormat.get(meshDefinition.format)
 
@@ -122,7 +148,7 @@ function ExtendedMeshMeshlet.fromMesh(
 
 			if not vertexBones[index] then
 				vertexBones[index] = {
-					indices = {
+					index = {
 						Table.unpack(
 							vertex,
 							boneIndexOffset,
@@ -156,7 +182,7 @@ function ExtendedMeshMeshlet.fromMesh(
 	end
 
 	local vertexIndices = {}
-	for index in ipairs(verticesByIndex) do
+	for index in pairs(verticesByIndex) do
 		table.insert(vertexIndices, index)
 	end
 	table.sort(vertexIndices)
@@ -205,7 +231,7 @@ function ExtendedMeshMeshlet.fromMesh(
 		end
 	end
 
-	local mesh = ExtendedMeshMeshlet(mesh, meshletIndexData)
+	local mesh = ExtendedMeshMeshlet(meshletIndexData)
 	mesh.boneIndices = bones or mesh.boneIndices
 	mesh.vertexIndices = vertexIndices
 	mesh.vertices = vertices
@@ -213,6 +239,29 @@ function ExtendedMeshMeshlet.fromMesh(
 	mesh.primaryBone = mesh.boneIndices[#mesh.boneIndices]
 
 	return mesh
+end
+
+--- @param serializedExtendedMeshMeshlet RatScratch.Pipeline.SerializedExtendedMeshMeshlet
+--- @return RatScratch.Pipeline.ExtendedMeshMeshlet
+function ExtendedMeshMeshlet.fromSerialized(serializedExtendedMeshMeshlet)
+	local result = ExtendedMeshMeshlet(serializedExtendedMeshMeshlet.indexData)
+
+	--- @type RatScratch.Math.Vector3[]
+	local vertices = {}
+	for _, vertex in ipairs(serializedExtendedMeshMeshlet.vertices) do
+		table.insert(vertices, Vector3(unpack(vertex)))
+	end
+
+	result.boneIndices = serializedExtendedMeshMeshlet.boneIndices
+	result.vertexIndices = serializedExtendedMeshMeshlet.vertexIndices
+	result.vertices = vertices
+	result.vertexBones = serializedExtendedMeshMeshlet.vertexBones
+	result.primaryBone = serializedExtendedMeshMeshlet.primaryBone
+	result.staticBoundsPosition =
+		Vector3(unpack(serializedExtendedMeshMeshlet.staticBoundsPosition))
+	result.staticBoundsRadius = serializedExtendedMeshMeshlet.staticBoundsRadius
+
+	return result
 end
 
 ExtendedMeshMeshlet.PROPERTIES = {
@@ -224,7 +273,7 @@ ExtendedMeshMeshlet.PROPERTIES = {
 --- @param a number
 --- @param b number
 local function _compareTime(a, b)
-	return Common.zerosign(a - b, 0)
+	return a - b
 end
 
 --- @param axis RatScratch.Math.Vector3
@@ -432,18 +481,24 @@ function ExtendedMeshMeshlet:_getTimestamps(skeleton, animation)
 	local timestamps = {}
 
 	for _, boneIndex in ipairs(self.boneIndices) do
-		local bone = skeleton:getBone(boneIndex)
+		local bone = skeleton:getBone(boneIndex + 1)
 
 		--- @type RatScratch.Graphics.Graphics3D.Bone?
 		local current = bone
 		while current do
-			local channel = animation:getChannel(current)
-			for _, propertyName in ipairs(ExtendedMeshMeshlet.PROPERTIES) do
-				local keyedProperty = channel:getKeyedProperty(propertyName)
+			local channel = animation:hasBone(current)
+				and animation:getChannel(current)
+			if channel then
+				for _, propertyName in ipairs(ExtendedMeshMeshlet.PROPERTIES) do
+					local keyedProperty = channel:hasKeyedProperty(propertyName)
+						and channel:getKeyedProperty(propertyName)
 
-				for j = 1, keyedProperty:getFrameCount() do
-					local frame = keyedProperty:getFrame(j)
-					table.insert(timestamps, frame.time)
+					if keyedProperty then
+						for j = 1, keyedProperty:getFrameCount() do
+							local frame = keyedProperty:getFrame(j)
+							table.insert(timestamps, frame.time)
+						end
+					end
 				end
 			end
 
@@ -534,44 +589,55 @@ function ExtendedMeshMeshlet:_computeVerticesBounds(skeleton, animation, t1, t2)
 					local t1BoneInstance = BoneInstance(path[1])
 					local t2BoneInstance = BoneInstance(path[1])
 
-					local channel = animation:getChannel(path[1])
-					channel:computePropertiesAtTime(t1BoneInstance, t1)
-					channel:computePropertiesAtTime(t2BoneInstance, t2)
+					local channel = animation:hasBone(path[1])
+						and animation:getChannel(path[1])
+					if channel then
+						channel:computePropertiesAtTime(t1BoneInstance, t1)
+						channel:computePropertiesAtTime(t2BoneInstance, t2)
 
-					localVertex:transform(
-						t1BoneInstance:composeTransform(),
-						localVertex
-					)
+						localVertex:transform(
+							t1BoneInstance:composeTransform(),
+							localVertex
+						)
+						boneMin, boneMax = _extendAABB(
+							localVertex,
+							localVertex,
+							nil,
+							t1BoneInstance,
+							t2BoneInstance
+						)
+					else
+						boneMin, boneMax =
+							Vector3(localVertex:get()),
+							Vector3(localVertex:get())
+					end
+				end
+
+				for k = 2, #path do
+					local channel = animation:hasBone(path[k])
+						and animation:getChannel(path[k])
+					local t1BoneInstance = BoneInstance(path[k])
+					local t2BoneInstance = BoneInstance(path[k])
+
+					if channel then
+						channel:computePropertiesAtTime(t1BoneInstance, t1)
+						channel:computePropertiesAtTime(t2BoneInstance, t2)
+					else
+						t1BoneInstance:reset()
+						t2BoneInstance:reset()
+					end
+
 					boneMin, boneMax = _extendAABB(
-						localVertex,
-						localVertex,
-						nil,
+						boneMin,
+						boneMax,
+						directions[k],
 						t1BoneInstance,
 						t2BoneInstance
 					)
 				end
 
-				for k = 2, #path do
-					local channel = animation:getChannel(path[k])
-					if channel then
-						local t1BoneInstance = BoneInstance(path[k])
-						local t2BoneInstance = BoneInstance(path[k])
-
-						channel:computePropertiesAtTime(t1BoneInstance, t1)
-						channel:computePropertiesAtTime(t2BoneInstance, t2)
-
-						boneMin, boneMax = _extendAABB(
-							boneMin,
-							boneMax,
-							directions[k],
-							t1BoneInstance,
-							t2BoneInstance
-						)
-					end
-				end
-
-				boneMin:scale(boneWeight):add(vertexMin)
-				boneMax:scale(boneWeight):add(vertexMax)
+				boneMin:scale(boneWeight):add(vertexMin, vertexMin)
+				boneMax:scale(boneWeight):add(vertexMax, vertexMax)
 			end
 		end
 
@@ -588,6 +654,7 @@ function ExtendedMeshMeshlet:computeSkinnedBounds(skeleton, animation)
 	--- Implementation based on "Conservative Meshlet Bounds for Robust Culling of Skinned Meshes"
 	--- by Johannes Unterguggenberger, Bernhard Kerbl, Jakob Pernsteiner, and Michael Wimme
 	--- URL: https://www.cg.tuwien.ac.at/research/publications/2021/unterguggenberger-2021-msh/
+	--- DOI: https://doi.org/10.1111/cgf.14401
 
 	assert(self:getIsSkinned(), "meshlet is not skinned")
 
