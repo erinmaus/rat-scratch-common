@@ -4,7 +4,10 @@
 local RATPipelineExtra = {}
 
 --- @class RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets
+--- @field public vertexCount integer
+--- @field public indexCount integer
 --- @field public attributes table<string, integer>
+--- @field public indices integer
 --- @field public meshlets RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets.PrimitiveMeshlet[]
 --- @field public material? RatScratch.Pipeline.GLTF.RATMaterial
 local RATMeshMeshletPrimitive = {}

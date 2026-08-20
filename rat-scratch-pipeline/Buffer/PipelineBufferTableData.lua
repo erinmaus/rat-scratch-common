@@ -1,7 +1,6 @@
-local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
-local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
+local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local PipelineBufferData =
 	require("rat-scratch-pipeline.Buffer.PipelineBufferData")
 

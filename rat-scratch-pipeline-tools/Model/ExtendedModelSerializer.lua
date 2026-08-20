@@ -269,8 +269,13 @@ function ExtendedModelSerializer:_serializeModel(builder, node)
 
 		--- @type RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets
 		local primitiveExtras = {
+			vertexCount = extendedMesh:getVertexCount(),
+			indexCount = extendedMesh:getIndexCount(),
 			meshlets = {},
 			attributes = {},
+			indices = builder:addWorkingBufferView({
+				data = extendedMesh:getIndexBufferData(),
+			}),
 		}
 
 		for j = 1, extendedMesh:getVertexAttributeBufferCount() do

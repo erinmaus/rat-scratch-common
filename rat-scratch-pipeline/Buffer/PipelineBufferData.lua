@@ -1,5 +1,5 @@
 local Object = require("rat-scratch-common").Object
-local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
+local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 
 --- @class RatScratch.Pipeline.Buffer.PipelineBufferData : RatScratch.Common.BaseObject
 --- @overload fun(format: RatScratch.Graphics.Graphics3D.MeshFormatAttribute[], count: integer, dirtyContext: RatScratch.Pipeline.Buffer.PipelineBufferDirtyContext): RatScratch.Pipeline.Buffer.PipelineBufferData
@@ -50,7 +50,7 @@ end
 
 --- @param index integer
 --- @param count integer
---- @param data love.ByteData
+--- @param data love.Data
 --- @param offset? integer
 function PipelineBufferData:copyFromData(index, count, data, offset)
 	self:ABSTRACT()

@@ -1,7 +1,7 @@
 local jit = require("jit")
 local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
-local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
+local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local PipelineBufferContext =
 	require("rat-scratch-pipeline.Buffer.PipelineBufferContext")
 local PipelineBufferContextEvent =
