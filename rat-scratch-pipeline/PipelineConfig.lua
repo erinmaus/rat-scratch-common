@@ -5,7 +5,7 @@ local Table = require("rat-scratch-common").Table
 local IndexBufferInfo = require("rat-scratch-pipeline.IndexBufferInfo")
 local MeshletFormat = require("rat-scratch-pipeline.MeshletFormat")
 local RatScratchModule = require("lib.rat-scratch-module")
-local ShaderPreprocessor = require("rat-scratch-graphics.ShaderPreprocessor")
+local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
 local VertexBufferInfo = require("rat-scratch-pipeline.VertexBufferInfo")
 local json = require("lib.json")
 
@@ -14,7 +14,7 @@ local json = require("lib.json")
 --- @field private vertexBuffers RatScratch.Pipeline.VertexBufferInfo[]
 --- @field private vertexBufferByRole table<RatScratch.Pipeline.PipelineDefinitionVertexBufferRole, RatScratch.Pipeline.VertexBufferInfo[]>
 --- @field private vertexBufferToRole table<RatScratch.Pipeline.VertexBufferInfo, RatScratch.Pipeline.PipelineDefinitionVertexBufferRole>
---- @field private indexBuffer RatScratch.Pipeline.IndexBufferInfo
+--- @field private indexFormat RatScratch.Pipeline.IndexBufferInfo
 --- @field private meshletFormat RatScratch.Pipeline.MeshletFormat
 --- @field private definition RatScratch.Pipeline.PipelineDefinitionConfig
 --- @field private virtualShaders table<string, string>
@@ -112,6 +112,92 @@ end
 --- @return table<string, string>
 function PipelineConfig:getVirtualShaders()
 	return self.virtualShaders
+end
+
+--- @param other RatScratch.Pipeline.PipelineConfig
+--- @return boolean
+function PipelineConfig:isMatch(other)
+	if self.definition.version ~= other.definition.version then
+		return false
+	end
+
+	if
+		self.meshletFormat:getTriangleCount()
+		~= other.meshletFormat:getTriangleCount()
+	then
+		return false
+	end
+
+	if
+		self.indexFormat:getBufferName() ~= other.indexFormat:getBufferName()
+	then
+		return false
+	end
+
+	if
+		not self.indexFormat
+			:getIndexFormat()
+			:isMatch(other.indexFormat:getIndexFormat())
+	then
+		return false
+	end
+
+	if #self.vertexBuffers ~= #other.vertexBuffers then
+		return false
+	end
+
+	for i = 1, #self.vertexBuffers do
+		local selfVertexBuffer = self.vertexBuffers[i]
+		local otherVertexBuffer = other.vertexBuffers[i]
+
+		if
+			selfVertexBuffer:getBufferName()
+			~= otherVertexBuffer:getBufferName()
+		then
+			return false
+		end
+
+		local selfRole = self.vertexBufferToRole[selfVertexBuffer]
+		local otherRole = other.vertexBufferToRole[otherVertexBuffer]
+		if selfRole ~= otherRole then
+			return false
+		end
+
+		if
+			not (
+				selfVertexBuffer
+					:getInputFormat()
+					:isMatch(otherVertexBuffer:getInputFormat())
+				and selfVertexBuffer
+					:getVertexFormat()
+					:isMatch(otherVertexBuffer:getVertexFormat())
+			)
+		then
+			return false
+		end
+
+		local format = selfVertexBuffer:getInputFormat()
+		for _, attribute in ipairs(format) do
+			local selfUnpackTransform =
+				selfVertexBuffer:getUnpackTransform(attribute.name)
+			local otherUnpackTransform =
+				otherVertexBuffer:getUnpackTransform(attribute.name)
+
+			if selfUnpackTransform ~= otherUnpackTransform then
+				return false
+			end
+
+			local selfPackTransform =
+				selfVertexBuffer:getPackTransform(attribute.name)
+			local otherPackTransform =
+				otherVertexBuffer:getPackTransform(attribute.name)
+			if selfPackTransform ~= otherPackTransform then
+				return false
+			end
+		end
+	end
+
+	return true
 end
 
 function PipelineConfig.loadDefault()

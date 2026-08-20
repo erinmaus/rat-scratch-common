@@ -1270,4 +1270,33 @@ function BufferFormat:extend(other)
 	return result
 end
 
+--- @param other RatScratch.Graphics.Graphics3D.BufferFormat
+--- @return boolean
+function BufferFormat:isMatch(other)
+	if #self.format ~= #other.format then
+		return false
+	end
+
+	if self.packed ~= other.packed then
+		return false
+	end
+
+	for i = 1, #self.format do
+		local selfAttribute = self.format[i]
+		local otherAttribute = other.format[i]
+
+		if
+			not (
+				selfAttribute.location == otherAttribute.location
+				and selfAttribute.name == otherAttribute.name
+				and selfAttribute.format == otherAttribute.format
+			)
+		then
+			return false
+		end
+	end
+
+	return true
+end
+
 return BufferFormat
