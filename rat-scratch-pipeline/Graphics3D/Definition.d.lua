@@ -30,3 +30,22 @@ local PipelineMeshletDefinitionBounds = {}
 --- @field public bone integer
 --- @field public animation integer
 local PipelineMeshletDefinitionBounds = {}
+
+--- @class RatScratch.Pipeline.Graphics3D.PipelineMaterialDefinition
+--- @field public name string
+--- @field public shader? RatScratch.Pipeline.Graphics3D.PipelineMaterialDefinitionShaderSource
+--- @field public uniforms RatScratch.Pipeline.Graphics3D.PipelineMaterialDefinitionUniform[]
+local PipelineMaterialDefinition = {}
+
+--- @class RatScratch.Pipeline.Graphics3D.PipelineMaterialDefinitionShaderSource
+--- @field public vertex? string
+--- @field public fragment? string
+local PipelineMaterialDefinitionShaderSource = {}
+
+--- @alias RatScratch.Pipeline.Graphics3D.PipelineMaterialDefinitionUniformFormat RatScratch.Graphics.Graphics3D.BufferAttributeFormat | "texture"
+
+--- @class RatScratch.Pipeline.Graphics3D.PipelineMaterialDefinitionUniform
+--- @field public format RatScratch.Pipeline.Graphics3D.PipelineMaterialDefinitionUniformFormat
+--- @field public name string
+--- @field public value? number[]
+local PipelineMaterialDefinitionUniform = {}
