@@ -73,7 +73,7 @@ function MohoScene:new(parser, sceneIndex)
 
 	self.width = 1024
 	self.height = 1024
-	self.atlas = Atlas(self.width, self.height, 1)
+	self.atlas = Atlas(self.width, self.height, 1, 1)
 	self.materialsByMaterialIndex = {}
 	self.materials = {}
 	self.mesh = {}
@@ -158,7 +158,7 @@ function MohoScene:_addMaterial(material, imageData)
 				self.width = self.width + MohoScene.INCREMENT
 			end
 
-			self.atlas = Atlas(self.width, self.height, 1)
+			self.atlas = Atlas(self.width, self.height, 1, 1)
 			for _, material in pairs(self.materials) do
 				if not self.atlas:add(material) then
 					self.atlas:repack()

@@ -7,7 +7,7 @@ local AtlasEvent = require("rat-scratch-graphics.Atlas.AtlasEvent")
 local Common = require("rat-scratch-math").Common
 
 --- @class RatScratch.Graphics.Atlas : RatScratch.Common.BaseObject
---- @overload fun(width: integer, height: integer, maxLayers?: integer): RatScratch.Graphics.Atlas
+--- @overload fun(width: integer, height: integer, layers?: integer, maxLayers?: integer): RatScratch.Graphics.Atlas
 --- @field private width integer
 --- @field private height integer
 --- @field private layers integer
@@ -18,8 +18,9 @@ local Atlas = Object()
 
 --- @param width number
 --- @param height number
+--- @param layers? integer
 --- @param maxLayers? integer
-function Atlas:new(width, height, maxLayers)
+function Atlas:new(width, height, layers, maxLayers)
 	self.width = width
 	self.height = height
 	self.layers = 0
@@ -27,6 +28,10 @@ function Atlas:new(width, height, maxLayers)
 
 	self.entries = setmetatable({}, { __mode = "k" })
 	self.roots = {}
+
+	if layers and layers > 0 then
+		self:_allocateLayer(layers)
+	end
 end
 
 function Atlas:getWidth()
@@ -54,15 +59,22 @@ function Atlas:getTexture()
 end
 
 --- @private
-function Atlas:_allocateLayer()
+function Atlas:_allocateLayer(newCount)
 	assert(
-		self.layers < self.maxLayers,
-		"adding a layer (%d) would exceed max number of layers (%d)",
-		self.layers + 1,
+		newCount < self.maxLayers,
+		"resizing layer count (%d) would exceed max number of layers (%d)",
+		newCount,
 		self.maxLayers
 	)
 
-	self.layers = self.layers + 1
+	assert(
+		newCount > self.layers,
+		"requested layer count (%d) is less than current number of layers (%d)",
+		newCount,
+		self.layers
+	)
+
+	self.layers = newCount
 
 	local newCanvas = love.graphics.newTexture(
 		self.width,
