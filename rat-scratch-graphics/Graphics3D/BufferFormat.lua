@@ -4,8 +4,45 @@ local assert = require("rat-scratch-common").Debug.assert
 local Table = require("rat-scratch-common").Table
 local Common = require("rat-scratch-math").Common
 
---- @alias RatScratch.Graphics.Graphics3D.BufferAttributeFormat "float" | "floatvec2" | "floatvec3" | "floatvec4" | "int32" | "int32vec2" | "int32vec3" | "int32vec4" | "uint32" | "uint32vec2" | "uint32vec3" | "uint32vec4"
---- @alias RatScratch.Graphics.Graphics3D.BufferAttributeName "VertexPosition" | "VertexTexCoord" | "VertexColor" | "VertexNormal" | "VertexBoneIndex" | "VertexBoneWeight"
+--- @alias RatScratch.Graphics.Graphics3D.BufferAttributeFormat
+--- | "float"
+--- | "floatvec2"
+--- | "floatvec3"
+--- | "floatvec4"
+--- | "int32"
+--- | "int32vec2"
+--- | "int32vec3"
+--- | "int32vec4"
+--- | "uint32"
+--- | "uint32vec2"
+--- | "uint32vec3"
+--- | "uint32vec4"
+--- | "int16"
+--- | "int16vec2"
+--- | "int16vec3"
+--- | "int16vec4"
+--- | "uint16"
+--- | "uint16vec2"
+--- | "uint16vec3"
+--- | "uint16vec4"
+--- | "floatmat2x2"
+--- | "floatmat2x3"
+--- | "floatmat2x4"
+--- | "floatmat3x2"
+--- | "floatmat3x3"
+--- | "floatmat3x4"
+--- | "floatmat4x2"
+--- | "floatmat4x3"
+--- | "floatmat4x4"
+
+--- @alias RatScratch.Graphics.Graphics3D.BufferAttributeName
+--- | "VertexPosition"
+--- | "VertexTexCoord"
+--- | "VertexColor"
+--- | "VertexNormal"
+--- | "VertexTangent"
+--- | "VertexBoneIndex"
+--- | "VertexBoneWeight"
 
 --- @class RatScratch.Graphics.Graphics3D.BufferFormatAttribute
 --- @field public location integer
