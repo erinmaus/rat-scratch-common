@@ -1,0 +1,62 @@
+{
+  "material": {
+    "name": "Basic",
+    "paths": ["forward", "deferred"],
+    "light": true,
+    "shader": {
+      "fragment": "@Pipeline/Shaders/BasicMaterial/BasicMaterial.frag.glsl"
+    },
+    "uniforms": [
+      {
+        "name": "albedoFactor",
+        "format": "floatvec4",
+        "value": [1, 1, 1, 1]
+      },
+      {
+        "name": "albedoTexture",
+        "format": "texture"
+      },
+      {
+        "name": "metallicFactor",
+        "format": "float",
+        "value": [1]
+      },
+      {
+        "name": "roughnessFactor",
+        "format": "float",
+        "value": [1]
+      },
+      {
+        "name": "metallicRoughnessTexture",
+        "format": "texture"
+      },
+      {
+        "name": "occlusionStrength",
+        "format": "float",
+        "value": [1]
+      },
+      {
+        "name": "occlusionTexture",
+        "format": "texture"
+      },
+      {
+        "name": "normalScale",
+        "format": "float",
+        "value": [1]
+      },
+      {
+        "name": "normalTexture",
+        "format": "texture"
+      },
+      {
+        "name": "emissiveFactor",
+        "format": "float",
+        "value": [0, 0, 0]
+      },
+      {
+        "name": "emissiveTexture",
+        "format": "texture"
+      }
+    ]
+  }
+}

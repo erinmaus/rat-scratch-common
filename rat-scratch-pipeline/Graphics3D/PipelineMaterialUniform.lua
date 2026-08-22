@@ -82,6 +82,16 @@ function PipelineMaterialUniform:getOffset()
 	return self.offset
 end
 
+function PipelineMaterialUniform:getIsInteger()
+	return self.format == "texture"
+		or BufferFormat.isFormatScalarFloat(self.format)
+end
+
+function PipelineMaterialUniform:getIsFloat()
+	return self.format ~= "texture"
+		and BufferFormat.isFormatScalarFloat(self.format)
+end
+
 --- @param data love.Data
 --- @param offset integer
 function PipelineMaterialUniform:set(data, offset)

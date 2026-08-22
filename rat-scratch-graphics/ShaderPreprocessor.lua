@@ -127,6 +127,20 @@ local function readContent(state, currentFile)
 	end
 end
 
+--- @param content string
+--- @param filename string
+--- @return string
+local function wrapIncludeContent(content, filename)
+	local includeGuardIdentifier = filename:gsub("[^%w_]", "_")
+	local defineGuardBegin = ("#ifndef rat_include_%s\n#define rat_include_%s 1\n#line 1"):format(
+		includeGuardIdentifier,
+		includeGuardIdentifier
+	)
+	local defineGuardEnd = "#endif"
+
+	return ("%s\n%s\n%s\n"):format(defineGuardBegin, content, defineGuardEnd)
+end
+
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
 --- @param parent? RatScratch.Graphics.impl.ShaderProcessFile
 --- @param filename string
@@ -244,9 +258,10 @@ local function process(state, parent, filename, variables)
 				table.insert(lines, string.format("// %s", line))
 				local includedContent =
 					process(state, currentFile, resolvedPath, variables)
+				local wrappedIncludeContent =
+					wrapIncludeContent(includedContent, resolvedPath)
 
-				table.insert(lines, "#line 1")
-				table.insert(lines, includedContent)
+				table.insert(lines, wrappedIncludeContent)
 				table.insert(
 					lines,
 					string.format('// end "%s"', includeFilename)

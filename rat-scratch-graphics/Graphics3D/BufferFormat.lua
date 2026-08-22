@@ -266,12 +266,33 @@ local ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES = {
 	VertexBoneWeight = { 1, 0, 0, 0 },
 }
 
+local INT_SCALAR_TYPES = {
+	int32 = true,
+	uint32 = true,
+	int16 = true,
+	uint16 = true,
+}
+
+local FLOAT_SCALAR_TYPES = {
+	float = true,
+}
+
 local DEFAULT_MISSING_COMPONENT_VALUES =
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 
 --- @param format string
 function BufferFormat.getFormatScalar(format)
 	return SCALAR_TYPE[format] or "float"
+end
+
+--- @param scalar string
+function BufferFormat.isFormatScalarInteger(scalar)
+	return INT_SCALAR_TYPES[scalar] == true
+end
+
+--- @param scalar string
+function BufferFormat.isFormatScalarFloat(scalar)
+	return FLOAT_SCALAR_TYPES[scalar] == true
 end
 
 --- @param format string
@@ -1091,6 +1112,19 @@ function BufferFormat:new(format, packed)
 	self.preprocessedAttributes = _preprocessAttributeFormat(self)
 
 	FORMAT_POOL[self.format] = self
+end
+
+function BufferFormat:getAttributeCount()
+	return #self.format
+end
+
+--- @param index integer
+--- @return integer, string | RatScratch.Graphics.Graphics3D.MeshVertexAttributeName, string | RatScratch.Graphics.Graphics3D.MeshVertexAttributeFormat
+function BufferFormat:getAttribute(index)
+	local attribute = self.format[index]
+	return attribute and attribute.location,
+		attribute and attribute.name,
+		attribute and attribute.format
 end
 
 function BufferFormat:getFormat()

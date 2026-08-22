@@ -1,12 +1,7 @@
-local PATH = ...
 local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
-local BoneInstance = require("rat-scratch-graphics").Graphics3D.BoneInstance
-local Module = require("lib.rat-scratch-module")
 local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
-local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
-local Transform = require("rat-scratch-math").Transform
 local Atlas = require("rat-scratch-graphics").Atlas.Atlas
 local PipelineMaterialInstance =
 	require("rat-scratch-pipeline.Graphics3D.PipelineMaterialInstance")
@@ -17,13 +12,12 @@ local PipelineMultiBuffer =
 local ffi = require("ffi")
 local ImageDataAtlasHandle =
 	require("rat-scratch-graphics").Atlas.ImageDataAtlasHandle
-local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 
 --- @class RatScratch.Pipeline.MaterialPipeline : RatScratch.Common.BaseObject
---- @field private materialFormat RatScratch.Graphics.Graphics3D.BufferFormatAttribute[]
---- @field private materialFormatInstance RatScratch.Graphics.Graphics3D.BufferFormat
 --- @field private stagingMaterialData love.ByteData
---- @field private materialLayout table<RatScratch.Pipeline.Graphics3D.PipelineMaterial, integer>
+--- @field private maxMaterialComponents integer
+--- @field private materialInstanceValuesFormat RatScratch.Graphics.Graphics3D.BufferFormatAttribute[][]
+--- @field private materialInstanceValuesBuffer RatScratch.Pipeline.Buffer.PipelineMultiBuffer<RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance>
 --- @field private materials table<RatScratch.Pipeline.Graphics3D.PipelineMaterial, true>
 --- @field private materialsByName table<string, RatScratch.Pipeline.Graphics3D.PipelineMaterial>
 --- @field private materialsDirty boolean
@@ -45,6 +39,22 @@ MaterialPipeline.TEXTURE_FORMAT = {
 	{ location = 0, name = "layer", format = "float" },
 }
 
+MaterialPipeline.MATERIAL_INSTANCE_INTEGERS_FORMAT = {
+	{ location = 0, name = "value", format = "uint32" },
+}
+
+MaterialPipeline.MATERIAL_INSTANCE_FLOATS_FORMAT = {
+	{ location = 0, name = "value", format = "uint32" },
+}
+
+MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT = {
+	MaterialPipeline.MATERIAL_INSTANCE_INTEGERS_FORMAT,
+	MaterialPipeline.MATERIAL_INSTANCE_FLOATS_FORMAT,
+}
+
+MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT_INTEGER_BUFFER = 2
+MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT_FLOAT_BUFFER = 2
+
 MaterialPipeline.MAX_TEXTURE_SIZE = 8192
 MaterialPipeline.DEFAULT_TEXTURE_LAYERS = 8
 MaterialPipeline.DEFAULT_TEXTURES_COUNT = 128
@@ -53,8 +63,7 @@ MaterialPipeline.DEFAULT_MATERIAL_INSTANCES_COUNT = 1024
 function MaterialPipeline:new()
 	local limits = love.graphics.getSystemLimits()
 
-	self.materialFormat = {}
-	self.materialLayout = {}
+	self.maxMaterialComponents = 1
 
 	local textureSize =
 		math.min(limits.texturesize, MaterialPipeline.MAX_TEXTURE_SIZE)
@@ -101,6 +110,8 @@ function MaterialPipeline:addMaterial(material)
 	self.materials[material] = true
 	table.insert(self.materialsByIndex, material)
 	self.materialsByName[material:getName()] = material
+
+	self.materialsDirty = true
 end
 
 --- @param material RatScratch.Pipeline.Graphics3D.PipelineMaterial
@@ -114,7 +125,6 @@ function MaterialPipeline:removeMaterial(material)
 	self.materials[material] = nil
 	Table.remove(self.materialsByIndex, material)
 	self.materialsByName[material:getName()] = nil
-	self.materialLayout[material] = nil
 
 	self.materialsDirty = true
 end
@@ -150,12 +160,20 @@ function MaterialPipeline:addTexture(texture)
 	self.textures[texture] = handle
 	self.texturesBuffer:register(texture, 1)
 
+	local index = self.texturesBuffer:getIndexCount(texture)
+	self.indexToTexture[index] = texture
+
 	self.dirtyTextures[texture] = true
 end
 
 --- @param texture love.ImageData
 function MaterialPipeline:removeTexture(texture)
 	assert(self.textures[texture], "texture not in material pipeline")
+
+	local index = self.texturesBuffer:getIndexCount(texture)
+	self.indexToTexture[index] = nil
+
+	self.texturesBuffer:unregister(texture)
 
 	local handle = self.textures[texture]
 	self.atlas:remove(handle)
@@ -167,6 +185,12 @@ end
 function MaterialPipeline:newMaterialInstance(material)
 	material = self.materialsByName[material] or material
 	--- @cast material RatScratch.Pipeline.Graphics3D.PipelineMaterial
+
+	assert(
+		self.materials[material],
+		"material %s not in material pipeline",
+		material:getName()
+	)
 
 	local materialInstance = PipelineMaterialInstance(material, self)
 	if self.materialInstancesBuffer then
@@ -253,50 +277,59 @@ function MaterialPipeline:_rebuildMaterialShaders() end
 
 --- @private
 function MaterialPipeline:_rebuildMaterials()
-	self.materialFormat = {}
-
-	local location = 0
+	local maxComponents = 1
 	for _, material in ipairs(self.materialsByIndex) do
-		self.materialLayout[material] = location
-
-		for i = 1, material:getUniformCount() do
-			local uniform = material:getUniform(i)
-			local name = ("%s_%s"):format(material:getName(), uniform:getName())
-
-			table.insert(self.materialFormat, {
-				location = location,
-				name = name,
-				format = uniform:getFormat()[i].format,
-			})
-
-			location = location + 1
-		end
+		maxComponents = math.max(
+			maxComponents,
+			material:getIntegerFormat():getComponentCount(),
+			material:getFloatFormat():getComponentCount()
+		)
 	end
 
-	self.materialFormatInstance = BufferFormat(self.materialFormat)
+	self.maxMaterialComponents = maxComponents
 
 	self.materialInstancesBuffer = PipelineMultiBuffer(
-		{ self.materialFormat },
+		MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT,
 		{ shaderstorage = true },
-		self.materialFormatInstance and self.materialInstancesBuffer:getCount()
-			or MaterialPipeline.DEFAULT_MATERIAL_INSTANCES_COUNT
+		self.materialInstancesBuffer:getCount() * self.maxMaterialComponents
 	)
 
-	self.stagingMaterialData =
-		love.data.newByteData(self.materialFormatInstance:getStride())
+	self.stagingMaterialData = love.data.newByteData(maxComponents * 4)
 
 	for _, materialInstance in ipairs(self.materialInstancesByIndex) do
-		self.materialInstancesBuffer:register(materialInstance, 1)
+		self.materialInstancesBuffer:register(
+			materialInstance,
+			self.maxMaterialComponents
+		)
 		self:_rebuildMaterialInstanceUniforms(materialInstance)
 	end
+
+	Table.clear(self.dirtyMaterialInstances)
 end
 
 --- @private
 --- @param materialInstance RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
 function MaterialPipeline:_rebuildMaterialInstanceUniforms(materialInstance)
-	local material = materialInstance:getMaterial()
-	local layout = self.materialLayout[material]
-	local offset = self.materialFormatInstance:getByteOffset(layout)
+	ffi.fill(
+		self.stagingMaterialData:getFFIPointer(),
+		self.stagingMaterialData:getSize(),
+		0
+	)
+
+	ffi.copy(
+		self.stagingMaterialData:getFFIPointer(),
+		materialInstance:getUniformsBuffer():getIntegerData():getFFIPointer(),
+		materialInstance:getUniformsBuffer():getIntegerData():getSize()
+	)
+
+	self.materialInstancesBuffer:copyData(
+		MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT_INTEGER_BUFFER,
+		materialInstance,
+		self.stagingMaterialData,
+		1,
+		self.maxMaterialComponents,
+		0
+	)
 
 	ffi.fill(
 		self.stagingMaterialData:getFFIPointer(),
@@ -305,23 +338,35 @@ function MaterialPipeline:_rebuildMaterialInstanceUniforms(materialInstance)
 	)
 
 	ffi.copy(
-		ffi.cast("uint8_t *", self.stagingMaterialData:getFFIPointer()) + offset,
-		materialInstance:getData(),
-		materialInstance:getData():getSize()
+		self.stagingMaterialData:getFFIPointer(),
+		materialInstance:getUniformsBuffer():getFloatData():getFFIPointer(),
+		materialInstance:getUniformsBuffer():getFloatData():getSize()
 	)
 
 	self.materialInstancesBuffer:copyData(
-		1,
+		MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT_FLOAT_BUFFER,
 		materialInstance,
 		self.stagingMaterialData,
 		1,
-		1,
+		self.maxMaterialComponents,
 		0
 	)
 end
 
 --- @private
-function MaterialPipeline:_flushMaterials() end
+function MaterialPipeline:_flushMaterials()
+	self.materialInstancesBuffer:flush()
+end
+
+--- @private
+function MaterialPipeline:_flushMaterialInstances()
+	for materialInstance in pairs(self.dirtyMaterialInstances) do
+		self:_rebuildMaterialInstanceUniforms(materialInstance)
+		self.dirtyMaterialInstances[materialInstance] = nil
+	end
+
+	self.materialInstancesBuffer:flush()
+end
 
 function MaterialPipeline:flush()
 	if next(self.dirtyTextures) then
@@ -329,9 +374,14 @@ function MaterialPipeline:flush()
 	end
 
 	if self.materialsDirty then
+		self:_rebuildMaterialShaders()
 		self:_rebuildMaterials()
 		self:_flushMaterials()
 		self.materialsDirty = false
+	end
+
+	if next(self.dirtyMaterialInstances) then
+		self:_flushMaterialInstances()
 	end
 end
 

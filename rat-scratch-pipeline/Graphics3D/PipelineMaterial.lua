@@ -21,6 +21,30 @@ function PipelineMaterial:new(name, format, uniforms, shader)
 	self.name = name
 	self.format = format
 
+	local integerFormat = {}
+	local floatFormat = {}
+	for i = 1, self.format:getAttributeCount() do
+		local attributeLocation, attributeName, attributeFormat =
+			self.format:getAttribute(i)
+		local scalar = self.format:getScalarType(attributeLocation)
+		if BufferFormat.isFormatScalarInteger(scalar) then
+			table.insert(integerFormat, {
+				location = attributeLocation,
+				name = attributeName,
+				format = attributeFormat,
+			})
+		elseif BufferFormat.isFormatScalarFloat(scalar) then
+			table.insert(floatFormat, {
+				location = attributeLocation,
+				name = attributeName,
+				format = attributeFormat,
+			})
+		end
+	end
+
+	self.integerFormat = BufferFormat(integerFormat, true)
+	self.floatFormat = BufferFormat(floatFormat, true)
+
 	self.uniforms = uniforms
 	self.uniformsByName = {}
 	for _, uniform in ipairs(uniforms) do
@@ -36,6 +60,14 @@ end
 
 function PipelineMaterial:getFormat()
 	return self.format
+end
+
+function PipelineMaterial:getIntegerFormat()
+	return self.integerFormat
+end
+
+function PipelineMaterial:getFloatFormat()
+	return self.integerFormat
 end
 
 function PipelineMaterial:getUniformCount()

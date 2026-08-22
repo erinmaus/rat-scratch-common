@@ -302,7 +302,7 @@ function PipelineConfig:_loadBaseVertexShader()
 		{
 			variables = variables,
 			rootPath = ("%s/Shaders"):format(
-				RatScratchModule.getPath("rat-scratch-graphics")
+				RatScratchModule.getSelfPath("rat-scratch-graphics")
 			),
 			rootPaths = {
 				Pipeline = ("%s/Shaders"):format(

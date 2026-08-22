@@ -1,0 +1,1 @@
+rat_FloatMaterialProperties[baseFloatIndex + $RAT_SCRATCH_BUFFER_OFFSET$] $COMMA$

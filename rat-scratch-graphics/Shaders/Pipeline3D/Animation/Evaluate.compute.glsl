@@ -75,7 +75,7 @@ float getKeyFrameDelta(float time, uint currentKeyFrameIndex, uint nextKeyFrameI
 {
 	float deltaWidth = max(rat_AnimationChannelKeyFrames[nextKeyFrameIndex].time -
 							   rat_AnimationChannelKeyFrames[currentKeyFrameIndex].time,
-						   RAT_EPSILON);
+						   RAT_SCRATCH_EPSILON);
 	float delta = (time - rat_AnimationChannelKeyFrames[currentKeyFrameIndex].time) / deltaWidth;
 	return clamp(delta, 0.0, 1.0);
 }

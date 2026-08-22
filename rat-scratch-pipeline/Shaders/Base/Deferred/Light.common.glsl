@@ -1,0 +1,47 @@
+#include "@Pipeline/Common/Buffers/Fragment.common.glsl"
+#include "@Pipeline/Common/Pack.common.glsl"
+#include "@Pipeline/Common/Types/Fragment.common.glsl"
+#include "@Pipeline/Shaders/Base/Light/ApplyLights.frag.glsl"
+
+varying ratTextureCoordinateType frag_TextureCoordinate;
+
+uniform ratGBufferSamplerBufferType rat_GBufferDepthTexture;
+uniform ratGBufferSamplerBufferType rat_GBufferAlbedoTexture;
+uniform ratGBufferSamplerBufferType rat_GBufferEmissiveTexture;
+uniform ratGBufferSamplerBufferType rat_GBufferNormalTexture;
+uniform ratGBufferSamplerBufferType rat_GBufferPropertiesTexture;
+uniform uratGBufferSamplerBufferType rat_GBufferMaterialTexture;
+
+layout(location = 0) vec4 rat_Result;
+
+void pixelmain()
+{
+	vec2 textureCoordinate = frag_TextureCoordinate;
+	vec4 albedo = texture(rat_GBufferAlbedo, textureCoordinate);
+	vec3 emissive = texture(rat_GBufferEmissive, textureCoordinate).rgb;
+	float depth = texture(rat_GBufferDepthTexture, textureCoordinate).x;
+	vec4 albedo = texture(rat_GBufferAlbedoTexture, textureCoordinate);
+	vec3 normal = decodeNormal(texture(rat_GBufferNormalTexture, textureCoordinate).xy);
+	vec3 materialProperties = texture(rat_GBufferPropertiesTexture, textureCoordinate).xyz;
+	uint materialDefinitionIndex = texture(rat_GBufferMaterial, textureCoordinate).x;
+
+	RatScratchPipelineFragmentOutput fragmentOutput;
+	ratClearFragmentOutput(fragmentOutput);
+
+	fragmentOutput.screenPosition = vec3(textureCoordinate, depth);
+	fragmentOutput.position = ratScreenPositionToWorldPosition(screenPosition, 0);
+	fragmentOutput.albedo = albedo;
+	fragmentOutput.emissive = emissive;
+	fragmentOutput.normal = normal;
+	fragmentOutput.metal = materialProperties.x;
+	fragmentOutput.roughness = materialProperties.y;
+	fragmentOutput.occlusion = materialProperties.z;
+	fragmentOutput.materialDefinitionIndex = materialDefinitionIndex;
+	fragmentOutput.cameraIndex = RAT_CAMERA_INDEX;
+
+	RatScratchPipelineLightResult result;
+	ratClearLightResult(result);
+
+	vec4 color = ratApplyLights(fragmentOutput, result);
+	rat_Result = albedo * color + vec4(emissive, 0.0);
+}

@@ -8,7 +8,7 @@ bool intersectRayTriangle(vec3 origin, vec3 direction, vec3 ta, vec3 tb, vec3 tc
 	vec3 h = cross(direction, cMinusA);
 	float a = dot(bMinusA, h);
 
-	if (abs(a) < RAT_EPSILON)
+	if (abs(a) < RAT_SCRATCH_EPSILON)
 	{
 		return false;
 	}
@@ -35,7 +35,7 @@ bool intersectRayTriangle(vec3 origin, vec3 direction, vec3 ta, vec3 tb, vec3 tc
 	side = sign(a);
 	t = f * dot(cMinusA, q);
 
-	return t > RAT_EPSILON;
+	return t > RAT_SCRATCH_EPSILON;
 }
 
 bool intersectRayTriangle(vec3 origin, vec3 direction, vec3 a, vec3 b, vec3 c, out float t, out float side)

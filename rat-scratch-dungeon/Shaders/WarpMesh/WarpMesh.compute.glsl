@@ -92,7 +92,7 @@ void evaluateCurve(float t, uint tileIndex, out vec2 farVertex, out vec2 previou
 		float nextSum = sum + extent;
 		if (nextSum >= targetSum)
 		{
-			s = (targetSum - sum) / max(extent, RAT_EPSILON);
+			s = (targetSum - sum) / max(extent, RAT_SCRATCH_EPSILON);
 			break;
 		}
 

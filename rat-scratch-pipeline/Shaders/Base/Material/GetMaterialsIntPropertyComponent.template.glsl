@@ -1,0 +1,1 @@
+rat_IntMaterialProperties[baseIntIndex + $RAT_SCRATCH_BUFFER_OFFSET$] $COMMA$
