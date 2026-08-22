@@ -224,6 +224,7 @@ end
 function PipelineConfig:_loadBaseVertexShader()
 	local variables = {
 		RAT_SCRATCH_VERTEX = { RAT_SCRATCH_VERTICES = {} },
+		RAT_SCRATCH_BUFFERS = {},
 		RAT_SCRATCH_GET_VERTEX_FUNCS = {},
 		RAT_SCRATCH_FUNCS_BY_PIPELINE = {
 			RAT_SCRATCH_GET_VERTEX_STATIC_FUNCS = {},
@@ -236,6 +237,13 @@ function PipelineConfig:_loadBaseVertexShader()
 		local vertexFormat = vertexFormatInstance:getFormat()
 		local inputFormatInstance = vertexBufferInfo:getInputFormat()
 		local inputFormat = inputFormatInstance:getFormat()
+
+		table.insert(variables.RAT_SCRATCH_BUFFERS, {
+			RAT_SCRATCH_BUFFER_NAME = vertexBufferInfo:getBufferName(),
+			RAT_SCRATCH_SCALAR_TYPE = inputFormatInstance:getScalarType(
+				inputFormat[1].name
+			),
+		})
 
 		local role = self.vertexBufferToRole[vertexBufferInfo]
 		for i, attribute in ipairs(vertexFormat) do
