@@ -419,13 +419,17 @@ function ShaderPreprocessor.preprocess(filename, options)
 	return table.concat(finalOutput, "\n"), result
 end
 
---- @param result RatScratch.Graphics.ShaderPreprocessResult
+--- @param result? RatScratch.Graphics.ShaderPreprocessResult
 --- @param shader? string
 --- @param strict? boolean
 --- @return string?
 function ShaderPreprocessor.validateResult(shader, result, strict)
 	if strict == nil then
 		strict = true
+	end
+
+	if not result then
+		return nil
 	end
 
 	if not (#result.warnings > 0 and strict) and #result.errors == 0 then
