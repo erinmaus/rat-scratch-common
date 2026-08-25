@@ -9,10 +9,7 @@ restrict buffer rat_TransparentPixelCounterBuffer
 	uint rat_TransparentPixelCounter[];
 };
 
-restrict coherent buffer rat_ABufferBuffer
-{
-	int rat_ABuffer[];
-};
+layout(r32i) restrict uniform iimage2D rat_ABufferImage;
 
 restrict writeonly buffer rat_ABufferFragmentsBuffer
 {
@@ -21,7 +18,6 @@ restrict writeonly buffer rat_ABufferFragmentsBuffer
 
 uniform uint rat_ABufferFragmentsCount;
 uniform uint rat_BlendMode;
-uniform uvec2 rat_ABufferSize;
 
 void storeFragment(vec4 color)
 {
@@ -37,9 +33,7 @@ void storeFragment(vec4 color)
 	rat_ABufferFragments[fragmentIndex].blendMode = rat_BlendMode;
 	rat_ABufferFragments[fragmentIndex].next = -1;
 
-	uint relativeIndex = fragCoord.x * rat_ABufferSize.y + fragCoord.y;
-
-	int currentHead = atomicExchange(rat_ABuffer[relativeIndex], int(fragmentIndex));
+	int currentHead = imageAtomicExchange(rat_ABufferImage, fragCoord, int(fragmentIndex));
 	rat_ABufferFragments[fragmentIndex].next = currentHead;
 }
 

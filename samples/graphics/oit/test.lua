@@ -56,10 +56,10 @@ function demo.load()
 		1,
 		{ shaderstorage = true }
 	)
-	demo.aBuffer = love.graphics.newBuffer(
-		A_BUFFER_FORMAT,
-		width * height,
-		{ shaderstorage = true }
+	demo.aBufferImage = love.graphics.newTexture(
+		love.graphics.getWidth(),
+		love.graphics.getHeight(),
+		{ format = "r32i", computewrite = true }
 	)
 	demo.canvas = love.graphics.newTexture(
 		width,
@@ -233,10 +233,13 @@ function demo.drawGLTF()
 
 	local width, height = love.graphics.getDimensions()
 	local bufferCount = width * height
-	demo.clearShader:send("rat_ABufferBuffer", demo.aBuffer)
-	demo.clearShader:send("rat_ABufferCount", bufferCount)
+	demo.clearShader:send("rat_ABufferImage", demo.aBufferImage)
 
-	demo.dispatch(demo.clearShader, bufferCount)
+	demo.dispatch(
+		demo.clearShader,
+		love.graphics.getWidth(),
+		love.graphics.getHeight()
+	)
 
 	love.graphics.push("all")
 	love.graphics.setFrontFaceWinding("cw")
@@ -272,7 +275,7 @@ function demo.drawGLTF()
 
 		if demo.enableOIT then
 			love.graphics.setShader(demo.renderShader)
-			demo.renderShader:send("rat_ABufferBuffer", demo.aBuffer)
+			demo.renderShader:send("rat_ABufferImage", demo.aBufferImage)
 			demo.renderShader:send(
 				"rat_ABufferFragmentsBuffer",
 				demo.fragmentsBuffer
@@ -285,7 +288,6 @@ function demo.drawGLTF()
 				"rat_ABufferFragmentsCount",
 				demo.fragmentsBuffer:getElementCount()
 			)
-			demo.renderShader:send("rat_ABufferSize", { width, height })
 			demo.renderShader:send("rat_BlendMode", 0)
 		end
 
@@ -300,12 +302,11 @@ function demo.drawGLTF()
 
 	if demo.enableOIT then
 		love.graphics.setShader(demo.resolveShader)
-		demo.resolveShader:send("rat_ABufferBuffer", demo.aBuffer)
+		demo.resolveShader:send("rat_ABufferImage", demo.aBufferImage)
 		demo.resolveShader:send(
 			"rat_ABufferFragmentsBuffer",
 			demo.fragmentsBuffer
 		)
-		demo.resolveShader:send("rat_ABufferSize", { width, height })
 	end
 
 	love.graphics.setColor(1, 1, 1, 1)

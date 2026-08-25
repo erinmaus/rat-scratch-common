@@ -2,10 +2,7 @@
 
 #include "./Types.common.glsl"
 
-restrict coherent buffer rat_ABufferBuffer
-{
-	int rat_ABuffer[];
-};
+layout(r32i) restrict uniform iimage2D rat_ABufferImage;
 
 restrict readonly buffer rat_ABufferFragmentsBuffer
 {
@@ -27,10 +24,8 @@ void pullFragments(vec2 textureCoordinate, out Fragment fragments[RAT_SCRATCH_MA
 {
 	count = 0;
 
-	uvec2 fragCoord = uvec2(textureCoordinate * vec2(rat_ABufferSize));
-
-	uint relativeIndex = fragCoord.x * rat_ABufferSize.y + fragCoord.y;
-	int current = rat_ABuffer[relativeIndex];
+	ivec2 fragCoord = ivec2(textureCoordinate * vec2(imageSize(rat_ABufferImage)));
+	int current = imageLoad(rat_ABufferImage, fragCoord).r;
 
 	while (current >= 0 && count < RAT_SCRATCH_MAX_FRAGMENTS)
 	{
