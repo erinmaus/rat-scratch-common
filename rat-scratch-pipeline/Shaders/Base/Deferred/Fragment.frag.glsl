@@ -4,8 +4,8 @@
 #include "@Pipeline/Common/Pack.common.glsl"
 #include "@Pipeline/Common/Types/Fragment.common.glsl"
 
-#include "generated://Pipeline/Material/Fragment.common.glsl"
-#include "generated://Pipeline/Material/Properties.common.glsl"
+#include "@Generated/Pipeline/Material/Fragment.common.glsl"
+#include "@Generated/Pipeline/Material/Properties.common.glsl"
 
 layout(location = 0) out vec4 rat_GBufferAlbedo;	 // generally rgba8, colors
 layout(location = 1) out vec4 rat_GBufferEmissive;	 // generally rgba8, emissive colors rgb, a = unused
@@ -23,6 +23,13 @@ void pixelmain()
 	fragmentOutput.cameraIndex = fragmentInput.cameraIndex;
 
 	ratFragmentApplyMaterial(fragmentInput, fragmentOutput);
+
+#ifdef RAT_SCRATCH_FRAGMENT_ENABLE_DISCARD
+	if (fragmentOutput.discardFragment != 0)
+	{
+		discard;
+	}
+#endif
 
 	rat_GBufferAlbedo = fragmentOutput.albedo;
 	rat_GBufferEmissive = vec4(fragmentOutput.emissive, fragmentOutput.albedo.a);

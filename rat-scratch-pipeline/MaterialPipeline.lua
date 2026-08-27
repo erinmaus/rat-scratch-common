@@ -1,17 +1,21 @@
+local PATH = ...
 local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
 local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
 local Atlas = require("rat-scratch-graphics").Atlas.Atlas
+local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local PipelineMaterialInstance =
 	require("rat-scratch-pipeline.Graphics3D.PipelineMaterialInstance")
 local PipelineMaterialInstanceEvent =
 	require("rat-scratch-pipeline.Graphics3D.PipelineMaterialInstanceEvent")
 local PipelineMultiBuffer =
 	require("rat-scratch-pipeline.Buffer.PipelineMultiBuffer")
+local ShaderPreprocessor = require("rat-scratch-graphics.ShaderPreprocessor")
 local ffi = require("ffi")
 local ImageDataAtlasHandle =
 	require("rat-scratch-graphics").Atlas.ImageDataAtlasHandle
+local RatScratchModule = require("lib.rat-scratch-module")
 
 --- @class RatScratch.Pipeline.MaterialPipeline : RatScratch.Common.BaseObject
 --- @field private stagingMaterialData love.ByteData
@@ -127,6 +131,12 @@ function MaterialPipeline:removeMaterial(material)
 	self.materialsByName[material:getName()] = nil
 
 	self.materialsDirty = true
+end
+
+--- @param name string
+--- @return RatScratch.Pipeline.Graphics3D.PipelineMaterial
+function MaterialPipeline:getMaterialByName(name)
+	return self.materialsByName[name]
 end
 
 --- @param texture love.ImageData
@@ -273,17 +283,366 @@ end
 function MaterialPipeline:compact() end
 
 --- @private
-function MaterialPipeline:_rebuildMaterialShaders() end
+--- @param material RatScratch.Pipeline.Graphics3D.PipelineMaterial
+function MaterialPipeline:_verifyParents(material)
+	local currentMaterial = material
+	local parents = {}
+
+	while currentMaterial do
+		assert(
+			not parents[currentMaterial],
+			"material %s loops (encountered parent %s more than once)",
+			material:getName(),
+			currentMaterial:getName()
+		)
+		assert(
+			not currentMaterial:getParentName()
+				or self.materialsByName[currentMaterial:getParentName()],
+			"material %s has missing parent (%s)",
+			currentMaterial:getName(),
+			currentMaterial:getParentName()
+		)
+
+		parents[currentMaterial] = true
+		currentMaterial = self.materialsByName[currentMaterial:getParentName()]
+	end
+end
+
+--- @param material RatScratch.Pipeline.Graphics3D.PipelineMaterial
+function MaterialPipeline:_getMaterialParentComponentIndex(material)
+	local count = math.max(
+		material:getIntegerFormat():getAttributeCount(),
+		material:getFloatFormat():getAttributeCount()
+	)
+
+	if material:getParentName() then
+		return count
+			+ self:_getMaterialParentComponentIndex(
+				self.materialsByName[material:getParentName()]
+			)
+	end
+
+	return count
+end
+
+--- @param material RatScratch.Pipeline.Graphics3D.PipelineMaterial
+function MaterialPipeline:_getMaterialComponentIndex(material)
+	if material:getParentName() then
+		return self:_getMaterialParentComponentIndex(
+			self.materialsByName[material:getParentName()]
+		) + 1
+	end
+
+	return 1
+end
+
+--- @private
+--- @param a RatScratch.Pipeline.Graphics3D.PipelineMaterial
+--- @param b RatScratch.Pipeline.Graphics3D.PipelineMaterial
+function MaterialPipeline:_isAParentOfB(a, b)
+	local currentMaterial = self.materialsByName[b:getParentName()]
+	while currentMaterial do
+		if currentMaterial == a then
+			return true
+		end
+	end
+
+	return false
+end
+
+--- @private
+--- @param material RatScratch.Pipeline.Graphics3D.PipelineMaterial
+--- @param materialInfo table
+--- @param variables table
+function MaterialPipeline:_binMaterialVariables(
+	material,
+	materialInfo,
+	variables
+)
+	table.insert(variables.RAT_SCRATCH_MATERIALS, materialInfo)
+
+	local shader = material:getShader()
+	if shader:hasLightShader() then
+		table.insert(variables.RAT_SCRATCH_LIGHT_MATERIALS, materialInfo)
+	end
+
+	if shader:hasVertexShader() then
+		table.insert(variables.RAT_SCRATCH_VERTEX_MATERIALS, materialInfo)
+	end
+
+	if shader:hasFragmentShader() then
+		table.insert(variables.RAT_SCRATCH_FRAGMENT_MATERIALS, materialInfo)
+	end
+end
+
+local function _newMaterialVariables()
+	return {
+		RAT_SCRATCH_MATERIALS = {},
+		RAT_SCRATCH_LIGHT_MATERIALS = {},
+		RAT_SCRATCH_VERTEX_MATERIALS = {},
+		RAT_SCRATCH_FRAGMENT_MATERIALS = {},
+	}
+end
+
+--- @private
+function MaterialPipeline:_getMaterialVariables()
+	local forwardVariables = _newMaterialVariables()
+	local deferredVariables = _newMaterialVariables()
+	local depthDiscardVariables = _newMaterialVariables()
+	local depthVariables = _newMaterialVariables()
+
+	--- @type RatScratch.Pipeline.Graphics3D.PipelineMaterial[]
+	local sortedMaterials = {}
+	for _, material in ipairs(self.materialsByIndex) do
+		self:_verifyParents(material)
+		table.insert(sortedMaterials, material)
+	end
+
+	Table.sort(sortedMaterials, 1, #sortedMaterials, function(a, b)
+		return self:_isAParentOfB(a, b)
+	end)
+
+	for i, material in ipairs(sortedMaterials) do
+		local shader = material:getShader()
+		local baseOffset = self:_getMaterialComponentIndex(material)
+		local materialInfo = {
+			RAT_SCRATCH_MATERIAL = material:getName(),
+			RAT_SCRATCH_MATERIAL_DEFINITION_INDEX = i - 1,
+			RAT_SCRATCH_MATERIAL_PROPERTIES_STRIDE = self.maxMaterialComponents,
+			RAT_SCRATCH_BASE_OFFSET = baseOffset - 1,
+			RAT_SCRATCH_INT_PROPERTIES = {},
+			RAT_SCRATCH_FLOAT_PROPERTIES = {},
+			RAT_SCRATCH_PROPERTIES = {},
+			RAT_SCRATCH_VERTEX_SHADER_SOURCE = shader:hasVertexShader()
+					and shader:getVertexShaderSource()
+				or nil,
+			RAT_SCRATCH_FRAGMENT_SHADER_SOURCE = shader:hasFragmentShader()
+					and shader:getFragmentShaderSource()
+				or nil,
+			RAT_SCRATCH_DEPTH_SHADER_SOURCE = (
+				shader:hasFragmentShader() and shader:getDepthShaderSource()
+			)
+				or (shader:hasFragmentShader() and shader:getFragmentShaderSource())
+				or nil,
+			RAT_SCRATCH_LIGHT_SHADER_SOURCE = shader:hasLightShader()
+					and shader:getLightShaderSource()
+				or nil,
+		}
+
+		local formatInstance = material:getFormat()
+		for i = 1, formatInstance:getAttributeCount() do
+			local attributeLocation, attributeName, attributeFormat =
+				formatInstance:getAttribute(i)
+			local shaderType = formatInstance:getShaderType(attributeLocation)
+			local scalarFormat = formatInstance:getScalarType(attributeLocation)
+
+			local count, offset =
+				formatInstance:getCountOffset(attributeLocation)
+
+			local propertyInfo = {
+				RAT_SCRATCH_TYPE = shaderType,
+				RAT_SCRATCH_MATERIAL_PROPERTY = attributeName,
+				RAT_SCRATCH_COMPONENTS = {},
+			}
+
+			for j = 1, count do
+				local componentInfo = {
+					RAT_SCRATCH_SCALAR_TYPE = BufferFormat.getFormatShaderType(
+						scalarFormat
+					),
+					RAT_SCRATCH_BASE_OFFSET = (offset - 1) + (j - 1),
+				}
+
+				table.insert(propertyInfo.RAT_SCRATCH_COMPONENTS, componentInfo)
+			end
+
+			if BufferFormat.isFormatScalarFloat(scalarFormat) then
+				table.insert(
+					materialInfo.RAT_SCRATCH_INT_PROPERTIES,
+					propertyInfo
+				)
+			elseif BufferFormat.isFormatScalarInteger(scalarFormat) then
+				table.insert(
+					materialInfo.RAT_SCRATCH_FLOAT_PROPERTIES,
+					propertyInfo
+				)
+			end
+
+			table.insert(materialInfo.RAT_SCRATCH_PROPERTIES, propertyInfo)
+		end
+
+		if material:getIsDeferredCompatible() then
+			self:_binMaterialVariables(
+				material,
+				deferredVariables,
+				materialInfo
+			)
+
+			local v = material:hasFeature("discard") and depthDiscardVariables
+				or depthVariables
+
+			if material:getShader():hasDepthShader() then
+				local depthMaterialInfo = Table.deepClone(materialInfo)
+				depthMaterialInfo.RAT_SCRATCH_VERTEX_SHADER_SOURCE =
+					depthMaterialInfo.RAT_SCRATCH_DEPTH_SHADER_SOURCE
+				self:_binMaterialVariables(material, v, depthMaterialInfo)
+			else
+				self:_binMaterialVariables(material, v, materialInfo)
+			end
+		end
+
+		if material:getIsForwardCompatible() then
+			self:_binMaterialVariables(material, forwardVariables, materialInfo)
+		end
+	end
+
+	return {
+		deferred = deferredVariables,
+		forward = forwardVariables,
+		depth = depthVariables,
+		depthDiscard = depthDiscardVariables,
+	}
+end
+
+--- @private
+--- @param path string
+--- @param config RatScratch.Graphics.ShaderPreprocessOptions
+--- @return string
+function MaterialPipeline:_rebuildMaterialTemplateShader(path, config)
+	local shaderSource, result = ShaderPreprocessor.preprocess(path, config)
+
+	local message =
+		ShaderPreprocessor.validateResult(shaderSource, result, true)
+	if message then
+		error(message)
+	end
+
+	return shaderSource
+end
+
+--- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
+--- @param variables table
+function MaterialPipeline:_rebuildMaterialTemplateShadersPass(
+	baseConfig,
+	variables
+)
+	--- @type RatScratch.Graphics.ShaderPreprocessOptions
+	local config = {
+		rootPath = baseConfig.rootPath,
+		rootPaths = baseConfig.rootPaths,
+		variables = variables,
+	}
+
+	return {
+		["generated:/Pipeline/Material/Fragment.common.glsl"] = self:_rebuildMaterialTemplateShader(
+			"@Pipeline/Base/Material/Fragment.template.glsl",
+			config
+		),
+		["generated:/Pipeline/Material/Properties.common.glsl"] = self:_rebuildMaterialTemplateShader(
+			"@Pipeline/Base/Material/Properties.template.glsl",
+			config
+		),
+		["generated:/Pipeline/Material/ApplyLights.common.glsl"] = self:_rebuildMaterialTemplateShader(
+			"@Pipeline/Base/Material/ApplyLights.template.glsl",
+			config
+		),
+		["generated:/Pipeline/Material/Lights.common.glsl"] = self:_rebuildMaterialTemplateShader(
+			"@Pipeline/Base/Material/Lights.template.glsl",
+			config
+		),
+	}
+end
+
+--- @private
+--- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
+--- @param virtualPaths table
+function MaterialPipeline:_rebuildDeferredShaders(baseConfig, virtualPaths)
+	--- @type RatScratch.Graphics.ShaderPreprocessOptions
+	local config = {
+		rootPath = baseConfig.rootPath,
+		rootPaths = baseConfig.rootPaths,
+		virtualPaths = virtualPaths,
+	}
+
+	-- TODO: layered rendering
+	return {
+		render = ShaderPreprocessor.newShader(
+			"@Pipeline/Base/Deferred/Fragment.frag.glsl",
+			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
+			config
+		),
+		lights = ShaderPreprocessor.newShader(
+			"@Pipeline/Base/Deferred/Light.frag.glsl",
+			"@Pipeline/Base/Deferred/Light.vert.glsl",
+			config
+		),
+	}
+end
+
+--- @private
+--- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
+--- @param virtualPaths table
+function MaterialPipeline:_rebuildShaders(baseConfig, virtualPaths)
+	-- self.shaders = {
+	-- 	deferred = self:_rebuildDeferredShaders(baseConfig, virtualPaths.deferred)
+	-- 	forward = self:_rebuild
+	-- }
+end
+
+function MaterialPipeline:_rebuildMaterialShaders()
+	local variables = self:_getMaterialVariables()
+	local baseConfig = {
+		rootPath = ("%s/Shaders"):format(
+			RatScratchModule.getSelfPath("rat-scratch-graphics")
+		),
+		rootPaths = {
+			Pipeline = ("%s/Shaders"):format(
+				RatScratchModule.getSelfPath(PATH)
+			),
+			Generated = "generated:/",
+		},
+	}
+
+	local baseVirtualShaders = {
+		deferred = self:_rebuildMaterialTemplateShadersPass(
+			baseConfig,
+			variables.deferred
+		),
+		forward = self:_rebuildMaterialTemplateShadersPass(
+			baseConfig,
+			variables.forward
+		),
+		depth = self:_rebuildMaterialTemplateShadersPass(
+			baseConfig,
+			variables.depth
+		),
+		depthDiscard = self:_rebuildMaterialTemplateShadersPass(
+			baseConfig,
+			variables.depthDiscard
+		),
+	}
+
+	self:_rebuildShaders(baseConfig, baseVirtualShaders)
+end
 
 --- @private
 function MaterialPipeline:_rebuildMaterials()
 	local maxComponents = 1
 	for _, material in ipairs(self.materialsByIndex) do
-		maxComponents = math.max(
-			maxComponents,
-			material:getIntegerFormat():getComponentCount(),
-			material:getFloatFormat():getComponentCount()
-		)
+		local integerCount = material:getIntegerFormat():getComponentCount()
+		local floatCount = material:getIntegerFormat():getComponentCount()
+
+		local current = self.materialsByName[material:getName()]
+		while current do
+			integerCount = integerCount
+				+ current:getIntegerFormat():getComponentCount()
+			floatCount = floatCount
+				+ current:getIntegerFormat():getComponentCount()
+
+			current = self.materialsByName[material:getName()]
+		end
+
+		maxComponents = math.max(maxComponents, integerCount, floatCount)
 	end
 
 	self.maxMaterialComponents = maxComponents
@@ -316,8 +675,29 @@ function MaterialPipeline:_rebuildMaterialInstanceUniforms(materialInstance)
 		0
 	)
 
+	return self:_rebuildMaterialInstanceUniformsImpl(materialInstance)
+end
+
+--- @private
+--- @param materialInstance RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
+--- @return integer
+function MaterialPipeline:_rebuildMaterialInstanceUniformsImpl(materialInstance)
+	local index = 0
+	if materialInstance:getParent() then
+		index = index
+			+ self:_rebuildMaterialInstanceUniformsImpl(
+				materialInstance:getParent()
+			)
+	end
+
+	local offset = math.max(
+		materialInstance:getMaterial():getIntegerFormat():getAttributeCount(),
+		materialInstance:getMaterial():getFloatFormat():getAttributeCount()
+	)
+
 	ffi.copy(
-		self.stagingMaterialData:getFFIPointer(),
+		ffi.cast("uint8_t *", self.stagingMaterialData:getFFIPointer())
+			+ (index * ffi.sizeof("uint32_t")),
 		materialInstance:getUniformsBuffer():getIntegerData():getFFIPointer(),
 		materialInstance:getUniformsBuffer():getIntegerData():getSize()
 	)
@@ -326,8 +706,8 @@ function MaterialPipeline:_rebuildMaterialInstanceUniforms(materialInstance)
 		MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT_INTEGER_BUFFER,
 		materialInstance,
 		self.stagingMaterialData,
-		1,
-		self.maxMaterialComponents,
+		index,
+		offset,
 		0
 	)
 
@@ -338,7 +718,8 @@ function MaterialPipeline:_rebuildMaterialInstanceUniforms(materialInstance)
 	)
 
 	ffi.copy(
-		self.stagingMaterialData:getFFIPointer(),
+		ffi.cast("uint8_t *", self.stagingMaterialData:getFFIPointer())
+			+ (index * ffi.sizeof("float")),
 		materialInstance:getUniformsBuffer():getFloatData():getFFIPointer(),
 		materialInstance:getUniformsBuffer():getFloatData():getSize()
 	)
@@ -347,10 +728,12 @@ function MaterialPipeline:_rebuildMaterialInstanceUniforms(materialInstance)
 		MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT_FLOAT_BUFFER,
 		materialInstance,
 		self.stagingMaterialData,
-		1,
-		self.maxMaterialComponents,
+		index,
+		offset,
 		0
 	)
+
+	return index + offset
 end
 
 --- @private

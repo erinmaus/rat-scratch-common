@@ -1,8 +1,8 @@
 #pragma language glsl4
 
-#include "generated://Pipeline/Material/Properties.common.glsl"
-#include "generated://Pipeline/Material/Vertex.vert.glsl"
-#include "generated://Pipeline/Vertex.vert.glsl"
+#include "@Generated/Pipeline/Material/Properties.common.glsl"
+#include "@Generated/Pipeline/Material/Vertex.vert.glsl"
+#include "@Generated/Pipeline/Vertex/Vertex.vert.glsl"
 
 #include "@Pipeline/Common/Buffers/Draw.common.glsl"
 #include "@Pipeline/Common/Buffers/Fragment.common.glsl"

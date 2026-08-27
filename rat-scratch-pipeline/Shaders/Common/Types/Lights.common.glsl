@@ -49,5 +49,4 @@ struct RatScratchPipelineLightResult
 {
 	vec4 diffuse;
 	vec4 specular;
-	/* ... anything else? */
 };

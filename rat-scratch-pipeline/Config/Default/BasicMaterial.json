@@ -1,10 +1,10 @@
 {
   "material": {
     "name": "Basic",
-    "paths": ["forward", "deferred"],
-    "light": true,
+    "passes": ["forward", "deferred"],
     "shader": {
-      "fragment": "@Pipeline/Shaders/BasicMaterial/BasicMaterial.frag.glsl"
+      "light": "@Pipeline/BasicMaterial/BasicMaterial.light.glsl",
+      "fragment": "@Pipeline/BasicMaterial/BasicMaterial.frag.glsl"
     },
     "uniforms": [
       {

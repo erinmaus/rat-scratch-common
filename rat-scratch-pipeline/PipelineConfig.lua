@@ -64,7 +64,7 @@ function PipelineConfig:new(definition)
 	self.meshletFormat = MeshletFormat(definition.meshletFormat)
 
 	self.virtualShaders = {
-		["@Pipeline/Generated/Vertex/Vertex.template.glsl"] = self:_loadBaseVertexShader(),
+		["generated:/Pipeline/Vertex/Vertex.vert.glsl"] = self:_loadBaseVertexShader(),
 	}
 
 	self.definition = Table.deepClone(definition)

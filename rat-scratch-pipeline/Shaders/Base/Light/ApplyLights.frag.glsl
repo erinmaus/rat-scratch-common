@@ -1,15 +1,13 @@
+#include "@Pipeline/Base/DefaultApplyLights.frag.glsl"
+#include "@Pipeline/Common/Buffers/Draw.common.glsl"
 #include "@Pipeline/Common/Buffers/Lights.common.glsl"
 #include "@Pipeline/Common/Index.common.glsl"
 #include "@Pipeline/Common/Lights.common.glsl"
 
-#define ratApplyFragmentLight ratApplyDefaultLight4
-#include "@Pipeline/Materials/BasicMaterial/BasicMaterial.light.glsl"
-#undef ratApplyFragmentLight
-
-#include "generated://Config.common.glsl"
-#include "generated://Pipeline/Material/ApplyLights.common.glsl"
-#include "generated://Pipeline/Material/Lights.common.glsl"
-#include "generated://Pipeline/Material/Properties.common.glsl"
+#include "@Generated/Config.common.glsl"
+#include "@Generated/Pipeline/Material/ApplyLights.common.glsl"
+#include "@Generated/Pipeline/Material/Lights.common.glsl"
+#include "@Generated/Pipeline/Material/Properties.common.glsl"
 
 uint ratApplyLightsImplGetIndex(vec3 position, uint i)
 {

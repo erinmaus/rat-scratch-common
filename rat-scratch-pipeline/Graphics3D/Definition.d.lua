@@ -33,6 +33,9 @@ local PipelineMeshletDefinitionBounds = {}
 
 --- @class RatScratch.Pipeline.Graphics3D.PipelineMaterialDefinition
 --- @field public name string
+--- @field public extends? string
+--- @field public passes RatScratch.Pipeline.Graphics3D.PipelineMaterial.Pass[]
+--- @field public features RatScratch.Pipeline.Graphics3D.PipelineMaterial.Feature[]
 --- @field public shader? RatScratch.Pipeline.Graphics3D.PipelineMaterialDefinitionShaderSource
 --- @field public uniforms RatScratch.Pipeline.Graphics3D.PipelineMaterialDefinitionUniform[]
 local PipelineMaterialDefinition = {}
@@ -40,6 +43,8 @@ local PipelineMaterialDefinition = {}
 --- @class RatScratch.Pipeline.Graphics3D.PipelineMaterialDefinitionShaderSource
 --- @field public vertex? string
 --- @field public fragment? string
+--- @field public light? string
+--- @field public depth? string
 local PipelineMaterialDefinitionShaderSource = {}
 
 --- @alias RatScratch.Pipeline.Graphics3D.PipelineMaterialDefinitionUniformFormat RatScratch.Graphics.Graphics3D.BufferAttributeFormat | "texture"

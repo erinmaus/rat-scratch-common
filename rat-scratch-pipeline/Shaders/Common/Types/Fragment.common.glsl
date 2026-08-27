@@ -28,4 +28,5 @@ struct RatScratchPipelineFragmentOutput
 	float occlusion;
 	uint materialDefinitionIndex;
 	uint cameraIndex;
+	uint discardFragment;
 };

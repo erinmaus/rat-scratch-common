@@ -523,15 +523,39 @@ function ShaderPreprocessor.newShader(pixelFilename, vertexFilename, options)
 		vertexSource = s
 	end
 
+	local success, result
 	if vertexSource and pixelSource then
-		return love.graphics.newShader(
+		success, result = pcall(
+			love.graphics.newShader,
 			pixelSource,
 			vertexSource,
 			{ write = true }
 		)
 	else
-		return love.graphics.newShader(pixelSource, { write = true })
+		success, result =
+			pcall(love.graphics.newShader, pixelSource, { write = true })
 	end
+
+	if not success then
+		if pixelSource and vertexSource then
+			error(
+				("could not compile shader: %s\npixel shader source:\n%s\nfragment shader source:\n%s"):format(
+					result,
+					pixelSource,
+					vertexSource
+				)
+			)
+		else
+			error(
+				("could not compile shader: %s\nshader source:\n%s"):format(
+					result,
+					pixelSource
+				)
+			)
+		end
+	end
+
+	return result
 end
 
 return ShaderPreprocessor

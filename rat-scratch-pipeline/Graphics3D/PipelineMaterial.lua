@@ -5,20 +5,39 @@ local PipelineMaterialShaderSource =
 local PipelineMaterialUniform =
 	require("rat-scratch-pipeline.Graphics3D.PipelineMaterialUniform")
 
+--- @alias RatScratch.Pipeline.Graphics3D.PipelineMaterial.Pass "deferred" | "forward"
+--- @alias RatScratch.Pipeline.Graphics3D.PipelineMaterial.Feature "discard"
+
 --- @class RatScratch.Pipeline.Graphics3D.PipelineMaterial : RatScratch.Common.BaseObject
+--- @field private name string
+--- @field private extends? string
 --- @field private format RatScratch.Graphics.Graphics3D.BufferFormat
 --- @field private uniforms RatScratch.Pipeline.Graphics3D.PipelineMaterialUniform[]
 --- @field private uniformsByName table<string, RatScratch.Pipeline.Graphics3D.PipelineMaterialUniform>
+--- @field private passes table<RatScratch.Pipeline.Graphics3D.PipelineMaterial.Pass, boolean>
 --- @field private shader RatScratch.Pipeline.Graphics3D.PipelineMaterialShaderSource
---- @overload fun(format: RatScratch.Graphics.Graphics3D.BufferFormat, uniforms: RatScratch.Pipeline.Graphics3D.PipelineMaterialUniform[], shader: RatScratch.Pipeline.Graphics3D.PipelineMaterialShaderSource): RatScratch.Pipeline.Graphics3D.PipelineMaterial
+--- @overload fun(name: string, extends?: string, features: table<RatScratch.Pipeline.Graphics3D.PipelineMaterial.Feature, boolean>, format: RatScratch.Graphics.Graphics3D.BufferFormat, uniforms: RatScratch.Pipeline.Graphics3D.PipelineMaterialUniform[], passes: table<string, RatScratch.Pipeline.Graphics3D.PipelineMaterial.Pass>, shader: RatScratch.Pipeline.Graphics3D.PipelineMaterialShaderSource): RatScratch.Pipeline.Graphics3D.PipelineMaterial
 local PipelineMaterial = Object()
 
 --- @param name string
+--- @param extends? string
+--- @param features table<RatScratch.Pipeline.Graphics3D.PipelineMaterial.Feature, boolean>
 --- @param format RatScratch.Graphics.Graphics3D.BufferFormat
 --- @param uniforms RatScratch.Pipeline.Graphics3D.PipelineMaterialUniform[]
+--- @param passes table<string, RatScratch.Pipeline.Graphics3D.PipelineMaterial.Pass>
 --- @param shader RatScratch.Pipeline.Graphics3D.PipelineMaterialShaderSource
-function PipelineMaterial:new(name, format, uniforms, shader)
+function PipelineMaterial:new(
+	name,
+	extends,
+	features,
+	format,
+	uniforms,
+	passes,
+	shader
+)
 	self.name = name
+	self.extends = extends
+	self.features = features
 	self.format = format
 
 	local integerFormat = {}
@@ -52,10 +71,19 @@ function PipelineMaterial:new(name, format, uniforms, shader)
 	end
 
 	self.shader = shader
+
+	self.passes = {
+		forward = not not passes.forward,
+		deferred = not not passes.deferred,
+	}
 end
 
 function PipelineMaterial:getName()
 	return self.name
+end
+
+function PipelineMaterial:getParentName()
+	return self.extends
 end
 
 function PipelineMaterial:getFormat()
@@ -88,6 +116,20 @@ end
 
 function PipelineMaterial:getShader()
 	return self.shader
+end
+
+function PipelineMaterial:getIsForwardCompatible()
+	return self.passes.forward
+end
+
+function PipelineMaterial:getIsDeferredCompatible()
+	return self.passes.deferred
+end
+
+--- @param feature RatScratch.Pipeline.Graphics3D.PipelineMaterial.Feature
+--- @return boolean
+function PipelineMaterial:hasFeature(feature)
+	return not not self.features[feature]
 end
 
 --- @param materialDefinition RatScratch.Pipeline.Graphics3D.PipelineMaterialDefinition
@@ -145,7 +187,26 @@ function PipelineMaterial.fromDefinition(materialDefinition)
 		end
 	end
 
-	return PipelineMaterial(formatInstance, uniforms, shader)
+	local passes = {}
+	for _, pass in ipairs(materialDefinition.passes) do
+		passes[pass] = true
+	end
+	assert(next(passes), "material must have at least one pass")
+
+	local features = { discard = false }
+	for _, flag in ipairs(materialDefinition.features) do
+		features[flag] = true
+	end
+
+	return PipelineMaterial(
+		materialDefinition.name,
+		materialDefinition.extends,
+		features,
+		formatInstance,
+		uniforms,
+		passes,
+		shader
+	)
 end
 
 return PipelineMaterial

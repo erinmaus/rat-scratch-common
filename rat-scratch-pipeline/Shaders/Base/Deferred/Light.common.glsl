@@ -1,7 +1,7 @@
+#include "@Pipeline/Base/Light/ApplyLights.frag.glsl"
 #include "@Pipeline/Common/Buffers/Fragment.common.glsl"
 #include "@Pipeline/Common/Pack.common.glsl"
 #include "@Pipeline/Common/Types/Fragment.common.glsl"
-#include "@Pipeline/Shaders/Base/Light/ApplyLights.frag.glsl"
 
 varying ratTextureCoordinateType frag_TextureCoordinate;
 
@@ -42,6 +42,6 @@ void pixelmain()
 	RatScratchPipelineLightResult result;
 	ratClearLightResult(result);
 
-	vec4 color = ratApplyLights(fragmentOutput, result);
-	rat_Result = albedo * color + vec4(emissive, 0.0);
+	ratApplyLights(fragmentOutput, result);
+	rat_Result = albedo * result.diffuse + vec4(emissive, 0.0);
 }
