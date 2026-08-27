@@ -1,4 +1,4 @@
-void ratGet$RAT_SCRATCH_ROLE$(in RatScratchPipelineStaticVertex vertex, uint index)
+void ratGet$RAT_SCRATCH_ROLE$(in RatScratchPipelineVertex vertex, uint index)
 {
 	index *= $RAT_SCRATCH_COMPONENTS_COUNT$;
 	index += $RAT_SCRATCH_ATTRIBUTE_OFFSET$;

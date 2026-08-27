@@ -83,7 +83,7 @@
         "format": [
           {
             "role": "VertexBoneIndex",
-            "name": "boneIndices",
+            "name": "boneIndex",
             "inputFormat": "uint32vec2",
             "vertexFormat": "uint32vec4",
             "transform": {
@@ -93,7 +93,7 @@
           },
           {
             "role": "VertexBoneWeight",
-            "name": "boneWeights",
+            "name": "boneWeight",
             "inputFormat": "uint32",
             "vertexFormat": "floatvec4",
             "transform": {

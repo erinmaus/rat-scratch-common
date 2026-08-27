@@ -32,6 +32,10 @@ function PipelineMultiBuffer:new(formats, flags, count)
 
 	self.bufferCount = #formats
 
+	self.context = PipelineBufferContext(count)
+	self.context:listen(PipelineBufferContextEvent.RESIZE, self._resize, self)
+	self.context:listen(PipelineBufferContextEvent.COMPACT, self._compact, self)
+
 	self.formats = {}
 	self.buffers = {}
 	self.data = {}
@@ -50,10 +54,6 @@ function PipelineMultiBuffer:new(formats, flags, count)
 			)
 		)
 	end
-
-	self.context = PipelineBufferContext(count)
-	self.context:listen(PipelineBufferContextEvent.RESIZE, self._resize, self)
-	self.context:listen(PipelineBufferContextEvent.COMPACT, self._compact, self)
 
 	self.dirtyContext = PipelineBufferDirtyContext()
 end

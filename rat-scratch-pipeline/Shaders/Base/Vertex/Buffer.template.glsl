@@ -1,4 +1,4 @@
-restrict readonly rat_$RAT_SCRATCH_BUFFER_NAME$Buffer
+restrict readonly buffer rat_$RAT_SCRATCH_BUFFER_NAME$Buffer
 {
 	$RAT_SCRATCH_SCALAR_TYPE$ rat_$RAT_SCRATCH_BUFFER_NAME$[];
 };

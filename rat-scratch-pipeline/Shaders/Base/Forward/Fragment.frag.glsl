@@ -1,11 +1,13 @@
 #pragma language glsl4
 
+#include "@Pipeline/Common/Buffers/Fragment.common.glsl"
+
 void ratDiscard(out RatScratchPipelineFragmentOutput fragmentOutput)
 {
-	fragmentOutput.discardFragment = true;
+	fragmentOutput.discardFragment = 1;
 }
 
-#include "@Pipeline/Common/Buffers/Fragment.common.glsl"
+#include "@Pipeline/Common/Buffers/Materials.common.glsl"
 #include "@Pipeline/Common/Pack.common.glsl"
 #include "@Pipeline/Common/Types/Fragment.common.glsl"
 
@@ -37,7 +39,7 @@ void pixelmain()
 		ratClearLightResult(result);
 
 		ratApplyLights(fragmentOutput, result);
-		rat_Color = albedo * result.diffuse + vec4(result.emissive, 0.0);
+		rat_Color = fragmentOutput.albedo * result.diffuse + vec4(fragmentOutput.emissive, 0.0);
 	}
 
 	// TODO: OIT

@@ -8,6 +8,7 @@ local RatScratchModule = require("lib.rat-scratch-module")
 local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
 local VertexBufferInfo = require("rat-scratch-pipeline.VertexBufferInfo")
 local json = require("lib.json")
+local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 
 --- @class RatScratch.Pipeline.PipelineConfig : RatScratch.Common.BaseObject
 --- @overload fun(definition: RatScratch.Pipeline.PipelineDefinitionConfig): RatScratch.Pipeline.PipelineConfig
@@ -240,8 +241,8 @@ function PipelineConfig:_loadBaseVertexShader()
 
 		table.insert(variables.RAT_SCRATCH_BUFFERS, {
 			RAT_SCRATCH_BUFFER_NAME = vertexBufferInfo:getBufferName(),
-			RAT_SCRATCH_SCALAR_TYPE = inputFormatInstance:getScalarType(
-				inputFormat[1].name
+			RAT_SCRATCH_SCALAR_TYPE = BufferFormat.getFormatShaderType(
+				inputFormatInstance:getScalarType(inputFormat[1].name)
 			),
 		})
 

@@ -1,21 +1,24 @@
-#include "@Pipeline/Base/DefaultApplyLights.frag.glsl"
+#include "@Pipeline/Base/Light/DefaultApplyLights.frag.glsl"
 #include "@Pipeline/Common/Buffers/Draw.common.glsl"
 #include "@Pipeline/Common/Buffers/Lights.common.glsl"
 #include "@Pipeline/Common/Index.common.glsl"
 #include "@Pipeline/Common/Lights.common.glsl"
 
-#include "@Generated/Config.common.glsl"
-#include "@Generated/Pipeline/Material/ApplyLights.common.glsl"
-#include "@Generated/Pipeline/Material/Lights.common.glsl"
+// #include "@Generated/Config.common.glsl"
+#include "@Generated/Pipeline/Light/ApplyLights.common.glsl"
+#include "@Generated/Pipeline/Light/Lights.common.glsl"
 #include "@Generated/Pipeline/Material/Properties.common.glsl"
+
+const uvec3 RAT_SCRATCH_CONFIG_LIGHT_CELLS = uvec3(16, 16, 16);
+const uint RAT_SCRATCH_CONFIG_LIGHTS_PER_CELL = 32;
 
 uint ratApplyLightsImplGetIndex(vec3 position, uint i)
 {
-	float clampedPosition = clamp(fragmentOutput.screenPosition, vec3(0.0), vec3(1.0));
-	uvec3 coordinates = uvec3(round(clampedPosition * vec3(RAT_SCRATCH_CONFIG_LIGHT_CELLS)));
+	vec3 clampedPosition = clamp(position, vec3(0.0), vec3(1.0));
+	uvec3 coordinate = uvec3(round(clampedPosition * vec3(RAT_SCRATCH_CONFIG_LIGHT_CELLS)));
 
 	uvec4 dimensions = uvec4(RAT_SCRATCH_CONFIG_LIGHT_CELLS, RAT_SCRATCH_CONFIG_LIGHTS_PER_CELL + 1);
-	return coordinateToIndex(vec4(coordinate, i), dimensions);
+	return coordinateToIndex(uvec4(coordinate, i), dimensions);
 }
 
 vec4 ratApplyLights(in RatScratchPipelineFragmentOutput fragmentOutput, out RatScratchPipelineLightResult result)
@@ -28,10 +31,10 @@ vec4 ratApplyLights(in RatScratchPipelineFragmentOutput fragmentOutput, out RatS
 	RatScratchPipelinePointLight pointLight;
 	RatScratchPipelineSpotLight spotLight;
 
-	uint lightsCount = rat_LightCountIndices[ratApplyLightsImplGetIndex(screenPosition, 0)];
+	uint lightsCount = rat_LightCountIndices[ratApplyLightsImplGetIndex(fragmentOutput.screenPosition, 0)];
 	for (uint i = 0; i < lightsCount; ++i)
 	{
-		uint lightIndex = rat_LightCountIndices[ratApplyLightsImplGetIndex(screenPosition, i + 1)];
+		uint lightIndex = rat_LightCountIndices[ratApplyLightsImplGetIndex(fragmentOutput.screenPosition, i + 1)];
 		light = rat_Lights[lightIndex];
 
 		switch (ratGetLightType(light))

@@ -26,7 +26,7 @@ function PipelineMaterialUniform:new(name, format, value, offset)
 			name = name,
 			format = (format == "texture" and "uint32" or format),
 		},
-	})
+	}, true)
 	self.offset = offset
 
 	self.value = {}
@@ -55,7 +55,7 @@ function PipelineMaterialUniform:new(name, format, value, offset)
 			self.formatInstance,
 			1,
 			0,
-			componentCount,
+			1,
 			self.value,
 			self.data
 		)

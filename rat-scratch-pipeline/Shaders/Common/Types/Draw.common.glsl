@@ -48,6 +48,17 @@ struct RatScratchPipelineSkinnedMeshletBounds
 	uint bone;
 };
 
+struct RatScratchPipelineCamera
+{
+	mat4 viewTransform;
+	mat4 inverseViewTransform;
+	mat4 projectionTransform;
+	mat4 inverseProjectionTransform;
+	mat4 projectionViewTransform;
+	mat4 inverseProjectionViewTransform;
+	vec4 position;
+};
+
 struct RatScratchPipelineDraw
 {
 	uint objectInstanceIndex;
@@ -62,14 +73,4 @@ struct RatScratchPipelineDraw
 	uint indexOffset;
 	uint cameraIndex;
 	uint layerIndex;
-};
-
-struct RatScratchPipelineCamera
-{
-	mat4 viewTransform;
-	mat4 inverseViewTransform;
-	mat4 projectionTransform;
-	mat4 inverseProjectionTransform;
-	mat4 viewProjectionTransform;
-	mat4 inverseViewProjectionTransform;
 };

@@ -38,7 +38,7 @@ vec3 unpackNormal2(vec2 packedNormal)
 
 vec3 packTangent3(vec4 tangent)
 {
-	return vec3(encodedNormal(clampNormal(tangent.xyz)), tangent.w);
+	return vec3(encodeNormal(clampNormal(tangent.xyz)), tangent.w);
 }
 
 vec4 unpackTangent3(vec3 packedTangent)

@@ -17,7 +17,19 @@ local ImageDataAtlasHandle =
 	require("rat-scratch-graphics").Atlas.ImageDataAtlasHandle
 local RatScratchModule = require("lib.rat-scratch-module")
 
+--- @alias RatScratch.Pipeline.MaterialPipeline.ShaderPass
+--- | "deferred"
+--- | "forward"
+--- | "depth"
+--- | "depth-discard"
+
+--- @alias RatScratch.Pipeline.MaterialPipeline.ShaderType
+--- | "draw"
+--- | "light"
+
 --- @class RatScratch.Pipeline.MaterialPipeline : RatScratch.Common.BaseObject
+--- @field private pipelineConfig RatScratch.Pipeline.PipelineConfig
+--- @field private shaders table<RatScratch.Pipeline.MaterialPipeline.ShaderPass, table<RatScratch.Pipeline.MaterialPipeline.ShaderType, love.Shader>> table<RatScratch.Pipeline.MaterialPipeline.ShaderPass, table<RatScratch.Pipeline.MaterialPipeline.ShaderType, love.Shader>>
 --- @field private stagingMaterialData love.ByteData
 --- @field private maxMaterialComponents integer
 --- @field private materialInstanceValuesFormat RatScratch.Graphics.Graphics3D.BufferFormatAttribute[][]
@@ -34,13 +46,13 @@ local RatScratchModule = require("lib.rat-scratch-module")
 --- @field private indexToTexture table<integer, love.ImageData>
 --- @field private dirtyTextures table<love.ImageData, true>
 --- @field private texturesBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<love.ImageData>
---- @overload fun(): RatScratch.Pipeline.MaterialPipeline
+--- @overload fun(pipelineConfig: RatScratch.Pipeline.PipelineConfig): RatScratch.Pipeline.MaterialPipeline
 local MaterialPipeline = Object()
 
 MaterialPipeline.TEXTURE_FORMAT = {
 	{ location = 0, name = "size", format = "floatvec2" },
-	{ location = 0, name = "position", format = "floatvec2" },
-	{ location = 0, name = "layer", format = "float" },
+	{ location = 1, name = "position", format = "floatvec2" },
+	{ location = 2, name = "layer", format = "float" },
 }
 
 MaterialPipeline.MATERIAL_INSTANCE_INTEGERS_FORMAT = {
@@ -64,11 +76,14 @@ MaterialPipeline.DEFAULT_TEXTURE_LAYERS = 8
 MaterialPipeline.DEFAULT_TEXTURES_COUNT = 128
 MaterialPipeline.DEFAULT_MATERIAL_INSTANCES_COUNT = 1024
 
-function MaterialPipeline:new()
-	local limits = love.graphics.getSystemLimits()
+--- @param pipelineConfig RatScratch.Pipeline.PipelineConfig
+function MaterialPipeline:new(pipelineConfig)
+	self.pipelineConfig = pipelineConfig
+	self.shaders = {}
 
 	self.maxMaterialComponents = 1
 
+	local limits = love.graphics.getSystemLimits()
 	local textureSize =
 		math.min(limits.texturesize, MaterialPipeline.MAX_TEXTURE_SIZE)
 	self.atlas = Atlas(
@@ -308,6 +323,7 @@ function MaterialPipeline:_verifyParents(material)
 	end
 end
 
+--- @private
 --- @param material RatScratch.Pipeline.Graphics3D.PipelineMaterial
 function MaterialPipeline:_getMaterialParentComponentIndex(material)
 	local count = math.max(
@@ -325,6 +341,7 @@ function MaterialPipeline:_getMaterialParentComponentIndex(material)
 	return count
 end
 
+--- @private
 --- @param material RatScratch.Pipeline.Graphics3D.PipelineMaterial
 function MaterialPipeline:_getMaterialComponentIndex(material)
 	if material:getParentName() then
@@ -356,8 +373,8 @@ end
 --- @param variables table
 function MaterialPipeline:_binMaterialVariables(
 	material,
-	materialInfo,
-	variables
+	variables,
+	materialInfo
 )
 	table.insert(variables.RAT_SCRATCH_MATERIALS, materialInfo)
 
@@ -385,6 +402,15 @@ local function _newMaterialVariables()
 end
 
 --- @private
+-- function MaterialPipeline:_getMaterialConfigVariables()
+-- 	local variables = {
+-- 		RAT_SCRATCH_CONFIG_VARIABLES = {}
+-- 	}
+
+-- 	for
+-- end
+
+--- @private
 function MaterialPipeline:_getMaterialVariables()
 	local forwardVariables = _newMaterialVariables()
 	local deferredVariables = _newMaterialVariables()
@@ -407,6 +433,7 @@ function MaterialPipeline:_getMaterialVariables()
 		local baseOffset = self:_getMaterialComponentIndex(material)
 		local materialInfo = {
 			RAT_SCRATCH_MATERIAL = material:getName(),
+			RAT_SCRATCH_PARENT_MATERIAL = material:getParentName() or "None",
 			RAT_SCRATCH_MATERIAL_DEFINITION_INDEX = i - 1,
 			RAT_SCRATCH_MATERIAL_PROPERTIES_STRIDE = self.maxMaterialComponents,
 			RAT_SCRATCH_BASE_OFFSET = baseOffset - 1,
@@ -450,7 +477,7 @@ function MaterialPipeline:_getMaterialVariables()
 					RAT_SCRATCH_SCALAR_TYPE = BufferFormat.getFormatShaderType(
 						scalarFormat
 					),
-					RAT_SCRATCH_BASE_OFFSET = (offset - 1) + (j - 1),
+					RAT_SCRATCH_BUFFER_OFFSET = (offset - 1) + (j - 1),
 				}
 
 				table.insert(propertyInfo.RAT_SCRATCH_COMPONENTS, componentInfo)
@@ -458,12 +485,12 @@ function MaterialPipeline:_getMaterialVariables()
 
 			if BufferFormat.isFormatScalarFloat(scalarFormat) then
 				table.insert(
-					materialInfo.RAT_SCRATCH_INT_PROPERTIES,
+					materialInfo.RAT_SCRATCH_FLOAT_PROPERTIES,
 					propertyInfo
 				)
 			elseif BufferFormat.isFormatScalarInteger(scalarFormat) then
 				table.insert(
-					materialInfo.RAT_SCRATCH_FLOAT_PROPERTIES,
+					materialInfo.RAT_SCRATCH_INT_PROPERTIES,
 					propertyInfo
 				)
 			end
@@ -520,6 +547,7 @@ function MaterialPipeline:_rebuildMaterialTemplateShader(path, config)
 	return shaderSource
 end
 
+--- @private
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
 --- @param variables table
 function MaterialPipeline:_rebuildMaterialTemplateShadersPass(
@@ -533,7 +561,7 @@ function MaterialPipeline:_rebuildMaterialTemplateShadersPass(
 		variables = variables,
 	}
 
-	return {
+	local result = {
 		["generated:/Pipeline/Material/Fragment.common.glsl"] = self:_rebuildMaterialTemplateShader(
 			"@Pipeline/Base/Material/Fragment.template.glsl",
 			config
@@ -542,15 +570,26 @@ function MaterialPipeline:_rebuildMaterialTemplateShadersPass(
 			"@Pipeline/Base/Material/Properties.template.glsl",
 			config
 		),
-		["generated:/Pipeline/Material/ApplyLights.common.glsl"] = self:_rebuildMaterialTemplateShader(
-			"@Pipeline/Base/Material/ApplyLights.template.glsl",
+		["generated:/Pipeline/Material/Vertex.vert.glsl"] = self:_rebuildMaterialTemplateShader(
+			"@Pipeline/Base/Material/Vertex.template.glsl",
 			config
 		),
-		["generated:/Pipeline/Material/Lights.common.glsl"] = self:_rebuildMaterialTemplateShader(
-			"@Pipeline/Base/Material/Lights.template.glsl",
+		["generated:/Pipeline/Light/ApplyLights.common.glsl"] = self:_rebuildMaterialTemplateShader(
+			"@Pipeline/Base/Light/ApplyLights.template.glsl",
+			config
+		),
+		["generated:/Pipeline/Light/Lights.common.glsl"] = self:_rebuildMaterialTemplateShader(
+			"@Pipeline/Base/Light/Lights.template.glsl",
 			config
 		),
 	}
+
+	local other = self.pipelineConfig:getVirtualShaders()
+	for filename, source in pairs(other) do
+		result[filename] = source
+	end
+
+	return result
 end
 
 --- @private
@@ -566,12 +605,12 @@ function MaterialPipeline:_rebuildDeferredShaders(baseConfig, virtualPaths)
 
 	-- TODO: layered rendering
 	return {
-		render = ShaderPreprocessor.newShader(
+		draw = ShaderPreprocessor.newShader(
 			"@Pipeline/Base/Deferred/Fragment.frag.glsl",
 			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
 			config
 		),
-		lights = ShaderPreprocessor.newShader(
+		light = ShaderPreprocessor.newShader(
 			"@Pipeline/Base/Deferred/Light.frag.glsl",
 			"@Pipeline/Base/Deferred/Light.vert.glsl",
 			config
@@ -582,13 +621,85 @@ end
 --- @private
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
 --- @param virtualPaths table
-function MaterialPipeline:_rebuildShaders(baseConfig, virtualPaths)
-	-- self.shaders = {
-	-- 	deferred = self:_rebuildDeferredShaders(baseConfig, virtualPaths.deferred)
-	-- 	forward = self:_rebuild
-	-- }
+function MaterialPipeline:_rebuildForwardShaders(baseConfig, virtualPaths)
+	--- @type RatScratch.Graphics.ShaderPreprocessOptions
+	local config = {
+		rootPath = baseConfig.rootPath,
+		rootPaths = baseConfig.rootPaths,
+		virtualPaths = virtualPaths,
+	}
+
+	-- TODO: layered rendering
+	return {
+		draw = ShaderPreprocessor.newShader(
+			"@Pipeline/Base/Forward/Fragment.frag.glsl",
+			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
+			config
+		),
+	}
 end
 
+--- @private
+--- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
+--- @param virtualPaths table
+function MaterialPipeline:_rebuildDepthShaders(baseConfig, virtualPaths)
+	--- @type RatScratch.Graphics.ShaderPreprocessOptions
+	local config = {
+		rootPath = baseConfig.rootPath,
+		rootPaths = baseConfig.rootPaths,
+		virtualPaths = virtualPaths,
+	}
+
+	-- TODO: layered rendering
+	return {
+		draw = ShaderPreprocessor.newShader(
+			"@Pipeline/Base/Deferred/Depth.frag.glsl",
+			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
+			config
+		),
+	}
+end
+
+--- @private
+--- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
+--- @param virtualPaths table
+function MaterialPipeline:_rebuildDepthDiscardShaders(baseConfig, virtualPaths)
+	--- @type RatScratch.Graphics.ShaderPreprocessOptions
+	local config = {
+		rootPath = baseConfig.rootPath,
+		rootPaths = baseConfig.rootPaths,
+		virtualPaths = virtualPaths,
+	}
+
+	-- TODO: layered rendering
+	return {
+		draw = ShaderPreprocessor.newShader(
+			"@Pipeline/Base/Deferred/DepthDiscard.frag.glsl",
+			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
+			config
+		),
+	}
+end
+
+--- @private
+--- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
+--- @param virtualPaths table
+function MaterialPipeline:_rebuildShaders(baseConfig, virtualPaths)
+	self.shaders = {
+		deferred = self:_rebuildDeferredShaders(
+			baseConfig,
+			virtualPaths.deferred
+		),
+		forward = self:_rebuildForwardShaders(baseConfig, virtualPaths.forward),
+		depth = self:_rebuildDepthShaders(baseConfig, virtualPaths.depth),
+		depthDiscard = self:_rebuildDepthDiscardShaders(
+			baseConfig,
+			virtualPaths.depthDiscard
+		),
+	}
+end
+
+--- @private
 function MaterialPipeline:_rebuildMaterialShaders()
 	local variables = self:_getMaterialVariables()
 	local baseConfig = {
@@ -639,7 +750,7 @@ function MaterialPipeline:_rebuildMaterials()
 			floatCount = floatCount
 				+ current:getIntegerFormat():getComponentCount()
 
-			current = self.materialsByName[material:getName()]
+			current = self.materialsByName[material:getParentName()]
 		end
 
 		maxComponents = math.max(maxComponents, integerCount, floatCount)
@@ -650,7 +761,11 @@ function MaterialPipeline:_rebuildMaterials()
 	self.materialInstancesBuffer = PipelineMultiBuffer(
 		MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT,
 		{ shaderstorage = true },
-		self.materialInstancesBuffer:getCount() * self.maxMaterialComponents
+		(
+			self.materialInstancesBuffer
+				and self.materialInstancesBuffer:getCount()
+			or MaterialPipeline.DEFAULT_MATERIAL_INSTANCES_COUNT
+		) * self.maxMaterialComponents
 	)
 
 	self.stagingMaterialData = love.data.newByteData(maxComponents * 4)

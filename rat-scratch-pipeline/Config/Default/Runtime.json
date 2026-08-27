@@ -1,0 +1,28 @@
+{
+  "runtime": {
+    "main": [
+      {
+        "name": "RAT_SCRATCH_CONFIG_LIGHT_CELLS",
+        "format": "uint32vec3",
+        "value": [16, 16, 16]
+      },
+      {
+        "name": "RAT_SCRATCH_CONFIG_LIGHTS_PER_CELL",
+        "format": "uint32",
+        "value": [32]
+      }
+    ],
+    "secondary": [
+      {
+        "name": "RAT_SCRATCH_CONFIG_LIGHT_CELLS",
+        "format": "uint32vec3",
+        "value": [8, 8, 8]
+      },
+      {
+        "name": "RAT_SCRATCH_CONFIG_LIGHTS_PER_CELL",
+        "format": "uint32",
+        "value": [32]
+      }
+    ]
+  }
+}

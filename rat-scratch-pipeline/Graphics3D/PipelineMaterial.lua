@@ -148,15 +148,16 @@ function PipelineMaterial.fromDefinition(materialDefinition)
 			format = "float",
 		})
 	else
-		for _, uniform in ipairs(materialDefinition.uniforms) do
-			local format
+		for i, uniform in ipairs(materialDefinition.uniforms) do
 			if uniform.format == "texture" then
 				table.insert(format, {
+					location = i - 1,
 					name = uniform.name,
 					format = "uint32",
 				})
 			else
 				table.insert(format, {
+					location = i - 1,
 					name = uniform.name,
 					format = uniform.format,
 				})
@@ -194,8 +195,10 @@ function PipelineMaterial.fromDefinition(materialDefinition)
 	assert(next(passes), "material must have at least one pass")
 
 	local features = { discard = false }
-	for _, flag in ipairs(materialDefinition.features) do
-		features[flag] = true
+	if materialDefinition.features then
+		for _, flag in ipairs(materialDefinition.features) do
+			features[flag] = true
+		end
 	end
 
 	return PipelineMaterial(

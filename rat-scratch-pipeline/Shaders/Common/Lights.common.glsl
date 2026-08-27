@@ -25,21 +25,21 @@ uint ratGetLightType(in RatScratchPipelineLight baseLight)
 	return RAT_SCRATCH_LIGHT_TYPE_POINT;
 }
 
-void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchAmbientLight ambientLight)
+void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchPipelineAmbientLight ambientLight)
 {
 	ambientLight.color = inputLight.color;
 	ambientLight.ambience = inputLight.color.a;
 	ambientLight.occlusionTextureIndexCount = inputLight.shadowTextureIndexCount;
 }
 
-void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchDirectionalLight directionalLight)
+void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchPipelineDirectionalLight directionalLight)
 {
 	directionalLight.color = inputLight.color;
 	directionalLight.direction = decodeNormal(inputLight.direction);
 	directionalLight.shadowTextureIndexCount = inputLight.shadowTextureIndexCount;
 }
 
-void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchPointLight pointLight)
+void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchPipelinePointLight pointLight)
 {
 	pointLight.color = inputLight.color;
 	pointLight.position = inputLight.position.xyz;
@@ -47,7 +47,7 @@ void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchPointLight
 	pointLight.shadowTextureIndexCount = inputLight.shadowTextureIndexCount;
 }
 
-void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchSpotLight spotLight)
+void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchPipelineSpotLight spotLight)
 {
 	spotLight.color = inputLight.color;
 	spotLight.position = inputLight.position.xyz;
@@ -59,6 +59,6 @@ void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchSpotLight 
 
 void ratClearLightResult(out RatScratchPipelineLightResult result)
 {
-	result.color = vec4(0.0);
+	result.diffuse = vec4(0.0);
 	result.specular = vec4(0.0);
 }

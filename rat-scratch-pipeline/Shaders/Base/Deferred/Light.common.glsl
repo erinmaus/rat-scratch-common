@@ -1,5 +1,6 @@
 #include "@Pipeline/Base/Light/ApplyLights.frag.glsl"
 #include "@Pipeline/Common/Buffers/Fragment.common.glsl"
+#include "@Pipeline/Common/Camera.common.glsl"
 #include "@Pipeline/Common/Pack.common.glsl"
 #include "@Pipeline/Common/Types/Fragment.common.glsl"
 
@@ -12,24 +13,23 @@ uniform ratGBufferSamplerBufferType rat_GBufferNormalTexture;
 uniform ratGBufferSamplerBufferType rat_GBufferPropertiesTexture;
 uniform uratGBufferSamplerBufferType rat_GBufferMaterialTexture;
 
-layout(location = 0) vec4 rat_Result;
+layout(location = 0) out vec4 rat_Result;
 
 void pixelmain()
 {
 	vec2 textureCoordinate = frag_TextureCoordinate;
-	vec4 albedo = texture(rat_GBufferAlbedo, textureCoordinate);
-	vec3 emissive = texture(rat_GBufferEmissive, textureCoordinate).rgb;
 	float depth = texture(rat_GBufferDepthTexture, textureCoordinate).x;
 	vec4 albedo = texture(rat_GBufferAlbedoTexture, textureCoordinate);
+	vec3 emissive = texture(rat_GBufferEmissiveTexture, textureCoordinate).rgb;
 	vec3 normal = decodeNormal(texture(rat_GBufferNormalTexture, textureCoordinate).xy);
 	vec3 materialProperties = texture(rat_GBufferPropertiesTexture, textureCoordinate).xyz;
-	uint materialDefinitionIndex = texture(rat_GBufferMaterial, textureCoordinate).x;
+	uint materialDefinitionIndex = texture(rat_GBufferMaterialTexture, textureCoordinate).x;
 
 	RatScratchPipelineFragmentOutput fragmentOutput;
 	ratClearFragmentOutput(fragmentOutput);
 
 	fragmentOutput.screenPosition = vec3(textureCoordinate, depth);
-	fragmentOutput.position = ratScreenPositionToWorldPosition(screenPosition, 0);
+	fragmentOutput.position = ratScreenPositionToWorldPosition(fragmentOutput.screenPosition, 0);
 	fragmentOutput.albedo = albedo;
 	fragmentOutput.emissive = emissive;
 	fragmentOutput.normal = normal;
@@ -45,3 +45,5 @@ void pixelmain()
 	ratApplyLights(fragmentOutput, result);
 	rat_Result = albedo * result.diffuse + vec4(emissive, 0.0);
 }
+
+#pragma option RAT_SCRATCH_FRAGMENT_SKIP_VARYINGS

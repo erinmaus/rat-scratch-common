@@ -1,13 +1,14 @@
 #include "@Pipeline/Base/Light/DefaultApplyLights.frag.glsl"
 
-void ratApplyFragmentLight(in RatScratchPipelineFragmentOutput fragmentOutput, in RatScratchAmbientLight ambientLight,
-						   inout RatScratchPipelineLightResult result)
+void ratApplyFragmentLight(in RatScratchPipelineFragmentOutput fragmentOutput,
+						   in RatScratchPipelineAmbientLight ambientLight, inout RatScratchPipelineLightResult result)
 {
 	ratApplyDefaultFragmentLight(fragmentOutput, ambientLight, result);
 }
 
 void ratApplyFragmentLight(in RatScratchPipelineFragmentOutput fragmentOutput,
-						   in RatScratchDirectionalLight directionalLight, inout RatScratchPipelineLightResult result)
+						   in RatScratchPipelineDirectionalLight directionalLight,
+						   inout RatScratchPipelineLightResult result)
 {
 	ratApplyDefaultFragmentLight(fragmentOutput, directionalLight, result);
 }

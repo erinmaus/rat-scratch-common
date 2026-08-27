@@ -1,5 +1,7 @@
 #include "@Pipeline/Common/Types/Fragment.common.glsl"
 
+#ifndef RAT_SCRATCH_FRAGMENT_SKIP_VARYINGS
+
 varying vec3 frag_LocalPosition;
 varying vec3 frag_WorldPosition;
 varying vec3 frag_ScreenPosition;
@@ -10,15 +12,17 @@ varying vec3 frag_Tangent;
 varying vec3 frag_Bitanget;
 varying vec2 frag_TextureCoordinate;
 varying vec4 frag_Color;
-varying uint frag_MaterialInstance;
-varying uint frag_CameraIndex;
+flat varying uint frag_MaterialInstance;
+flat varying uint frag_CameraIndex;
+
+#endif
 
 void ratClearFragmentInput(out RatScratchPipelineFragmentInput fragmentInput)
 {
 	fragmentInput.localPosition = vec3(0.0);
 	fragmentInput.worldPosition = vec3(0.0);
-	fragmentInput.position = vec3(0.0);
-	fragmentInput.screenPosition = vec4(0.0);
+	fragmentInput.position = vec4(0.0);
+	fragmentInput.screenPosition = vec3(0.0);
 	fragmentInput.localNormal = vec3(0.0);
 	fragmentInput.normal = vec3(0.0);
 	fragmentInput.tangent = vec3(0.0);
@@ -29,12 +33,14 @@ void ratClearFragmentInput(out RatScratchPipelineFragmentInput fragmentInput)
 	fragmentInput.cameraIndex = 0;
 }
 
+#ifndef RAT_SCRATCH_FRAGMENT_SKIP_VARYINGS
+
 void ratGetFragmentInput(out RatScratchPipelineFragmentInput fragmentInput)
 {
 	fragmentInput.localPosition = frag_LocalPosition;
 	fragmentInput.worldPosition = frag_WorldPosition;
-	fragmentInput.position = frag_ScreenPosition;
-	fragmentInput.screenPosition = frag_Position;
+	fragmentInput.position = frag_Position;
+	fragmentInput.screenPosition = frag_ScreenPosition;
 	fragmentInput.localNormal = frag_LocalNormal;
 	fragmentInput.normal = frag_Normal;
 	fragmentInput.tangent = frag_Tangent;
@@ -45,12 +51,16 @@ void ratGetFragmentInput(out RatScratchPipelineFragmentInput fragmentInput)
 	fragmentInput.cameraIndex = frag_CameraIndex;
 }
 
+#endif
+
+#ifdef VERTEX
+
 void ratSetVertexOutputs(in RatScratchPipelineFragmentInput fragmentInput)
 {
 	frag_LocalPosition = fragmentInput.localPosition;
 	frag_WorldPosition = fragmentInput.worldPosition;
-	frag_ScreenPosition = fragmentInput.position;
-	frag_Position = fragmentInput.screenPosition;
+	frag_Position = fragmentInput.position;
+	frag_ScreenPosition = fragmentInput.screenPosition;
 	frag_LocalNormal = fragmentInput.localNormal;
 	frag_Normal = fragmentInput.normal;
 	frag_Tangent = fragmentInput.tangent;
@@ -60,6 +70,8 @@ void ratSetVertexOutputs(in RatScratchPipelineFragmentInput fragmentInput)
 	frag_MaterialInstance = fragmentInput.materialInstance;
 	frag_CameraIndex = fragmentInput.cameraIndex;
 }
+
+#endif
 
 void ratClearFragmentOutput(out RatScratchPipelineFragmentOutput fragmentOutput)
 {

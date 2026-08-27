@@ -1,6 +1,6 @@
 #include "@/Math/Common.common.glsl"
-#include "@Pipeline/Types/Fragment.common.glsl"
-#include "@Pipeline/Types/Lights.common.glsl"
+#include "@Pipeline/Common/Types/Fragment.common.glsl"
+#include "@Pipeline/Common/Types/Lights.common.glsl"
 
 float ratPBRImplDistributionGGX(vec3 N, vec3 H, float roughness)
 {
@@ -37,7 +37,7 @@ float ratPBRImplGeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 	return ggx1 * ggx2;
 }
 
-vec3 ratPBRImplFresnelSchlick(vec3 cosTheta, vec3 F0)
+vec3 ratPBRImplFresnelSchlick(float cosTheta, vec3 F0)
 {
 	return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
@@ -64,6 +64,6 @@ void ratApplyPBR(in RatScratchPipelineFragmentOutput fragmentOutput, vec3 L, vec
 	float nDotL = max(dot(N, L), 0.0);
 	vec3 diffuseTerm = radiance * nDotL;
 
-	result.diffuse += diffuseTerm;
-	result.specular += specularTerm;
+	result.diffuse += vec4(diffuseTerm, 0.0);
+	result.specular += vec4(specularTerm, 0.0);
 }

@@ -10,7 +10,7 @@ struct RatScratchPipelineLight
 
 	// x = index, y = count (0 for no shadows)
 	// y = 6 for point lights, 0 or 1 for other lights for now (no cascading)
-	uvec2 shadowTexturesIndexCount;
+	uvec2 shadowTextureIndexCount;
 };
 
 struct RatScratchPipelineAmbientLight

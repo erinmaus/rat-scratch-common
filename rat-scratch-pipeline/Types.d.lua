@@ -1,3 +1,5 @@
+--- @meta
+
 --- @class RatScratch.Pipeline.PipelineDefinition
 --- @field public pipeline RatScratch.Pipeline.PipelineDefinitionConfig
 local PipelineDefinition = {}
@@ -42,3 +44,18 @@ local PipelineDefinitionVertexBufferAttributeTransform = {}
 --- @field public buffer string
 --- @field public format RatScratch.Graphics.Graphics3D.BufferAttributeFormat
 local PipelineDefinitionIndexBuffer = {}
+
+--- @class RatScratch.Pipeline.PipelineRuntime
+--- @field public pipeline RatScratch.Pipeline.PipelineRuntimeConfig
+local PipelineRuntime = {}
+
+--- @class RatScratch.Pipeline.PipelineRuntimeConfig
+--- @field public main RatScratch.Pipeline.PipelineRuntimeConfigVariable[]
+--- @field public secondary? RatScratch.Pipeline.PipelineRuntimeConfigVariable[]
+local PipelineRuntimeConfig = {}
+
+--- @class RatScratch.Pipeline.PipelineRuntimeConfigVariable
+--- @field public name string
+--- @field public format RatScratch.Graphics.Graphics3D.BufferFormat
+--- @field public value number[]
+local PipelineRuntimeConfigVariable = {}
