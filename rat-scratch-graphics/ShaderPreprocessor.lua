@@ -62,7 +62,7 @@ local DEFAULT_OPTIONS = {
 local function beginVisit(state, parent, filename)
 	if state.visited[filename] then
 		local errorMessage = string.format(
-			"%s:0: recursive import for `%s`",
+			"%s:%d: recursive import for `%s`",
 			parent and parent.filename or "<root>",
 			parent and parent.currentLineNumber or 1,
 			filename
@@ -101,7 +101,7 @@ local TRIMMED_LINE_PATTERN = "^%s*(.-)%s*$"
 local INCLUDE_PATTERN = '^#include "([^"]+)"'
 local PRAGMA_OPTION_PATTERN = "^#pragma option%s+([%w_]+)%s*(.*)"
 local FUNCTION_OPTION_VALUE_PATTERN = "%((.-)%)"
-local PRAGMA_LANGUAGE_PATTERN = "^#pragma language%s+([^\n\r]+)"
+local PRAGMA_LANGUAGE_PATTERN = "#pragma language%s+([^\n\r]+)"
 local TEMPLATE_INCLUDE_CAPTURE_PATTERN = '%$%("([^"]+)", %$([%w_]+)%$%)'
 local TEMPLATE_INCLUDE_PATTERN = '^.*(%$%("[^"]+", %$[%w_]+%$%))'
 local TEMPLATE_VARIABLE = "%$([%w_]+)%$"
@@ -131,7 +131,8 @@ end
 --- @param filename string
 --- @return string
 local function wrapIncludeContent(content, filename)
-	local includeGuardIdentifier = filename:gsub("[^%w_]", "_")
+	local includeGuardIdentifier =
+		filename:gsub("[^%w_]", "_"):gsub("(__+)", "_")
 	local defineGuardBegin = ("#ifndef rat_include_%s\n#define rat_include_%s 1\n#line 1"):format(
 		includeGuardIdentifier,
 		includeGuardIdentifier
@@ -151,6 +152,7 @@ local function process(state, parent, filename, variables)
 	if not currentFile then
 		return string.format('// file "%s" is recursively included', filename)
 	elseif state.include[filename] then
+		endVisit(state, currentFile)
 		return string.format('// file "%s" is included previously', filename)
 	end
 
@@ -187,7 +189,7 @@ local function process(state, parent, filename, variables)
 				end
 
 				local variables
-				if #templateVariables == 0 then
+				if #templateVariables == 0 and next(templateVariables) then
 					variables = { templateVariables }
 				else
 					variables = templateVariables
