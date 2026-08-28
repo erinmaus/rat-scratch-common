@@ -1,5 +1,8 @@
 local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
+local Vector3 = require("rat-scratch-math").Vector3
+local Quaternion = require("rat-scratch-math").Quaternion
+local Bone = require("rat-scratch-graphics.Graphics3D.Bone")
 
 --- @class RatScratch.Graphics.Graphics3D.Skeleton : RatScratch.Common.BaseObject
 --- @overload fun(bones: RatScratch.Graphics.Graphics3D.Bone[]): RatScratch.Graphics.Graphics3D.Skeleton
@@ -197,6 +200,36 @@ end
 function Skeleton:getBoneAtLayer(layer, index)
 	local bones = self.layers[layer]
 	return bones and bones[index]
+end
+
+--- @param skeletonDefinition RatScratch.Graphics.Graphics3D.SkeletonDefinition
+--- @return RatScratch.Graphics.Graphics3D.Skeleton
+function Skeleton.fromDefinition(skeletonDefinition)
+	local bones = {}
+
+	--- @type table<integer, RatScratch.Graphics.Graphics3D.Bone>
+	local bonesByID = {}
+
+	for _, boneDefinition in ipairs(skeletonDefinition.bones) do
+		local bone = Bone(
+			bonesByID[boneDefinition.parentID],
+			boneDefinition.id,
+			boneDefinition.name,
+			boneDefinition.index,
+			boneDefinition.inverseBindPoseTransform,
+			{
+				transform = boneDefinition.transform,
+				translation = Vector3(unpack(boneDefinition.translation)),
+				rotation = Quaternion(unpack(boneDefinition.rotation)),
+				scale = Vector3(unpack(boneDefinition.scale)),
+			}
+		)
+
+		bonesByID[bone:getID()] = bone
+		table.insert(bones, bone)
+	end
+
+	return Skeleton(bones)
 end
 
 return Skeleton
