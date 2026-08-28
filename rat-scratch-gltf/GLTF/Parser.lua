@@ -527,6 +527,10 @@ function GLTFParser:getSceneCount()
 	return self.root.scenes and #self.root.scenes or 0
 end
 
+function GLTFParser:getDefaultScene()
+	return self.root.scene or 0
+end
+
 function GLTFParser:getTexture(index)
 	local texture = self.root.textures and self.root.textures[index + 1]
 	assert(texture, "no texture at index %d", index)

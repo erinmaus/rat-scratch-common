@@ -180,6 +180,19 @@ function Table.clone(t, o)
 	return result
 end
 
+--- @param t any[]
+--- @param o? any[]
+function Table.cloneHash(t, o)
+	local result = o or {}
+	Table.clear(result)
+
+	for k, v in pairs(t) do
+		result[k] = v
+	end
+
+	return result
+end
+
 --- @param value any
 --- @param e any
 --- @return any
