@@ -14,9 +14,11 @@ void ratApplyFragmentMaterial(in RatScratchPipelineFragmentInput fragmentInput,
 
 	vec3 normalTextureSample =
 		ratSampleNormalTexture(materialProperties.normalTexture, fragmentInput.textureCoordinate);
+	normalTextureSample =
+		normalize(normalTextureSample * vec3(materialProperties.normalScale, materialProperties.normalScale, 1.0));
 
-	vec3 t = vec3(normalTextureSample.x * materialProperties.normalScale) * fragmentInput.tangent;
-	vec3 b = vec3(normalTextureSample.y * materialProperties.normalScale) * fragmentInput.bitangent;
+	vec3 t = vec3(normalTextureSample.x) * fragmentInput.tangent;
+	vec3 b = vec3(normalTextureSample.y) * fragmentInput.bitangent;
 	vec3 n = vec3(normalTextureSample.z) * fragmentInput.normal;
 	fragmentOutput.normal = normalize(t + b + n);
 
