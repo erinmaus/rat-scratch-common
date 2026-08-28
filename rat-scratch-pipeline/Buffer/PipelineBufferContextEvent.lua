@@ -1,6 +1,6 @@
 local Object = require("rat-scratch-common").Object
 local Event = require("rat-scratch-common").Event
-local EventScope = require("rat-scratch-common.EventScope")
+local EventScope = require("rat-scratch-common").EventScope
 
 --- @class RatScratch.Pipeline.Buffer.PipelineBufferContextEvent : RatScratch.Common.Event
 --- @overload fun(scope: RatScratch.Common.EventScope): RatScratch.Pipeline.Buffer.PipelineBufferContextEvent
@@ -59,8 +59,10 @@ function PipelineBufferContextEvent.fromCompact(
 	oldIndex,
 	count
 )
-	local event =
-		Event.get(PipelineBufferContextEvent, PipelineBufferContextEvent.RESIZE)
+	local event = Event.get(
+		PipelineBufferContextEvent,
+		PipelineBufferContextEvent.COMPACT
+	)
 
 	event.instance = instance
 	event.newIndex = newIndex
