@@ -602,6 +602,12 @@ function GLTFParser:loadMesh(mesh, options)
 	return model and model.meshes
 end
 
+--- @param index integer
+--- @return RatScratch.Graphics.Graphics3D.MaterialDefinition
+function GLTFParser:loadMaterial(index)
+	return self:_loadMaterial(index)
+end
+
 --- @param node integer
 --- @param options? RatScratch.GLTF.SceneLoadOptions
 function GLTFParser:loadModel(node, options)
@@ -616,6 +622,24 @@ function GLTFParser:loadModel(node, options)
 	)
 
 	return result[1]
+end
+
+--- @param skin integer
+--- @return RatScratch.Graphics.Graphics3D.SkeletonDefinition
+function GLTFParser:loadSkin(skin)
+	local skin = self:getSkin(skin)
+	return self:_loadSkin(skin)
+end
+
+--- @param skin integer | RatScratch.Graphics.Graphics3D.SkeletonDefinition
+--- @return RatScratch.Graphics.Graphics3D.AnimationDefinition[]?
+function GLTFParser:loadAnimations(skin)
+	if type(skin) == "number" then
+		skin = self:loadSkin(skin)
+	end
+
+	--- @cast skin RatScratch.Graphics.Graphics3D.SkeletonDefinition
+	return self:_loadAnimations(skin)
 end
 
 --- @private
@@ -688,14 +712,15 @@ function GLTFParser:_tryLoadNode(
 				options
 			)
 
-		local skeleton = node.skin
-			and (skeletonDefinitions[node.skin] or self:_loadSkin(skinData))
+		local skeleton = node.skin and skeletonDefinitions[node.skin]
+			or (skinData and self:_loadSkin(skinData))
 		model.skeleton = model.skeleton or skeleton
 
-		local animations = node.skin
-			and (
-				animationDefinitions[node.skin]
-				or self:_loadAnimations(
+		local animations = node.skin and animationDefinitions[node.skin]
+			or (
+				skeleton
+				and skinData
+				and self:_loadAnimations(
 					skeleton,
 					skinData.skeleton
 						or self:getNodeParent(skeleton.bones[1].id)
@@ -1271,40 +1296,21 @@ function GLTFParser:_makeDefaultImageData()
 end
 
 --- @private
---- @param index integer
---- @return RatScratch.Graphics.Graphics3D.MaterialDefinition?
-function GLTFParser:_loadMaterial(index)
-	local material = self:getMaterial(index)
-
-	local color = material.pbrMetallicRoughness
-		and material.pbrMetallicRoughness.baseColorFactor
-	color = color and { unpack(color) }
-
-	local colorTextureInfo = material.pbrMetallicRoughness
-		and material.pbrMetallicRoughness.baseColorTexture
-	if not colorTextureInfo then
-		if color then
-			return { color = color }
-		end
-
+--- @generic T : RatScratch.Graphics.Graphics3D.MaterialDefinitionTexture
+--- @param index? integer
+--- @return T?
+function GLTFParser:_loadTexture(index)
+	if not index then
 		return nil
 	end
 
-	local normalTextureInfo = material.normalTexture
-
-	local texture = self:getTexture(colorTextureInfo.index)
+	local texture = self:getTexture(index)
 	texture = texture
 			and (texture.extensions and texture.extensions.EXT_texture_webp)
 		or texture
-	local normalTexture = normalTextureInfo
-		and self:getTexture(normalTextureInfo.index)
-	normalTexture = normalTexture
-			and (normalTexture.extensions and normalTexture.extensions.EXT_texture_webp)
-		or normalTexture
+
 	local sampler = texture.sampler and self:getSampler(texture.sampler)
 	local image = texture and self:getImageData(texture.source)
-	local normalImage = normalTexture
-		and self:getImageData(normalTexture.source)
 
 	local horizontalWrapMode =
 		GLTF_WRAP_MODE_TO_RAT_SCRATCH[sampler and sampler.wrapS or GLTF.SamplerWrap.REPEAT]
@@ -1315,19 +1321,128 @@ function GLTFParser:_loadMaterial(index)
 	local minFilter, mipmapMinFilter = unpack(
 		GLTF_MIN_FILTER_TO_RAT_SCRATCH[sampler and sampler.minFilter or GLTF.SamplerMinFilter.LINEAR]
 	)
-	--- @cast minFilter string
 
+	--- @cast minFilter string
 	return {
 		texture = image,
-		normalTexture = normalImage,
 		minFilter = minFilter or "linear",
 		magFilter = magFilter,
 		mipmapFilter = mipmapMinFilter or nil,
 		mipmaps = not not mipmapMinFilter,
 		horizontalWrapMode = horizontalWrapMode,
 		verticalWrapMode = verticalWrapMode,
-		color = color or { 1, 1, 1, 1 },
 	}
+end
+
+--- @private
+--- @param index integer
+--- @return RatScratch.Graphics.Graphics3D.MaterialDefinition
+function GLTFParser:_loadMaterial(index)
+	local material = self:getMaterial(index)
+
+	--- @type RatScratch.Graphics.Graphics3D.MaterialDefinition
+	local materialDefinition = {}
+
+	--- @type RatScratch.Graphics.Graphics3D.MaterialDefinitionAlbedoTexture?
+	local texture = self:_loadTexture(
+		material.pbrMetallicRoughness
+			and material.pbrMetallicRoughness.baseColorTexture
+			and material.pbrMetallicRoughness.baseColorTexture.index
+	)
+	if
+		texture
+		and material.pbrMetallicRoughness
+		and material.pbrMetallicRoughness.baseColorFactor
+	then
+		texture.albedoFactor =
+			{ unpack(material.pbrMetallicRoughness.baseColorFactor) }
+	end
+	materialDefinition.texture = texture
+
+	--- @type RatScratch.Graphics.Graphics3D.MaterialDefinitionNormalTexture?
+	local normalTexture = self:_loadTexture(
+		material.normalTexture and material.normalTexture.index
+	)
+	if
+		normalTexture
+		and material.normalTexture
+		and material.normalTexture.scale
+	then
+		normalTexture.normalScale = material.normalTexture.scale
+	end
+	materialDefinition.normalTexture = normalTexture
+
+	--- @type RatScratch.Graphics.Graphics3D.MaterialDefinitionOcclusionTexture?
+	local occlusionTexture = self:_loadTexture(
+		material.occlusionTexture and material.occlusionTexture.index
+	)
+	if
+		occlusionTexture
+		and material.occlusionTexture
+		and material.occlusionTexture.strength
+	then
+		occlusionTexture.occlusionStrength = material.occlusionTexture.strength
+	end
+	materialDefinition.occlusionTexture = occlusionTexture
+
+	--- @type RatScratch.Graphics.Graphics3D.MaterialDefinitionMetalRoughnessTexture?
+	local metalRoughnessTexture = self:_loadTexture(
+		material.pbrMetallicRoughness
+			and material.pbrMetallicRoughness.metallicRoughnessTexture
+			and material.pbrMetallicRoughness.metallicRoughnessTexture.index
+	)
+	if
+		metalRoughnessTexture
+		and material.pbrMetallicRoughness
+		and material.pbrMetallicRoughness.metallicFactor
+	then
+		metalRoughnessTexture.metalFactor =
+			material.pbrMetallicRoughness.metallicFactor
+	end
+	if
+		metalRoughnessTexture
+		and material.pbrMetallicRoughness
+		and material.pbrMetallicRoughness.roughnessFactor
+	then
+		metalRoughnessTexture.metalFactor =
+			material.pbrMetallicRoughness.roughnessFactor
+	end
+	materialDefinition.metalRoughnessTexture = metalRoughnessTexture
+
+	--- @type RatScratch.Graphics.Graphics3D.MaterialDefinitionAlbedoTexture?
+	local texture = self:_loadTexture(
+		material.pbrMetallicRoughness
+			and material.pbrMetallicRoughness.baseColorTexture
+			and material.pbrMetallicRoughness.baseColorTexture.index
+	)
+	if
+		texture
+		and material.pbrMetallicRoughness
+		and material.pbrMetallicRoughness.baseColorFactor
+	then
+		texture.albedoFactor =
+			{ unpack(material.pbrMetallicRoughness.baseColorFactor) }
+	end
+	materialDefinition.texture = texture
+
+	--- @type RatScratch.Graphics.Graphics3D.MaterialDefinitionEmissiveTexture?
+	local emissiveTexture = self:_loadTexture(
+		material.pbrMetallicRoughness
+			and material.emissiveTexture
+			and material.emissiveTexture.index
+	)
+	if
+		emissiveTexture
+		and material.emissiveFactor
+		and material.emissiveTexture.emissiveFactor
+	then
+		emissiveTexture.emissiveFactor =
+			{ unpack(material.emissiveTexture.emissiveFactor) }
+	end
+	materialDefinition.emissiveTexture = emissiveTexture
+
+	materialDefinition.alphaCutoff = material.alphaCutoff
+	return materialDefinition
 end
 
 return GLTFParser

@@ -64,14 +64,42 @@ local KeyFramesDefinition = {}
 --- @field public outTangent number[]
 local KeyFrameDefinition = {}
 
---- @class RatScratch.Graphics.Graphics3D.MaterialDefinition : RatScratch.Graphics.Graphics3D.Definition
+--- @class RatScratch.Graphics.Graphics3D.MaterialDefinitionTexture
 --- @field public texture? love.ImageData | love.Texture
---- @field public normalTexture? love.ImageData | love.Texture
 --- @field public minFilter? "linear" | "nearest"
 --- @field public magFilter? "linear" | "nearest"
 --- @field public mipmaps? boolean
 --- @field public mipmapFilter? "linear" | "nearest"
 --- @field public verticalWrapMode? "clamp" | "repeat" | "mirroredrepeat" | "clampzero" | "clampone"
 --- @field public horizontalWrapMode? "clamp" | "repeat" | "mirroredrepeat" | "clampzero" | "clampone"
---- @field public color number[]
+local MaterialDefinitionTexture = {}
+
+--- @class RatScratch.Graphics.Graphics3D.MaterialDefinitionAlbedoTexture : RatScratch.Graphics.Graphics3D.MaterialDefinitionTexture
+--- @field public albedoFactor number[]
+local MaterialDefinitionAlbedoTexture = {}
+
+--- @class RatScratch.Graphics.Graphics3D.MaterialDefinitionNormalTexture : RatScratch.Graphics.Graphics3D.MaterialDefinitionTexture
+--- @field public normalScale? number
+local MaterialDefinitionNormalTexture = {}
+
+--- @class RatScratch.Graphics.Graphics3D.MaterialDefinitionMetalRoughnessTexture : RatScratch.Graphics.Graphics3D.MaterialDefinitionTexture
+--- @field public metalFactor? number
+--- @field public roughnessFactor? number
+local MaterialDefinitionMetalRoughnessTexture = {}
+
+--- @class RatScratch.Graphics.Graphics3D.MaterialDefinitionOcclusionTexture : RatScratch.Graphics.Graphics3D.MaterialDefinitionTexture
+--- @field public occlusionStrength? number
+local MaterialDefinitionEmissiveTexture = {}
+
+--- @class RatScratch.Graphics.Graphics3D.MaterialDefinitionEmissiveTexture : RatScratch.Graphics.Graphics3D.MaterialDefinitionTexture
+--- @field public emissiveFactor? number[]
+local MaterialDefinitionEmissiveTexture = {}
+
+--- @class RatScratch.Graphics.Graphics3D.MaterialDefinition : RatScratch.Graphics.Graphics3D.Definition
+--- @field public texture? RatScratch.Graphics.Graphics3D.MaterialDefinitionAlbedoTexture
+--- @field public normalTexture? RatScratch.Graphics.Graphics3D.MaterialDefinitionNormalTexture
+--- @field public occlusionTexture? RatScratch.Graphics.Graphics3D.MaterialDefinitionOcclusionTexture
+--- @field public metalRoughnessTexture? RatScratch.Graphics.Graphics3D.MaterialDefinitionMetalRoughnessTexture
+--- @field public emissiveTexture? RatScratch.Graphics.Graphics3D.MaterialDefinitionEmissiveTexture
+--- @field public alphaCutoff? number
 local MaterialDefinition = {}

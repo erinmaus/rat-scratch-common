@@ -1,5 +1,6 @@
 local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
+local Table = require("rat-scratch-common").Table
 local Animation = require("rat-scratch-graphics.Graphics3D.Animation")
 local AnimationChannel =
 	require("rat-scratch-graphics.Graphics3D.AnimationChannel")
@@ -54,6 +55,48 @@ local function _maybeYield(flag, ...)
 	end
 end
 
+--- @param textureDefinition RatScratch.Graphics.Graphics3D.MaterialDefinitionTexture
+--- @param linear? boolean
+--- @return love.Texture?
+local function _materialToTexture(textureDefinition, linear)
+	if not textureDefinition then
+		return
+	end
+
+	local textureOrImageData = textureDefinition.texture
+	if not textureOrImageData then
+		return nil
+	end
+
+	--- @type love.Texture
+	local texture
+	if textureOrImageData:typeOf("ImageData") then
+		texture = love.graphics.newTexture(textureOrImageData, {
+			linear = linear,
+			mipmaps = textureDefinition.mipmaps and "auto" or false,
+		})
+	else
+		--- @cast textureOrImageData love.Texture
+		texture = textureOrImageData
+	end
+
+	if textureDefinition.mipmapFilter then
+		texture:setMipmapFilter(textureDefinition.mipmapFilter)
+	end
+
+	texture:setWrap(
+		textureDefinition.horizontalWrapMode or "repeat",
+		textureDefinition.verticalWrapMode or "repeat"
+	)
+
+	texture:setFilter(
+		textureDefinition.minFilter or "linear",
+		textureDefinition.magFilter or "linear"
+	)
+
+	return texture
+end
+
 --- @param sceneDefinition RatScratch.Graphics.Graphics3D.SceneDefinition
 --- @param yield? boolean
 --- @return RatScratch.Graphics.Graphics3D.Scene
@@ -83,67 +126,121 @@ function Scene.fromDefinition(sceneDefinition, yield)
 			if meshDefinition.material then
 				_maybeYield(yield, "begin", Material, meshDefinition.material)
 
-				local texture = meshDefinition.material.texture
-				local normalTexture = meshDefinition.material.normalTexture
+				local materialDefinition = meshDefinition.material
+				--- @cast materialDefinition RatScratch.Graphics.Graphics3D.MaterialDefinition
 
-				if texture and texture:typeOf("ImageData") then
-					--- @cast texture love.ImageData
-					texture = love.graphics.newTexture(
-						texture,
-						{ mipmaps = meshDefinition.material.mipmaps }
-					)
+				local albedoTexture =
+					_materialToTexture(materialDefinition.texture)
+				_maybeYield(
+					yield and albedoTexture,
+					"step",
+					Material,
+					meshDefinition.material
+				)
+				local normalTexture =
+					_materialToTexture(materialDefinition.normalTexture)
+				_maybeYield(
+					yield and normalTexture,
+					"step",
+					Material,
+					meshDefinition.material
+				)
+				local occlusionTexture =
+					_materialToTexture(materialDefinition.occlusionTexture)
+				_maybeYield(
+					yield and occlusionTexture,
+					"step",
+					Material,
+					meshDefinition.material
+				)
+				local metalRoughnessTexture =
+					_materialToTexture(materialDefinition.metalRoughnessTexture)
+				_maybeYield(
+					yield and metalRoughnessTexture,
+					"step",
+					Material,
+					meshDefinition.material
+				)
+				local emissiveTexture =
+					_materialToTexture(materialDefinition.emissiveTexture)
+				_maybeYield(
+					yield and emissiveTexture,
+					"step",
+					Material,
+					meshDefinition.material
+				)
 
-					normalTexture = normalTexture
-						and love.graphics.newTexture(normalTexture, {
-							mipmaps = meshDefinition.material.mipmaps,
-						})
-
-					--- @cast texture love.Texture
-					--- @cast normalTexture love.Texture
-
-					if meshDefinition.material.mipmapFilter then
-						texture:setMipmapFilter(
-							meshDefinition.material.mipmapFilter
+				material = Material()
+				if
+					materialDefinition.texture
+					and materialDefinition.texture.albedoFactor
+				then
+					material:setColor(
+						Table.unpack(
+							materialDefinition.texture.albedoFactor,
+							1,
+							4
 						)
-
-						if normalTexture then
-							normalTexture:setMipmapFilter(
-								meshDefinition.material.mipmapFilter
-							)
-						end
-					end
-
-					texture:setWrap(
-						meshDefinition.material.horizontalWrapMode or "repeat",
-						meshDefinition.material.verticalWrapMode or "repeat"
 					)
-
-					if normalTexture then
-						normalTexture:setWrap(
-							meshDefinition.material.horizontalWrapMode
-								or "repeat",
-							meshDefinition.material.verticalWrapMode or "repeat"
-						)
-					end
-
-					texture:setFilter(
-						meshDefinition.material.minFilter or "linear",
-						meshDefinition.material.magFilter or "linear"
-					)
-
-					if normalTexture then
-						normalTexture:setFilter(
-							meshDefinition.material.minFilter or "linear",
-							meshDefinition.material.magFilter or "linear"
-						)
-					end
 				end
 
-				material = Material(
-					texture,
-					meshDefinition.material.color,
-					normalTexture
-				)
+				if
+					materialDefinition.normalTexture
+					and materialDefinition.normalTexture.normalScale
+				then
+					material:setNormalScale(
+						materialDefinition.normalTexture.normalScale
+					)
+				end
+
+				if
+					materialDefinition.occlusionTexture
+					and materialDefinition.occlusionTexture.occlusionStrength
+				then
+					material:setOcclusion(
+						materialDefinition.occlusionTexture.occlusionStrength
+					)
+				end
+
+				if
+					materialDefinition.metalRoughnessTexture
+					and materialDefinition.metalRoughnessTexture.metalFactor
+				then
+					material:setMetal(
+						materialDefinition.metalRoughnessTexture.metalFactor
+					)
+				end
+
+				if
+					materialDefinition.metalRoughnessTexture
+					and materialDefinition.metalRoughnessTexture.roughnessFactor
+				then
+					material:setRoughness(
+						materialDefinition.metalRoughnessTexture.roughnessFactor
+					)
+				end
+				if
+					materialDefinition.emissiveTexture
+					and materialDefinition.emissiveTexture.emissiveFactor
+				then
+					material:setColor(
+						Table.unpack(
+							materialDefinition.emissiveTexture.emissiveFactor,
+							1,
+							3
+						)
+					)
+				end
+
+				if materialDefinition.alphaCutoff then
+					material:setAlphaCutoff(materialDefinition.alphaCutoff)
+				end
+
+				material:setTexture(albedoTexture)
+				material:setNormalTexture(normalTexture)
+				material:setOcclusionTexture(occlusionTexture)
+				material:setMetalRoughnessTexture(metalRoughnessTexture)
+				material:setEmissiveTexture(emissiveTexture)
 
 				_maybeYield(yield, "load", material)
 			end

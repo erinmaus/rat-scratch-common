@@ -783,9 +783,15 @@ local function _marshalVertexFormat(format)
 end
 
 --- @private
---- @param materialDefinition RatScratch.Graphics.Graphics3D.MaterialDefinition
-function GLTFBuilder:_addMaterialDefinition(materialDefinition)
-	local imageData = self:addData(materialDefinition.texture:encode("png"))
+--- @param materialDefinitionTexture RatScratch.Graphics.Graphics3D.MaterialDefinitionTexture
+--- @return integer?
+function GLTFBuilder:_addMaterialDefinitionTexture(materialDefinitionTexture)
+	if not materialDefinitionTexture then
+		return nil
+	end
+
+	local imageData =
+		self:addData(materialDefinitionTexture.texture:encode("png"))
 
 	local bufferViewIndex = self:addWorkingBufferView({
 		data = imageData,
@@ -802,12 +808,63 @@ function GLTFBuilder:_addMaterialDefinition(materialDefinition)
 		source = imageSource,
 	})
 
+	return textureIndex
+end
+
+--- @private
+--- @param materialDefinition RatScratch.Graphics.Graphics3D.MaterialDefinition
+function GLTFBuilder:_addMaterialDefinition(materialDefinition)
+	local baseColorTextureIndex =
+		self:_addMaterialDefinitionTexture(materialDefinition.texture)
+	local normalTextureIndex =
+		self:_addMaterialDefinitionTexture(materialDefinition.normalTexture)
+	local occlusionTextureIndex =
+		self:_addMaterialDefinitionTexture(materialDefinition.occlusionTexture)
+	local metallicRoughnessTextureIndex = self:_addMaterialDefinitionTexture(
+		materialDefinition.metalRoughnessTexture
+	)
+	local emissiveTextureIndex =
+		self:_addMaterialDefinitionTexture(materialDefinition.emissiveTexture)
+
 	local materialIndex, material = self:addMaterial({
-		pbrMetallicRoughness = {
-			baseColorTexture = {
-				index = textureIndex,
+		pbrMetallicRoughness = (
+			baseColorTextureIndex or metallicRoughnessTextureIndex
+		)
+			and {
+				baseColorTexture = baseColorTextureIndex and {
+					index = baseColorTextureIndex,
+				},
+
+				pbrMetallicRoughness = metallicRoughnessTextureIndex and {
+					index = metallicRoughnessTextureIndex,
+				},
+
+				metallicFactor = materialDefinition.metalRoughnessTexture
+					and materialDefinition.metalRoughnessTexture.metalFactor,
+				roughnessFactor = materialDefinition.metalRoughnessTexture
+					and materialDefinition.metalRoughnessTexture.roughnessFactor,
+				baseColorFactor = materialDefinition.texture
+					and materialDefinition.texture.albedoFactor
+					and {
+						unpack(materialDefinition.texture.albedoFactor),
+					},
 			},
+		normalTexture = normalTextureIndex and {
+			index = normalTextureIndex,
+			scale = materialDefinition.normalTexture
+				and materialDefinition.normalTexture.normalScale,
 		},
+		occlusionTexture = occlusionTextureIndex and {
+			index = occlusionTextureIndex,
+			scale = materialDefinition.occlusionTexture
+				and materialDefinition.occlusionTexture.occlusionStrength,
+		},
+		emissiveTexture = emissiveTextureIndex and {
+			index = emissiveTextureIndex,
+		},
+		emissiveFactor = materialDefinition.emissiveTexture
+			and materialDefinition.emissiveTexture.emissiveFactor
+			and { unpack(materialDefinition.emissiveTexture.emissiveFactor) },
 	})
 
 	self:_trySerialize(material, materialIndex, materialDefinition)
