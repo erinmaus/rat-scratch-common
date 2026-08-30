@@ -71,34 +71,46 @@ function EventSource:listen(scope, callback, otherSelf)
 	return self.currentID
 end
 
---- @param id integer
-function EventSource:silence(id)
-	local scope = self.idToCallback[id]
-	assert(scope, "no callback found with ID %d", id)
+--- @generic T
+--- @overload fun<T>(self: RatScratch.Common.EventSource<T>, scope: RatScratch.Common.EventScope, callback: RatScratch.Common.EventSourceCallback, otherSelf: table)
+--- @overload fun<T>(self: RatScratch.Common.EventSource<T>, id: integer)
+function EventSource:silence(a, b, c)
+	local callbacks
+	if a and b and c then
+		callbacks = self.listeners[a]
+	else
+		local scope = self.idToCallback[a]
+		assert(scope, "no callback found with ID %d", a)
 
-	local callbacks = self.listeners[scope]
-	assert(callbacks, "no callbacks found with event scope %s", scope:getName())
+		callbacks = self.listeners[scope]
+		assert(
+			callbacks,
+			"no callbacks found with event scope %s",
+			scope:getName()
+		)
+	end
 
 	for i = #callbacks, 1, -1 do
 		local callback = callbacks[i]
-		if callback.id == id then
+		if
+			(a and b and c and b == callback.callback and callback.self == c)
+			or callback.id == a
+		then
+			self.idToCallback[callback.id] = nil
 			table.remove(callbacks, i)
 			break
 		end
-	end
-
-	if #callbacks == 0 then
-		self.listeners[scope] = nil
 	end
 end
 
 --- @param field string
 function EventSource.mixin(field)
 	--- @generic T
+	--- @generic O
 	--- @param self table
 	--- @param event RatScratch.Common.EventScope
 	--- @param callback RatScratch.Common.EventSourceCallback
-	--- @param otherSelf? T
+	--- @param otherSelf? O
 	--- @return integer id
 	local listen = function(self, event, callback, otherSelf)
 		--- @type RatScratch.Common.EventSource
@@ -108,12 +120,13 @@ function EventSource.mixin(field)
 	end
 
 	--- @param self table
-	--- @param id integer
-	local silence = function(self, id)
+	--- @overload fun(self: table, scope: RatScratch.Common.EventScope, callback: RatScratch.Common.EventSourceCallback, otherSelf: table)
+	--- @overload fun(self: table, id: integer)
+	local silence = function(self, a, b, c)
 		--- @type RatScratch.Common.EventSource
 		local listener = self[field]
 
-		listener:silence(id)
+		listener:silence(a, b, c)
 	end
 
 	return listen, silence
