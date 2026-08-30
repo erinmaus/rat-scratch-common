@@ -11,10 +11,10 @@ local PipelineConfig = require("rat-scratch-pipeline.PipelineConfig")
 --- @class RatScratch.Pipeline.GLTF.GLTFPipelineParser : RatScratch.Common.BaseObject
 --- @field private parser RatScratch.GLTF.GLTFParser
 --- @field private pipelineConfig RatScratch.Pipeline.PipelineConfig
---- @overload fun(pipelineConfig: RatScratch.Pipeline.PipelineConfig, parser: RatScratch.GLTF.GLTFParser): RatScratch.Pipeline.GLTF.GLTFPipelineParser
+--- @overload fun(pipelineConfig?: RatScratch.Pipeline.PipelineConfig, parser: RatScratch.GLTF.GLTFParser): RatScratch.Pipeline.GLTF.GLTFPipelineParser
 local PipelineParser = Object()
 
---- @param pipelineConfig RatScratch.Pipeline.PipelineConfig
+--- @param pipelineConfig? RatScratch.Pipeline.PipelineConfig
 --- @param parser RatScratch.GLTF.GLTFParser
 function PipelineParser:new(pipelineConfig, parser)
 	local extras = parser:getJSON().extras
@@ -32,11 +32,11 @@ function PipelineParser:new(pipelineConfig, parser)
 
 	local otherPipelineConfig = PipelineConfig(pipeline.pipeline)
 	assert(
-		pipelineConfig:isMatch(otherPipelineConfig),
+		not pipelineConfig or pipelineConfig:isMatch(otherPipelineConfig),
 		"pipeline config mismatch"
 	)
 
-	self.pipelineConfig = pipelineConfig
+	self.pipelineConfig = pipelineConfig or otherPipelineConfig
 	self.parser = parser
 end
 

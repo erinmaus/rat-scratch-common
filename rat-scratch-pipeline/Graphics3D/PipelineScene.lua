@@ -21,6 +21,36 @@ function PipelineScene:new(models, skeletons, animations)
 	self.animations = Table.cloneHash(animations)
 end
 
+function PipelineScene:getModel(index)
+	return self.models[index]
+end
+
+function PipelineScene:getModelCount()
+	return #self.models
+end
+
+function PipelineScene:getSkeleton(index)
+	return self.skeletons[index]
+end
+
+function PipelineScene:getSkeletonCount()
+	return #self.skeletons
+end
+
+--- @param key RatScratch.Graphics.Graphics3D.Skeleton | integer
+function PipelineScene:getAnimationCount(key)
+	local skeleton = self.skeletons[key] or key
+	local animations = self.animations[skeleton]
+	return animations and #animations or 0
+end
+
+--- @param key RatScratch.Graphics.Graphics3D.Skeleton | integer
+function PipelineScene:getAnimation(key, index)
+	local skeleton = self.skeletons[key] or key
+	local animations = self.animations[skeleton]
+	return animations and animations[index]
+end
+
 --- @param sceneDefinition RatScratch.Pipeline.Graphics3D.PipelineSceneDefinition
 --- @return RatScratch.Pipeline.Graphics3D.PipelineScene
 function PipelineScene.fromDefinition(sceneDefinition)
