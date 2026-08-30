@@ -46,3 +46,9 @@ version = 1.0.0
 source = rat-scratch-pipeline-tools
 url = rat-scratch-pipeline-tools.rsmeta
 root = staging/module/rat%-scratch
+
+[rat-scratch-resource]
+version = 1.0.0
+source = rat-scratch-resource
+url = rat-scratch-resource.rsmeta
+root = staging/module/rat%-scratch

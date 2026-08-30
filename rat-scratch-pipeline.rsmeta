@@ -32,3 +32,9 @@ version = *
 source = rat-scratch-gltf
 url = rat-scratch-gltf.rsmeta
 root = staging/module/rat%-scratch
+
+[rat-scratch-resource]
+version = 1.0.0
+source = rat-scratch-resource
+url = rat-scratch-resource.rsmeta
+root = staging/module/rat%-scratch
