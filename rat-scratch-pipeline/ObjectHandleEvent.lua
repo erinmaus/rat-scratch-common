@@ -2,16 +2,20 @@ local Object = require("rat-scratch-common").Object
 local Event = require("rat-scratch-common").Event
 local EventScope = require("rat-scratch-common").EventScope
 
---- @class RatScratch.Resource.ObjectHandleEvent : RatScratch.Common.Event
+--- @class RatScratch.Pipeline.ObjectHandleEvent : RatScratch.Common.Event
 --- @field private resource RatScratch.Resource.Resource
 --- @field private resourceType RatScratch.Common.BaseObject
 --- @field private animator RatScratch.Graphics.Graphics3D.Animator
---- @overload fun(scope: RatScratch.Common.EventScope): RatScratch.Resource.ObjectHandleEvent
+--- @field private mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>
+--- @field private material RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
+--- @overload fun(scope: RatScratch.Common.EventScope): RatScratch.Pipeline.ObjectHandleEvent
 local ObjectHandleEvent = Object(Event)
 
 ObjectHandleEvent.RESOURCE_ADDED = EventScope.create()
 ObjectHandleEvent.RESOURCE_REMOVED = EventScope.create()
 ObjectHandleEvent.RESOURCE_UPDATED = EventScope.create()
+ObjectHandleEvent.MATERIAL_ADDED = EventScope.create()
+ObjectHandleEvent.MATERIAL_REMOVED = EventScope.create()
 ObjectHandleEvent.ANIMATOR_ADDED = EventScope.create()
 ObjectHandleEvent.ANIMATOR_REMOVED = EventScope.create()
 
@@ -31,9 +35,17 @@ function ObjectHandleEvent:getAnimator()
 	return self.animator
 end
 
+function ObjectHandleEvent:getMesh()
+	return self.mesh
+end
+
+function ObjectHandleEvent:getMaterial()
+	return self.material
+end
+
 --- @param resource RatScratch.Resource.Resource
 --- @param resourceType RatScratch.Common.BaseObject | unknown
---- @return RatScratch.Resource.ObjectHandleEvent
+--- @return RatScratch.Pipeline.ObjectHandleEvent
 function ObjectHandleEvent.fromResourceAdded(resource, resourceType)
 	local event = Event.get(ObjectHandleEvent, ObjectHandleEvent.RESOURCE_ADDED)
 	event.resource = resource
@@ -44,7 +56,7 @@ end
 
 --- @param resource RatScratch.Resource.Resource
 --- @param resourceType RatScratch.Common.BaseObject | unknown
---- @return RatScratch.Resource.ObjectHandleEvent
+--- @return RatScratch.Pipeline.ObjectHandleEvent
 function ObjectHandleEvent.fromResourceRemoved(resource, resourceType)
 	local event =
 		Event.get(ObjectHandleEvent, ObjectHandleEvent.RESOURCE_REMOVED)
@@ -55,7 +67,7 @@ function ObjectHandleEvent.fromResourceRemoved(resource, resourceType)
 end
 
 --- @param resource RatScratch.Resource.Resource
---- @return RatScratch.Resource.ObjectHandleEvent
+--- @return RatScratch.Pipeline.ObjectHandleEvent
 function ObjectHandleEvent.fromResourceUpdated(resource)
 	local event =
 		Event.get(ObjectHandleEvent, ObjectHandleEvent.RESOURCE_UPDATED)
@@ -71,7 +83,7 @@ function ObjectHandleEvent.fromResourceUpdated(resource)
 end
 
 --- @param animator RatScratch.Graphics.Graphics3D.Animator
---- @return RatScratch.Resource.ObjectHandleEvent
+--- @return RatScratch.Pipeline.ObjectHandleEvent
 function ObjectHandleEvent.fromAnimatorAdded(animator)
 	local event = Event.get(ObjectHandleEvent, ObjectHandleEvent.ANIMATOR_ADDED)
 	event.animator = animator
@@ -80,11 +92,34 @@ function ObjectHandleEvent.fromAnimatorAdded(animator)
 end
 
 --- @param animator RatScratch.Graphics.Graphics3D.Animator
---- @return RatScratch.Resource.ObjectHandleEvent
+--- @return RatScratch.Pipeline.ObjectHandleEvent
 function ObjectHandleEvent.fromAnimatorRemoved(animator)
 	local event =
 		Event.get(ObjectHandleEvent, ObjectHandleEvent.ANIMATOR_REMOVED)
 	event.animator = animator
+
+	return event
+end
+
+--- @param mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>
+--- @param material RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
+--- @return RatScratch.Pipeline.ObjectHandleEvent
+function ObjectHandleEvent.fromMaterialAdded(mesh, material)
+	local event = Event.get(ObjectHandleEvent, ObjectHandleEvent.MATERIAL_ADDED)
+	event.mesh = mesh
+	event.material = material
+
+	return event
+end
+
+--- @param mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>
+--- @param material RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
+--- @return RatScratch.Pipeline.ObjectHandleEvent
+function ObjectHandleEvent.fromMaterialRemoved(mesh, material)
+	local event =
+		Event.get(ObjectHandleEvent, ObjectHandleEvent.MATERIAL_REMOVED)
+	event.mesh = mesh
+	event.material = material
 
 	return event
 end

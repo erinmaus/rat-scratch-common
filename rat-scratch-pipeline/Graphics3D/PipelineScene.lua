@@ -8,17 +8,17 @@ local PipelineModel = require("rat-scratch-pipeline.Graphics3D.PipelineModel")
 --- @field private models RatScratch.Pipeline.Graphics3D.PipelineModel[]
 --- @field private skeletons RatScratch.Graphics.Graphics3D.Skeleton[]
 --- @field private animations table<RatScratch.Graphics.Graphics3D.Skeleton, RatScratch.Graphics.Graphics3D.Animation[]>
---- @overload fun(models: RatScratch.Pipeline.Graphics3D.PipelineModel[], skeletons: RatScratch.Graphics.Graphics3D.Skeleton[], animations: table<RatScratch.Graphics.Graphics3D.Skeleton, RatScratch.Graphics.Graphics3D.Animation[]>): RatScratch.Pipeline.Graphics3D.PipelineScene
+--- @overload fun(models: RatScratch.Pipeline.Graphics3D.PipelineModel[], skeletons?: RatScratch.Graphics.Graphics3D.Skeleton[], animations?: table<RatScratch.Graphics.Graphics3D.Skeleton, RatScratch.Graphics.Graphics3D.Animation[]>): RatScratch.Pipeline.Graphics3D.PipelineScene
 local PipelineScene = Object()
 
 --- @param models RatScratch.Pipeline.Graphics3D.PipelineModel[]
---- @param skeletons RatScratch.Graphics.Graphics3D.Skeleton[]
---- @param animations table<RatScratch.Graphics.Graphics3D.Skeleton, RatScratch.Graphics.Graphics3D.Animation[]>
+--- @param skeletons? RatScratch.Graphics.Graphics3D.Skeleton[]
+--- @param animations? table<RatScratch.Graphics.Graphics3D.Skeleton, RatScratch.Graphics.Graphics3D.Animation[]>
 function PipelineScene:new(models, skeletons, animations)
 	self.models = models
 
-	self.skeletons = Table.clone(skeletons)
-	self.animations = Table.cloneHash(animations)
+	self.skeletons = skeletons and Table.clone(skeletons) or {}
+	self.animations = animations and Table.cloneHash(animations) or {}
 end
 
 function PipelineScene:getModel(index)

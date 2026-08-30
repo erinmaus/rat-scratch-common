@@ -235,6 +235,11 @@ function AnimationPipeline:addSkeleton(skeleton)
 	self.isAnimationDataDirty = true
 end
 
+--- @param skeleton RatScratch.Graphics.Graphics3D.Skeleton
+function AnimationPipeline:hasSkeleton(skeleton)
+	return self.skeletons[skeleton] ~= nil
+end
+
 function AnimationPipeline:removeSkeleton(skeleton)
 	assert(
 		self.skeletons[skeleton],
