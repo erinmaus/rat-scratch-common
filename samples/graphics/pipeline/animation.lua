@@ -1,6 +1,8 @@
 local GLTF = require("rat-scratch-gltf")
 local Scene = require("rat-scratch-graphics").Graphics3D.Scene
 local Animator = require("rat-scratch-graphics").Graphics3D.Animator
+local SkinnedModelAnimatorProvider =
+	require("rat-scratch-graphics").Graphics3D.SkinnedModelAnimatorProvider
 local Transform = require("rat-scratch-math").Transform
 local Vector3 = require("rat-scratch-math").Vector3
 local Common = require("rat-scratch-math").Common
@@ -57,7 +59,7 @@ function demo.load()
 	for i = -GRID_SIZE_X, GRID_SIZE_X do
 		for j = -GRID_SIZE_Y, GRID_SIZE_Y do
 			for k = -GRID_SIZE_Z, GRID_SIZE_Z do
-				local animator = Animator(model)
+				local animator = Animator(SkinnedModelAnimatorProvider(model))
 				demo.pipeline:addAnimator(animator)
 
 				animator:play(

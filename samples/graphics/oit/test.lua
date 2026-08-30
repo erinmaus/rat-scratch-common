@@ -2,6 +2,8 @@ local GLTF = require("rat-scratch-gltf")
 local Scene = require("rat-scratch-graphics").Graphics3D.Scene
 local Animator = require("rat-scratch-graphics").Graphics3D.Animator
 local SkinnedModel = require("rat-scratch-graphics").Graphics3D.SkinnedModel
+local SkinnedModelAnimatorProvider =
+	require("rat-scratch-graphics").Graphics3D.SkinnedModelAnimatorProvider
 local ModelProcessor = require("rat-scratch-graphics").Graphics3D.ModelProcessor
 local Transform = require("rat-scratch-math").Transform
 local Vector3 = require("rat-scratch-math").Vector3
@@ -117,7 +119,8 @@ function demo.mousepressed(x, y, button)
 			demo.gltf = { scene = scene, model = model }
 			if Object.isDerived(SkinnedModel, model:getType()) then
 				--- @cast model RatScratch.Graphics.Graphics3D.SkinnedModel
-				demo.gltf.animator = Animator(model)
+				demo.gltf.animator =
+					Animator(SkinnedModelAnimatorProvider(model))
 				demo.gltf.processor = ModelProcessor(model)
 
 				demo.gltf.animations = {}

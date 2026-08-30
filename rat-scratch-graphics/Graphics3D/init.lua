@@ -7,6 +7,9 @@ return {
 		"rat-scratch-graphics.Graphics3D.AnimationInstance"
 	),
 	Animator = require("rat-scratch-graphics.Graphics3D.Animator"),
+	AnimatorProvider = require(
+		"rat-scratch-graphics.Graphics3D.AnimatorProvider"
+	),
 	Bone = require("rat-scratch-graphics.Graphics3D.Bone"),
 	BoneInstance = require("rat-scratch-graphics.Graphics3D.BoneInstance"),
 	BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat"),
@@ -19,4 +22,7 @@ return {
 	Scene = require("rat-scratch-graphics.Graphics3D.Scene"),
 	Skeleton = require("rat-scratch-graphics.Graphics3D.Skeleton"),
 	SkinnedModel = require("rat-scratch-graphics.Graphics3D.SkinnedModel"),
+	SkinnedModelAnimatorProvider = require(
+		"rat-scratch-graphics.Graphics3D.SkinnedModelAnimatorProvider"
+	),
 }
