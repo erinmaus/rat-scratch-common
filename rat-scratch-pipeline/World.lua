@@ -3,6 +3,7 @@ local assert = require("rat-scratch-common").Debug.assert
 local Animation = require("rat-scratch-graphics").Graphics3D.Animation
 local Skeleton = require("rat-scratch-graphics").Graphics3D.Skeleton
 local AnimationPipeline = require("rat-scratch-pipeline.AnimationPipeline")
+local MaterialPipeline = require("rat-scratch-pipeline.MaterialPipeline")
 local ModelPipeline = require("rat-scratch-pipeline.ModelPipeline")
 local ObjectHandle = require("rat-scratch-pipeline.ObjectHandle")
 local ObjectHandleEvent = require("rat-scratch-pipeline.ObjectHandleEvent")
@@ -15,12 +16,13 @@ local ResourceTrackerEvent =
 --- @class RatScratch.Pipeline.World : RatScratch.Common.BaseObject
 --- @field private pipelines RatScratch.Pipeline.Pipelines
 --- @field private objectHandles table<RatScratch.Pipeline.ObjectHandle, true>
+--- @field private objectHandlesToModelInstancesHandle table<RatScratch.Pipeline.ObjectHandle, RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle>
 --- @field private dirtyObjectHandles table<RatScratch.Pipeline.ObjectHandle, true>
 --- @field private nextObjectHandleID integer
 --- @field private modelResources RatScratch.Pipeline.ResourceTracker<RatScratch.Pipeline.Graphics3D.PipelineModel>
 --- @field private skeletonResources RatScratch.Pipeline.ResourceTracker<RatScratch.Graphics.Graphics3D.Skeleton>
 --- @field private animationResources RatScratch.Pipeline.ResourceTracker<RatScratch.Graphics.Graphics3D.Animation>
---- @field private resources table<RatScratch.Common.BaseObject, RatScratch.Pipeline.ResourceTracker>
+--- @field private resources table<RatScratch.Common.BaseObject | string, RatScratch.Pipeline.ResourceTracker>
 --- @overload fun(pipelineConfig: RatScratch.Pipeline.PipelineConfig): RatScratch.Pipeline.World
 local World = Object()
 
@@ -30,6 +32,7 @@ function World:new(pipelineConfig)
 
 	self.objectHandles = {}
 	self.dirtyObjectHandles = {}
+	self.objectHandlesToModelInstancesHandle = {}
 	self.nextObjectHandleID = 1
 
 	self.skeletonResources = ResourceTracker()
@@ -79,10 +82,28 @@ function World:new(pipelineConfig)
 		self
 	)
 
+	self.textureResources = ResourceTracker()
+	self.textureResources:listen(
+		ResourceTrackerEvent.ADD,
+		self._onAddTexture,
+		self
+	)
+	self.textureResources:listen(
+		ResourceTrackerEvent.REMOVE,
+		self._onRemoveTexture,
+		self
+	)
+	self.textureResources:listen(
+		ResourceTrackerEvent.UPDATE,
+		self._onUpdateTexture,
+		self
+	)
+
 	self.resources = {
 		[PipelineModel] = self.modelResources,
 		[Skeleton] = self.skeletonResources,
 		[Animation] = self.animationResources,
+		["love.ImageData"] = self.textureResources,
 	}
 end
 
@@ -173,6 +194,19 @@ end
 --- @private
 --- @param event RatScratch.Pipeline.impl.ResourceTrackerEvent<RatScratch.Pipeline.Graphics3D.PipelineModel>
 function World:_onUpdateModel(event)
+	if event:getResource():getIsReady() then
+		for i = 1, event:getObjectCount() do
+			local object = event:getObject(i)
+			local handle = self.objectHandlesToModelInstancesHandle[object]
+
+			if event:getPreviousValue() then
+				handle:remove(event:getPreviousValue())
+			end
+
+			handle:add(event:getResource():get())
+		end
+	end
+
 	self:_tryRemoveModel(event:getPreviousValue())
 	self:_tryAddModel(event:getResource())
 end
@@ -238,6 +272,48 @@ function World:_onUpdateAnimation(event)
 	self:_tryAddAnimation(event:getResource())
 end
 
+--- @private
+--- @param resource RatScratch.Resource.Resource<love.ImageData>
+function World:_tryAddTexture(resource)
+	if not (resource and resource:getIsReady()) then
+		return
+	end
+
+	local imageData = resource:get()
+	local materialPipeline = self.pipelines:get(MaterialPipeline)
+	materialPipeline:addTexture(imageData)
+end
+
+--- @private
+--- @param imageData? love.ImageData
+function World:_tryRemoveTexture(imageData)
+	if not imageData then
+		return
+	end
+
+	local materialPipeline = self.pipelines:get(MaterialPipeline)
+	materialPipeline:removeTexture(imageData)
+end
+
+--- @private
+--- @param event RatScratch.Pipeline.impl.ResourceTrackerEvent<love.ImageData>
+function World:_onAddTexture(event)
+	self:_tryAddTexture(event:getResource())
+end
+
+--- @private
+--- @param event RatScratch.Pipeline.impl.ResourceTrackerEvent<love.ImageData>
+function World:_onRemoveTexture(event)
+	self:_tryRemoveTexture(event:getPreviousValue())
+end
+
+--- @private
+--- @param event RatScratch.Pipeline.impl.ResourceTrackerEvent<love.ImageData>
+function World:_onUpdateTexture(event)
+	self:_tryRemoveTexture(event:getPreviousValue())
+	self:_tryAddTexture(event:getResource())
+end
+
 function World:newObject()
 	local objectHandle = ObjectHandle(self.nextObjectHandleID, self)
 	self.objectHandles[objectHandle] = true
@@ -253,6 +329,20 @@ function World:newObject()
 		self._onRemoveResource,
 		self
 	)
+	objectHandle:listen(
+		ObjectHandleEvent.ANIMATOR_ADDED,
+		self._onAddAnimator,
+		self
+	)
+	objectHandle:listen(
+		ObjectHandleEvent.ANIMATOR_REMOVED,
+		self._onRemoveAnimator,
+		self
+	)
+
+	local modelPipeline = self.pipelines:get(ModelPipeline)
+	self.objectHandlesToModelInstancesHandle[objectHandle] =
+		modelPipeline:newModelInstances()
 
 	return objectHandle
 end
@@ -262,6 +352,16 @@ function World:freeObject(objectHandle)
 
 	self.objectHandles[objectHandle] = nil
 	self.dirtyObjectHandles[objectHandle] = nil
+
+	local modelPipeline = self.pipelines:get(ModelPipeline)
+	modelPipeline:freeModelInstances(
+		self.objectHandlesToModelInstancesHandle[objectHandle]
+	)
+	self.objectHandlesToModelInstancesHandle[objectHandle] = nil
+end
+
+function World:updateObject(objectHandle)
+	self.dirtyObjectHandles[objectHandle] = true
 end
 
 --- @private
@@ -282,6 +382,22 @@ function World:_onRemoveResource(event, objectHandle)
 	if resourceTracker then
 		resourceTracker:remove(event:getResource(), objectHandle)
 	end
+end
+
+--- @private
+--- @param event RatScratch.Pipeline.ObjectHandleEvent
+--- @param objectHandle RatScratch.Pipeline.ObjectHandle
+function World:_onAddAnimator(event, objectHandle)
+	local animationPipeline = self.pipelines:get(AnimationPipeline)
+	animationPipeline:addAnimator(event:getAnimator())
+end
+
+--- @private
+--- @param event RatScratch.Pipeline.ObjectHandleEvent
+--- @param objectHandle RatScratch.Pipeline.ObjectHandle
+function World:_onRemoveAnimator(event, objectHandle)
+	local animationPipeline = self.pipelines:get(AnimationPipeline)
+	animationPipeline:removeAnimator(event:getAnimator())
 end
 
 return World

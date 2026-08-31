@@ -153,8 +153,13 @@ function ObjectHandle:_updateSkeleton(skeleton)
 		return
 	end
 
-	self.animator = Animator(self.animatorProvider, self.animator)
+	local previousAnimator = self.animator
+	self.animator = Animator(self.animatorProvider)
 	self.eventSource:process(ObjectHandleEvent.fromAnimatorAdded(self.animator))
+
+	if previousAnimator then
+		self.animator:copyFrom(previousAnimator)
+	end
 end
 
 --- @private
@@ -697,6 +702,9 @@ function ObjectHandle:_bindResourceToUniform(mesh, uniform, resource)
 
 		uniforms[uniform] = resource
 	end
+
+	self.uniformsDirty = true
+	self.world:updateObject(self)
 end
 
 --- @param mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>
@@ -775,6 +783,35 @@ function ObjectHandle:detachModel(model)
 	model:silence(ResourceEvent.RELEASE, self._onModelRelease, self)
 
 	Table.remove(self.models, model)
+end
+
+--- @private
+function ObjectHandle:_tryFlushUniforms()
+	if not self.uniformsDirty then
+		return
+	end
+
+	local hasDirtyUniforms = false
+	for mesh, uniforms in pairs(self.meshUniformToResource) do
+		local material = self.overrideMaterials[mesh]
+			or self.defaultMaterials[mesh]
+
+		for uniform, resource in pairs(uniforms) do
+			if resource:getIsReady() then
+				material:setUniformByValue(uniform:getName(), resource:get())
+			else
+				hasDirtyUniforms = true
+			end
+		end
+	end
+
+	if not hasDirtyUniforms then
+		self.uniformsDirty = false
+	end
+end
+
+function ObjectHandle:flush()
+	self:_tryFlushUniforms()
 end
 
 return ObjectHandle
