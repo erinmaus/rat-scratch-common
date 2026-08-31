@@ -3,6 +3,9 @@ local GLTF = require("rat-scratch-gltf.GLTF.GLTF")
 return {
 	loadFromFilesystem = GLTF.loadFromFilesystem,
 	loadFromFile = GLTF.loadFromFile,
+	toGLB = GLTF.toGLB,
+	saveGLB = GLTF.saveGLB,
+	saveGLTF = GLTF.saveGLTF,
 
 	Accessor = require("rat-scratch-gltf.GLTF.Accessor"),
 	Attributes = require("rat-scratch-gltf.GLTF.Attributes"),
