@@ -1317,7 +1317,7 @@ end
 --- @return T?
 function GLTFParser:_loadTexture(index)
 	if not index then
-		return nil
+		return {}
 	end
 
 	local texture = self:getTexture(index)
@@ -1447,13 +1447,8 @@ function GLTFParser:_loadMaterial(index)
 			and material.emissiveTexture
 			and material.emissiveTexture.index
 	)
-	if
-		emissiveTexture
-		and material.emissiveFactor
-		and material.emissiveTexture.emissiveFactor
-	then
-		emissiveTexture.emissiveFactor =
-			{ unpack(material.emissiveTexture.emissiveFactor) }
+	if emissiveTexture and material.emissiveFactor then
+		emissiveTexture.emissiveFactor = { unpack(material.emissiveFactor) }
 	end
 	materialDefinition.emissiveTexture = emissiveTexture
 
