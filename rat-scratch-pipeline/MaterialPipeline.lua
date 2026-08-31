@@ -5,6 +5,7 @@ local Table = require("rat-scratch-common").Table
 local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
 local Atlas = require("rat-scratch-graphics").Atlas.Atlas
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
+local Pipeline = require("rat-scratch-pipeline.impl.Pipeline")
 local PipelineMaterialInstance =
 	require("rat-scratch-pipeline.Graphics3D.PipelineMaterialInstance")
 local PipelineMaterialInstanceEvent =
@@ -27,8 +28,7 @@ local RatScratchModule = require("lib.rat-scratch-module")
 --- | "draw"
 --- | "light"
 
---- @class RatScratch.Pipeline.MaterialPipeline : RatScratch.Common.BaseObject
---- @field private pipelineConfig RatScratch.Pipeline.PipelineConfig
+--- @class RatScratch.Pipeline.MaterialPipeline : RatScratch.Pipeline.impl.Pipeline
 --- @field private shaders table<RatScratch.Pipeline.MaterialPipeline.ShaderPass, table<RatScratch.Pipeline.MaterialPipeline.ShaderType, love.Shader>> table<RatScratch.Pipeline.MaterialPipeline.ShaderPass, table<RatScratch.Pipeline.MaterialPipeline.ShaderType, love.Shader>>
 --- @field private stagingMaterialData love.ByteData
 --- @field private maxMaterialComponents integer
@@ -46,7 +46,7 @@ local RatScratchModule = require("lib.rat-scratch-module")
 --- @field private indexToTexture table<integer, love.ImageData>
 --- @field private dirtyTextures table<love.ImageData, true>
 --- @field private texturesBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<love.ImageData>
---- @overload fun(pipelineConfig: RatScratch.Pipeline.PipelineConfig): RatScratch.Pipeline.MaterialPipeline
+--- @overload fun(pipelineRuntime: RatScratch.Pipeline.PipelineRuntime): RatScratch.Pipeline.MaterialPipeline
 local MaterialPipeline = Object()
 
 MaterialPipeline.TEXTURE_FORMAT = {
@@ -76,9 +76,10 @@ MaterialPipeline.DEFAULT_TEXTURE_LAYERS = 8
 MaterialPipeline.DEFAULT_TEXTURES_COUNT = 128
 MaterialPipeline.DEFAULT_MATERIAL_INSTANCES_COUNT = 1024
 
---- @param pipelineConfig RatScratch.Pipeline.PipelineConfig
-function MaterialPipeline:new(pipelineConfig)
-	self.pipelineConfig = pipelineConfig
+--- @param pipelineRuntime RatScratch.Pipeline.PipelineRuntime
+function MaterialPipeline:new(pipelineRuntime)
+	Pipeline.new(self, pipelineRuntime)
+
 	self.shaders = {}
 
 	self.maxMaterialComponents = 1
@@ -584,7 +585,7 @@ function MaterialPipeline:_rebuildMaterialTemplateShadersPass(
 		),
 	}
 
-	local other = self.pipelineConfig:getVirtualShaders()
+	local other = self:getPipelineConfig():getVirtualShaders()
 	for filename, source in pairs(other) do
 		result[filename] = source
 	end
@@ -877,7 +878,9 @@ function MaterialPipeline:flush()
 		self:_flushMaterials()
 		self.materialsDirty = false
 	end
+end
 
+function MaterialPipeline:update()
 	if next(self.dirtyMaterialInstances) then
 		self:_flushMaterialInstances()
 	end

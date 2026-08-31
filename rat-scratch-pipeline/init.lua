@@ -6,5 +6,6 @@ return {
 	Utility = require("rat-scratch-pipeline.Utility"),
 	MeshletFormat = require("rat-scratch-pipeline.MeshletFormat"),
 	PipelineConfig = require("rat-scratch-pipeline.PipelineConfig"),
+	PipelineRuntime = require("rat-scratch-pipeline.PipelineRuntime"),
 	VertexBufferInfo = require("rat-scratch-pipeline.VertexBufferInfo"),
 }

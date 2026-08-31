@@ -8,6 +8,7 @@ local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
 local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
 local Transform = require("rat-scratch-math").Transform
 local AnimatorEvent = require("rat-scratch-graphics").Graphics3D.AnimatorEvent
+local Pipeline = require("rat-scratch-pipeline.impl.Pipeline")
 
 --- @alias RatScratch.Pipeline.AnimationPipelineShaderRole
 --- | "evaluate"
@@ -16,8 +17,7 @@ local AnimatorEvent = require("rat-scratch-graphics").Graphics3D.AnimatorEvent
 --- | "compose"
 --- | "apply_inverse_bind_pose"
 
---- @class RatScratch.Pipeline.AnimationPipeline : RatScratch.Common.BaseObject
---- @overload fun(): RatScratch.Pipeline.AnimationPipeline
+--- @class RatScratch.Pipeline.AnimationPipeline : RatScratch.Pipeline.impl.Pipeline
 --- @field private skeletons table<RatScratch.Graphics.Graphics3D.Skeleton, { animations: RatScratch.Graphics.Graphics3D.Animation[] }>
 --- @field private skeletonsByIndex RatScratch.Graphics.Graphics3D.Skeleton[]
 --- @field private skeletonsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Graphics.Graphics3D.Skeleton>
@@ -42,7 +42,8 @@ local AnimatorEvent = require("rat-scratch-graphics").Graphics3D.AnimatorEvent
 --- @field private boneMapBuffers RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Graphics.Graphics3D.Animator>[]
 --- @field private boneMapBufferCount integer
 --- @field private shaders table<RatScratch.Pipeline.AnimationPipelineShaderRole, love.Shader>
-local AnimationPipeline = Object()
+--- @overload fun(pipelineRuntime: RatScratch.Pipeline.PipelineRuntime): RatScratch.Pipeline.AnimationPipeline
+local AnimationPipeline = Object(Pipeline)
 
 AnimationPipeline.SKELETON_BONE_FORMAT = {
 	{ location = 0, name = "parentBone", format = "uint32" },
@@ -140,7 +141,10 @@ AnimationPipeline.DEFAULT_MESH_INSTANCE_BONE_TRANSFORMS_COUNT = AnimationPipelin
 AnimationPipeline.DEFAULT_BONE_MAP_TRANSFORMS_COUNT =
 	AnimationPipeline.DEFAULT_MESH_INSTANCE_BONE_TRANSFORMS_COUNT
 
-function AnimationPipeline:new()
+--- @param pipelineRuntime RatScratch.Pipeline.PipelineRuntime
+function AnimationPipeline:new(pipelineRuntime)
+	Pipeline.new(self, pipelineRuntime)
+
 	self.skeletons = {}
 	self.skeletonsByIndex = {}
 	self.skeletonsBuffer = PipelineBuffer(
@@ -1038,8 +1042,6 @@ function AnimationPipeline:_finalizeAnimations()
 end
 
 function AnimationPipeline:update()
-	self:flush()
-
 	self:_evaluateAnimations()
 	self:_copyAnimations()
 	self:_blendAnimations()

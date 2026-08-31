@@ -1,28 +1,40 @@
 local Object = require("rat-scratch-common").Object
+local assert = require("rat-scratch-common").Debug.assert
+local Pipeline = require("rat-scratch-pipeline.impl.Pipeline")
 
 --- @class RatScratch.Pipeline.Pipelines : RatScratch.Common.BaseObject
---- @field private pipelineConfig RatScratch.Pipeline.PipelineConfig
---- @field private pipelines table<RatScratch.Common.BaseObject, true>
---- @overload fun(pipelineConfig: RatScratch.Pipeline.PipelineConfig): RatScratch.Pipeline.Pipelines
+--- @field private pipelineRuntime RatScratch.Pipeline.PipelineRuntime
+--- @field private pipelines table<RatScratch.Pipeline.impl.Pipeline, RatScratch.Pipeline.impl.Pipeline>
+--- @overload fun(pipelineRuntime: RatScratch.Pipeline.PipelineRuntime): RatScratch.Pipeline.Pipelines
 local Pipelines = Object()
 
---- @param pipelineConfig RatScratch.Pipeline.PipelineConfig
-function Pipelines:new(pipelineConfig)
-	self.pipelineConfig = pipelineConfig
+--- @param pipelineRuntime RatScratch.Pipeline.PipelineRuntime
+function Pipelines:new(pipelineRuntime)
+	self.pipelineRuntime = pipelineRuntime
 	self.pipelines = {}
 end
 
-function Pipelines:getPipelineConfig()
-	return self.pipelineConfig
+function Pipelines:getPipelineRuntime()
+	return self.pipelineRuntime
 end
 
---- @generic T : RatScratch.Common.BaseObject
---- @param pipelineType T | unknown
+function Pipelines:getPipelineConfig()
+	return self.pipelineRuntime:getConfig()
+end
+
+--- @generic T : RatScratch.Pipeline.impl.Pipeline
+--- @param pipelineType T | RatScratch.Pipeline.impl.Pipeline | unknown
 --- @return T
 function Pipelines:get(pipelineType)
+	assert(
+		Object.isType(pipelineType) and Object.isDerived(pipelineType, Pipeline),
+		"pipeline type argument '%s' is not derived from RatScratch.Pipeline.impl.Pipeline or is not RatScratch.Common.BaseObject-type",
+		Object.isType(pipelineType) and pipelineType._DEBUG.shortName or "???"
+	)
+
 	local pipeline = self.pipelines[pipelineType]
 	if not pipeline then
-		pipeline = pipelineType(self.pipelineConfig)
+		pipeline = pipelineType(self.pipelineRuntime)
 
 		self.pipelines[pipelineType] = pipeline
 	end
@@ -30,7 +42,7 @@ function Pipelines:get(pipelineType)
 	return pipeline
 end
 
---- @generic T : RatScratch.Common.BaseObject
+--- @generic T : RatScratch.Pipeline.impl.Pipeline
 --- @param pipelineType T | unknown
 --- @return boolean
 function Pipelines:has(pipelineType)

@@ -9,6 +9,8 @@ local Common = require("rat-scratch-math").Common
 local Quaternion = require("rat-scratch-math").Quaternion
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
+local PipelineConfig = require("rat-scratch-pipeline").PipelineConfig
+local PipelineRuntime = require("rat-scratch-pipeline").PipelineRuntime
 local AnimationPipeline = require("rat-scratch-pipeline").AnimationPipeline
 local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
 
@@ -39,7 +41,8 @@ function demo.load()
 
 	demo.gltf = { scene = scene, model = model }
 
-	demo.pipeline = AnimationPipeline()
+	demo.pipeline =
+		AnimationPipeline(PipelineRuntime(PipelineConfig.loadDefault()))
 	demo.pipeline:loadDefaultShaders()
 
 	demo.pipeline:addSkeleton(model:getSkeleton())
@@ -130,6 +133,7 @@ function demo.update(deltaTime)
 
 	do
 		local before = love.timer.getTime()
+		demo.pipeline:flush()
 		demo.pipeline:update()
 		local after = love.timer.getTime()
 		demo.pipelineUpdateDelta = (after - before) * 1000

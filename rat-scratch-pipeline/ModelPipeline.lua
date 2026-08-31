@@ -5,11 +5,12 @@ local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local ModelInstancesHandle =
 	require("rat-scratch-pipeline.ModelInstancesHandle")
+local Pipeline = require("rat-scratch-pipeline.impl.Pipeline")
 local PipelineMultiBuffer =
 	require("rat-scratch-pipeline.Buffer.PipelineMultiBuffer")
 local Transform = require("rat-scratch-math").Transform
 
---- @class RatScratch.Pipeline.ModelPipeline : RatScratch.Common.BaseObject
+--- @class RatScratch.Pipeline.ModelPipeline : RatScratch.Pipeline.impl.Pipeline
 --- @field private staticVertexBuffer RatScratch.Pipeline.Buffer.PipelineMultiBuffer<RatScratch.Pipeline.Graphics3D.PipelineMesh>
 --- @field private skinnedVertexBuffer RatScratch.Pipeline.Buffer.PipelineMultiBuffer<RatScratch.Pipeline.Graphics3D.PipelineMesh>
 --- @field private indexBuffer RatScratch.Pipeline.Buffer.PipelineMultiBuffer<RatScratch.Pipeline.Graphics3D.PipelineMesh>
@@ -17,7 +18,6 @@ local Transform = require("rat-scratch-math").Transform
 --- @field private meshesBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Graphics3D.PipelineModel>
 --- @field private meshletsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Graphics3D.PipelineMesh>
 --- @field private meshletsSkinnedBoundsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Graphics3D.PipelineMeshlet>
---- @field private pipelineConfig RatScratch.Pipeline.PipelineConfig
 --- @field private models table<RatScratch.Pipeline.Graphics3D.PipelineModel, true>
 --- @field private modelsByIndex RatScratch.Pipeline.Graphics3D.PipelineModel[]
 --- @field private dirtyModels table<RatScratch.Pipeline.Graphics3D.PipelineModel, true>
@@ -25,7 +25,7 @@ local Transform = require("rat-scratch-math").Transform
 --- @field private modelInstances table<RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle, true>
 --- @field private dirtyModelInstances table<RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle, true>
 --- @overload fun(): RatScratch.Pipeline.ModelPipeline
-local ModelPipeline = Object()
+local ModelPipeline = Object(Pipeline)
 
 ModelPipeline.MODEL_INSTANCE_FORMAT = {
 	{ location = 0, name = "objectInstanceIndex", format = "uint32" },
@@ -80,15 +80,15 @@ ModelPipeline.DEFAULT_MODEL_INSTANCE_COUNT = ModelPipeline.DEFAULT_MESHLET_COUNT
 ModelPipeline.DEFAULT_MESH_INSTANCE_COUNT = ModelPipeline.DEFAULT_MODEL_INSTANCE_COUNT
 	* 16
 
---- @param pipelineConfig RatScratch.Pipeline.PipelineConfig
-function ModelPipeline:new(pipelineConfig)
-	self.pipelineConfig = pipelineConfig
+--- @param pipelineRuntime RatScratch.Pipeline.PipelineRuntime
+function ModelPipeline:new(pipelineRuntime)
+	Pipeline.new(self, pipelineRuntime)
 
 	local staticFormats = {}
-	for i = 1, pipelineConfig:getVertexFormatCountByRole("static") do
+	for i = 1, self:getPipelineConfig():getVertexFormatCountByRole("static") do
 		table.insert(
 			staticFormats,
-			pipelineConfig:getVertexFormatByRole("static", i)
+			self:getPipelineConfig():getVertexFormatByRole("static", i)
 		)
 	end
 
@@ -105,10 +105,10 @@ function ModelPipeline:new(pipelineConfig)
 	)
 
 	local skinnedFormats = {}
-	for i = 1, pipelineConfig:getVertexFormatCountByRole("skinned") do
+	for i = 1, self:getPipelineConfig():getVertexFormatCountByRole("skinned") do
 		table.insert(
 			skinnedFormats,
-			pipelineConfig:getVertexFormatByRole("skinned", i)
+			self:getPipelineConfig():getVertexFormatByRole("skinned", i)
 		)
 	end
 
@@ -188,9 +188,9 @@ function ModelPipeline:addModel(model)
 
 		self.staticVertexBuffer:register(mesh, mesh:getVertexCount())
 
-		for j = 1, self.pipelineConfig:getVertexFormatCountByRole("static") do
+		for j = 1, self.self:getPipelineConfig():getVertexFormatCountByRole("static") do
 			local vertexBufferInfo =
-				self.pipelineConfig:getVertexFormatByRole("static", j)
+				self.self:getPipelineConfig():getVertexFormatByRole("static", j)
 			if mesh:hasVertexData(vertexBufferInfo:getBufferName()) then
 				self.skinnedVertexBuffer:register(mesh, mesh:getVertexCount())
 				break
@@ -237,9 +237,9 @@ end
 function ModelPipeline:_updateModelBuffer(model)
 	for i = 1, model:getMeshCount() do
 		local mesh = model:getMesh(i)
-		for j = 1, self.pipelineConfig:getVertexFormatCountByRole("static") do
+		for j = 1, self.self:getPipelineConfig():getVertexFormatCountByRole("static") do
 			local vertexBufferInfo =
-				self.pipelineConfig:getVertexFormatByRole("static", i)
+				self.self:getPipelineConfig():getVertexFormatByRole("static", i)
 			local vertexData =
 				mesh:getVertexData(vertexBufferInfo:getBufferName())
 			if vertexData then
@@ -248,9 +248,10 @@ function ModelPipeline:_updateModelBuffer(model)
 		end
 
 		if self.skinnedVertexBuffer:has(mesh) then
-			for j = 1, self.pipelineConfig:getVertexFormatCountByRole("skinned") do
-				local vertexBufferInfo =
-					self.pipelineConfig:getVertexFormatByRole("skinned", i)
+			for j = 1, self.self:getPipelineConfig():getVertexFormatCountByRole("skinned") do
+				local vertexBufferInfo = self.self
+					:getPipelineConfig()
+					:getVertexFormatByRole("skinned", i)
 				local vertexData =
 					mesh:getVertexData(vertexBufferInfo:getBufferName())
 				if vertexData then
@@ -271,8 +272,10 @@ function ModelPipeline:_updateMeshlet(mesh, meshlet, meshletIndex)
 	local skinnedBoundsIndex, skinnedBoundsCount =
 		self.meshletsSkinnedBoundsBuffer:getIndexCount(meshlet)
 	local staticCenter, staticRadius = meshlet:getStaticBounds()
-	local indexCount = self.pipelineConfig:getMeshletFormat():getTriangleCount()
-		* 3
+	local indexCount = self.self
+		:getPipelineConfig()
+		:getMeshletFormat()
+		:getTriangleCount() * 3
 	local indexOffset = self.indexBuffer:getIndexCount(mesh)
 		+ (meshletIndex - 1) * indexCount
 
@@ -338,7 +341,6 @@ end
 
 do
 	local _modelInfo = {}
-	local _transposedTransform = love.math.newTransform()
 
 	--- @private
 	--- @param model RatScratch.Pipeline.Graphics3D.PipelineModel
@@ -346,9 +348,10 @@ do
 		local modelInfo = _modelInfo
 		Table.clear(modelInfo)
 
-		local transposedTransform = _transposedTransform
-		Transform.transposeTransform(model:getTransform(), transposedTransform)
-		Table.append(modelInfo, transposedTransform:getMatrix())
+		Table.append(
+			modelInfo,
+			Transform.getTransposedMatrix(model:getTransform())
+		)
 
 		local index, count = self.meshesBuffer:getIndexCount(model)
 		Table.append(modelInfo, index - 1, count)
@@ -457,7 +460,9 @@ function ModelPipeline:flush()
 	if next(self.dirtyModelBuffers) then
 		self:_updateModelBuffers()
 	end
+end
 
+function ModelPipeline:update()
 	if next(self.dirtyModelInstances) then
 		self:_updateModelInstancesHandles()
 	end
@@ -499,6 +504,16 @@ function ModelPipeline:updateModelInstances(instances)
 	)
 
 	self.dirtyModelInstances[instances] = true
+end
+
+--- @param instances RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle
+function ModelPipeline:getModelInstancesPointer(instances)
+	assert(
+		self:hasModelInstances(instances),
+		"model instances handle does not belong to pipeline"
+	)
+
+	return self.modelInstancesBuffer:newPointer(instances)
 end
 
 --- @param instance RatScratch.Pipeline.ModelPipeline.ModelInstance
