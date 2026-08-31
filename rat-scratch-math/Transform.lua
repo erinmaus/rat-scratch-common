@@ -360,7 +360,7 @@ function Transform.makePerspectiveTransform(
 	local m31, m32, m33, m34 = 0, 0, 0, 0
 	local m41, m42, m43, m44 = 0, 0, 0, 0
 
-	m11 = -(f / aspectRatio)
+	m11 = (f / aspectRatio)
 	m22 = f
 	m33 = (far + near) / (near - far)
 	m34 = (2 * far * near) / (near - far)
