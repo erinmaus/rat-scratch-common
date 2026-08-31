@@ -7,6 +7,7 @@ return {
 		"rat-scratch-graphics.Graphics3D.AnimationInstance"
 	),
 	Animator = require("rat-scratch-graphics.Graphics3D.Animator"),
+	AnimatorEvent = require("rat-scratch-graphics.Graphics3D.AnimatorEvent"),
 	AnimatorProvider = require(
 		"rat-scratch-graphics.Graphics3D.AnimatorProvider"
 	),

@@ -1,9 +1,9 @@
 local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
-local Table = require("rat-scratch-common").Table
+local EventSource = require("rat-scratch-common").EventSource
 local AnimationInstance =
 	require("rat-scratch-graphics.Graphics3D.AnimationInstance")
-local Quaternion = require("rat-scratch-math").Quaternion
+local AnimatorEvent = require("rat-scratch-graphics.Graphics3D.AnimatorEvent")
 
 --- @class RatScratch.Graphics.Graphics3D.AnimatorPlaybackOptions
 --- @field weight? number
@@ -79,7 +79,7 @@ end
 --- @class RatScratch.Graphics.Graphics3D.AnimatorGroup
 --- @field totalWeight number
 --- @field playbacks RatScratch.Graphics.Graphics3D.AnimatorPlayback[]
---- @field bones table<RatScratch.Graphics.Graphics3D.Bone, boolean>
+--- @field bones table<RatScratch.Graphics.Graphics3D.Bone, integer>
 --- @field boneCount integer
 --- @field animationInstance RatScratch.Graphics.Graphics3D.AnimationInstance
 local AnimatorGroup = {}
@@ -95,14 +95,13 @@ local AnimatorGroup = {}
 --- @field private boneOverrides table<integer, love.Transform>
 --- @field private groupsByKey table<number | string, RatScratch.Graphics.Graphics3D.AnimatorGroup>
 --- @field private groups RatScratch.Graphics.Graphics3D.AnimatorGroup[]
---- @field private pipelines RatScratch.Pipeline.AnimationPipeline[]
+--- @field private eventSource RatScratch.Common.EventSource
 local Animator = Object()
 
 Animator.DEFAULT_GROUP = 1
 
 --- @param animatorProvider RatScratch.Graphics.Graphics3D.AnimatorProvider
---- @param animator? RatScratch.Graphics.Graphics3D.Animator
-function Animator:new(animatorProvider, animator)
+function Animator:new(animatorProvider)
 	local skeleton = animatorProvider:getSkeleton()
 	assert(
 		skeleton,
@@ -125,14 +124,17 @@ function Animator:new(animatorProvider, animator)
 	self.boneOverrides = {}
 	self.groups = {}
 	self.groupsByKey = {}
-	self.pipelines = {}
+	self.eventSource = EventSource(self)
+end
 
-	if animator then
-		for _, playback in ipairs(animator.playbacks) do
-			self:play(playback.animationKey, playback.groupKey, playback)
-		end
+--- @param animator RatScratch.Graphics.Graphics3D.Animator
+function Animator:copyFrom(animator)
+	for _, playback in ipairs(animator.playbacks) do
+		self:play(playback.animationKey, playback.groupKey, playback)
 	end
 end
+
+Animator.listen, Animator.silence = EventSource.mixin("eventSource")
 
 function Animator:getSkeleton()
 	return self.skeleton
@@ -263,10 +265,7 @@ function Animator:play(animationKey, groupKey, options)
 	end
 
 	table.insert(self.groups, group)
-
-	for _, pipeline in ipairs(self.pipelines) do
-		pipeline:updateAnimatorGroup(self, group)
-	end
+	self.eventSource:process(AnimatorEvent.fromAnimatorGroupUpdated(group))
 
 	return playback
 end
@@ -296,9 +295,9 @@ function Animator:stop(playback)
 			end
 		end
 
-		for _, pipeline in ipairs(self.pipelines) do
-			pipeline:clearAnimatorGroupPlayback(self, group, playback)
-		end
+		self.eventSource:process(
+			AnimatorEvent.fromAnimatorGroupPlaybackCleared(group, playback)
+		)
 
 		if #group == 0 then
 			self.groupsByKey[playback.groupKey] = nil
@@ -310,13 +309,13 @@ function Animator:stop(playback)
 				end
 			end
 
-			for _, pipeline in ipairs(self.pipelines) do
-				pipeline:clearAnimatorGroup(self, group)
-			end
+			self.eventSource:process(
+				AnimatorEvent.fromAnimatorGroupCleared(group)
+			)
 		else
-			for _, pipeline in ipairs(self.pipelines) do
-				pipeline:updateAnimatorGroup(self, group)
-			end
+			self.eventSource:process(
+				AnimatorEvent.fromAnimatorGroupUpdated(group)
+			)
 		end
 	end
 end
@@ -332,9 +331,9 @@ function Animator:setWeight(playback, weight)
 	end
 
 	playback.weight = weight
-	for _, pipeline in ipairs(self.pipelines) do
-		pipeline:updateAnimatorGroupPlayback(self, group, playback)
-	end
+	self.eventSource:process(
+		AnimatorEvent.fromAnimatorGroupPlaybackUpdated(group, playback)
+	)
 end
 
 --- @param playback RatScratch.Graphics.Graphics3D.AnimatorPlayback
@@ -344,13 +343,12 @@ function Animator:seek(playback, time)
 		playback.time = time
 		playback.dirty = true
 
-		for _, pipeline in ipairs(self.pipelines) do
-			pipeline:updateAnimatorGroupPlayback(
-				self,
+		self.eventSource:process(
+			AnimatorEvent.fromAnimatorGroupPlaybackUpdated(
 				self.groupsByKey[playback.groupKey],
 				playback
 			)
-		end
+		)
 	end
 end
 
@@ -488,13 +486,12 @@ function Animator:_updateTime(deltaTime)
 				playback.dirty = newTime ~= playback.time
 				playback.time = newTime
 
-				for _, pipeline in ipairs(self.pipelines) do
-					pipeline:updateAnimatorGroupPlayback(
-						self,
+				self.eventSource:process(
+					AnimatorEvent.fromAnimatorGroupPlaybackUpdated(
 						self.groupsByKey[playback.groupKey],
 						playback
 					)
-				end
+				)
 			end
 		end
 	end
@@ -671,17 +668,6 @@ function Animator:getBoneTransform(boneKey, result)
 	result:setMatrix(self.finalTransforms[index]:getMatrix())
 
 	return result
-end
-
---- @param pipeline RatScratch.Pipeline.AnimationPipeline
-function Animator:attachToAnimationPipeline(pipeline)
-	self:detachFromAnimationPipeline(pipeline)
-	table.insert(self.pipelines, pipeline)
-end
-
---- @param pipeline RatScratch.Pipeline.AnimationPipeline
-function Animator:detachFromAnimationPipeline(pipeline)
-	Table.remove(self.pipelines, pipeline)
 end
 
 return Animator

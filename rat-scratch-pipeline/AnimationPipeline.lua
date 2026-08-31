@@ -7,6 +7,7 @@ local Module = require("lib.rat-scratch-module")
 local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
 local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
 local Transform = require("rat-scratch-math").Transform
+local AnimatorEvent = require("rat-scratch-graphics").Graphics3D.AnimatorEvent
 
 --- @alias RatScratch.Pipeline.AnimationPipelineShaderRole
 --- | "evaluate"
@@ -338,7 +339,27 @@ function AnimationPipeline:addAnimator(animator)
 		animator:getSkeleton():getBoneCount()
 	)
 
-	animator:attachToAnimationPipeline(self)
+	animator:listen(
+		AnimatorEvent.GROUP_CLEARED,
+		self._onAnimatorGroupCleared,
+		self
+	)
+	animator:listen(
+		AnimatorEvent.GROUP_UPDATED,
+		self._onAnimatorGroupUpdated,
+		self
+	)
+	animator:listen(
+		AnimatorEvent.GROUP_PLAYBACK_CLEARED,
+		self._onAnimatorGroupPlaybackCleared,
+		self
+	)
+	animator:listen(
+		AnimatorEvent.GROUP_PLAYBACK_UPDATED,
+		self._onAnimatorGroupPlaybackUpdated,
+		self
+	)
+
 	self.isAnimatorDataDirty = true
 end
 
@@ -349,7 +370,26 @@ function AnimationPipeline:removeAnimator(animator)
 		"animator does not exist in animation pipeline"
 	)
 
-	animator:detachFromAnimationPipeline(self)
+	animator:silence(
+		AnimatorEvent.GROUP_CLEARED,
+		self._onAnimatorGroupCleared,
+		self
+	)
+	animator:silence(
+		AnimatorEvent.GROUP_UPDATED,
+		self._onAnimatorGroupUpdated,
+		self
+	)
+	animator:silence(
+		AnimatorEvent.GROUP_PLAYBACK_CLEARED,
+		self._onAnimatorGroupPlaybackCleared,
+		self
+	)
+	animator:silence(
+		AnimatorEvent.GROUP_PLAYBACK_UPDATED,
+		self._onAnimatorGroupPlaybackUpdated,
+		self
+	)
 
 	-- TODO
 end
@@ -643,6 +683,42 @@ end
 --- @return boolean
 local function _lessBone(a, b)
 	return a:getBone():getIndex() < b:getBone():getIndex()
+end
+
+--- @private
+--- @param event RatScratch.Graphics.Graphics3D.AnimatorEvent
+--- @param animator RatScratch.Graphics.Graphics3D.Animator
+function AnimationPipeline:_onAnimatorGroupPlaybackUpdated(event, animator)
+	self:updateAnimatorGroupPlayback(
+		animator,
+		event:getGroup(),
+		event:getPlayback()
+	)
+end
+
+--- @private
+--- @param event RatScratch.Graphics.Graphics3D.AnimatorEvent
+--- @param animator RatScratch.Graphics.Graphics3D.Animator
+function AnimationPipeline:_onAnimatorGroupUpdated(event, animator)
+	self:updateAnimatorGroup(animator, event:getGroup())
+end
+
+--- @private
+--- @param event RatScratch.Graphics.Graphics3D.AnimatorEvent
+--- @param animator RatScratch.Graphics.Graphics3D.Animator
+function AnimationPipeline:_onAnimatorGroupPlaybackCleared(event, animator)
+	self:clearAnimatorGroupPlayback(
+		animator,
+		event:getGroup(),
+		event:getPlayback()
+	)
+end
+
+--- @private
+--- @param event RatScratch.Graphics.Graphics3D.AnimatorEvent
+--- @param animator RatScratch.Graphics.Graphics3D.Animator
+function AnimationPipeline:_onAnimatorGroupCleared(event, animator)
+	self:clearAnimatorGroup(animator, event:getGroup())
 end
 
 --- @param animator RatScratch.Graphics.Graphics3D.Animator
