@@ -13,31 +13,40 @@ local ObjectHandleAnimatorProvider =
 local PipelineModel = require("rat-scratch-pipeline.Graphics3D.PipelineModel")
 local PipelineModelMeshPointer =
 	require("rat-scratch-pipeline.Resources.PipelineModelMeshPointer")
+local PipelinePointer = require("rat-scratch-pipeline.Buffer.PipelinePointer")
 local PipelineScene = require("rat-scratch-pipeline.Graphics3D.PipelineScene")
 local PipelineScenePointer =
 	require("rat-scratch-pipeline.Resources.PipelineScenePointer")
 
+--- @alias RatScratch.Pipeline.ObjectHandle.Pointer
+--- | "object"
+--- | "models"
+--- | "bones"
+
 --- @class RatScratch.Pipeline.ObjectHandle : RatScratch.Common.BaseObject
---- @field id integer
---- @field world RatScratch.Pipeline.World
---- @field animatorProvider RatScratch.Pipeline.Graphics3D.ObjectHandleAnimatorProvider
---- @field animator? RatScratch.Graphics.Graphics3D.Animator
---- @field skeleton? RatScratch.Resource.Resource<RatScratch.Graphics.Graphics3D.Skeleton>
---- @field animations RatScratch.Resource.Resource<RatScratch.Graphics.Graphics3D.Animation>[]
---- @field animationToResource table<RatScratch.Graphics.Graphics3D.Animation, RatScratch.Resource.Resource<RatScratch.Graphics.Graphics3D.Animation>>
---- @field models RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineModel>[]
---- @field resourcesByInstance table<RatScratch.Resource.Resource, true>
---- @field eventSource RatScratch.Common.EventSource<RatScratch.Pipeline.ObjectHandle>
---- @field defaultMaterials table<RatScratch.Pipeline.Resource.PipelineModelMeshPointer, RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance>
---- @field overrideMaterials table<RatScratch.Pipeline.Resource.PipelineModelMeshPointer, RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance>
---- @field resourceToUniforms table<RatScratch.Resource.Resource, table<RatScratch.Pipeline.Graphics3D.PipelineMaterialUniform, table<RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh, true>>>>
---- @field meshUniformToResource table<RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>, table<RatScratch.Pipeline.Graphics3D.PipelineMaterialUniform, RatScratch.Resource.Resource>>
+--- @field private id integer
+--- @field private world RatScratch.Pipeline.World
+--- @field private transform love.Transform
+--- @field private animatorProvider RatScratch.Pipeline.Graphics3D.ObjectHandleAnimatorProvider
+--- @field private animator? RatScratch.Graphics.Graphics3D.Animator
+--- @field private skeleton? RatScratch.Resource.Resource<RatScratch.Graphics.Graphics3D.Skeleton>
+--- @field private animations RatScratch.Resource.Resource<RatScratch.Graphics.Graphics3D.Animation>[]
+--- @field private animationToResource table<RatScratch.Graphics.Graphics3D.Animation, RatScratch.Resource.Resource<RatScratch.Graphics.Graphics3D.Animation>>
+--- @field private models RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineModel>[]
+--- @field private resourcesByInstance table<RatScratch.Resource.Resource, true>
+--- @field private eventSource RatScratch.Common.EventSource<RatScratch.Pipeline.ObjectHandle>
+--- @field private defaultMaterials table<RatScratch.Pipeline.Resource.PipelineModelMeshPointer, RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance>
+--- @field private overrideMaterials table<RatScratch.Pipeline.Resource.PipelineModelMeshPointer, RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance>
+--- @field private resourceToUniforms table<RatScratch.Resource.Resource, table<RatScratch.Pipeline.Graphics3D.PipelineMaterialUniform, table<RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh, true>>>>
+--- @field private meshUniformToResource table<RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>, table<RatScratch.Pipeline.Graphics3D.PipelineMaterialUniform, RatScratch.Resource.Resource>>
+--- @field private pointers table<RatScratch.Pipeline.ObjectHandle.Pointer, RatScratch.Pipeline.Buffer.PipelinePointer>
 --- @overload fun(id: integer, world: RatScratch.Pipeline.World): RatScratch.Pipeline.ObjectHandle
 local ObjectHandle = Object()
 
 function ObjectHandle:new(id, world)
 	self.id = id
 	self.world = world
+	self.transform = love.math.newTransform()
 
 	self.animatorProvider = ObjectHandleAnimatorProvider(self)
 	self.models = {}
@@ -50,6 +59,8 @@ function ObjectHandle:new(id, world)
 	self.overrideMaterials = {}
 	self.resourceToUniforms = {}
 	self.meshUniformToResource = {}
+
+	self.pointers = {}
 end
 
 function ObjectHandle:getWorld()
@@ -58,6 +69,28 @@ end
 
 function ObjectHandle:getID()
 	return self.id
+end
+
+function ObjectHandle:getTransform()
+	return self.transform
+end
+
+--- @param transform love.Transform
+function ObjectHandle:setTransform(transform)
+	self.transform:setMatrix(transform:getMatrix())
+	self.eventSource:process(ObjectHandleEvent.fromTransformed(self.transform))
+end
+
+--- @param pointer RatScratch.Pipeline.ObjectHandle.Pointer
+--- @param value? RatScratch.Pipeline.Buffer.PipelinePointer
+function ObjectHandle:setPointer(pointer, value)
+	self.pointers[pointer] = value
+end
+
+--- @param pointer RatScratch.Pipeline.ObjectHandle.Pointer
+--- @return RatScratch.Pipeline.Buffer.PipelinePointer
+function ObjectHandle:getPointer(pointer)
+	return self.pointers[pointer] or PipelinePointer.NULL
 end
 
 --- @param object RatScratch.Pipeline.ObjectHandle
@@ -643,6 +676,12 @@ end
 --- @param mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>
 function ObjectHandle:unsetModelMeshMaterial(mesh)
 	self:setModelMeshMaterial(mesh, nil)
+end
+
+--- @param mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>
+--- @return RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
+function ObjectHandle:getMeshMaterial(mesh)
+	return self.overrideMaterials[mesh] or self.defaultMaterials[mesh]
 end
 
 --- @private

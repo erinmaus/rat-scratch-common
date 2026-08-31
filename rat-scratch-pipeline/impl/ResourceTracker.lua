@@ -8,6 +8,7 @@ local ResourceTrackerEvent =
 --- @generic T
 --- @class RatScratch.Pipeline.ResourceTracker<T> : RatScratch.Common.BaseObject
 --- @field private resources table<RatScratch.Resource.Resource<T>, integer>
+--- @field private valueToResource table<T, RatScratch.Resource.Resource<T>>
 --- @field private resourceValue table<RatScratch.Resource.Resource<T>, T>
 --- @field private objectsByResource table<RatScratch.Resource.Resource<T>, table<RatScratch.Pipeline.ObjectHandle, true>>
 --- @field private dirtyResources table<RatScratch.Resource.Resource<T>, boolean>
@@ -21,6 +22,7 @@ function ResourceTracker:new()
 	self.resources = {}
 	self.resourceValue = {}
 	self.objectsByResource = {}
+	self.valueToResource = setmetatable({}, { __mode = "k" })
 	self.eventSource = EventSource(self)
 
 	self.dirtyResources = {}
@@ -30,6 +32,14 @@ end
 
 ResourceTracker.listen, ResourceTracker.silence =
 	EventSource.mixin("eventSource")
+
+--- @generic T
+--- @param self RatScratch.Pipeline.ResourceTracker<T>
+--- @param value T
+--- @return RatScratch.Resource.Resource<T>?
+function ResourceTracker:getResource(value)
+	return self.valueToResource[value]
+end
 
 --- @param resource RatScratch.Resource.Resource
 function ResourceTracker:has(resource)
@@ -62,6 +72,10 @@ function ResourceTracker:add(resource, object)
 
 	self.resourceValue[resource] = resource:get()
 		or self.resourceValue[resource]
+
+	if resource:getIsReady() then
+		self.valueToResource[resource:get()] = resource
+	end
 end
 
 --- @param resource RatScratch.Resource.Resource
@@ -88,6 +102,11 @@ function ResourceTracker:_onResourceUpdate(event, resource)
 		self.dirtyResourcePreviousValue[resource] = event:getPreviousValue()
 		table.insert(self.dirtyResourcesByIndex, resource)
 	end
+
+	if event:getPreviousValue() then
+		self.valueToResource[event:getPreviousValue()] = nil
+	end
+	self.valueToResource[resource:get()] = resource
 
 	self.resourceValue[resource] = resource:get()
 		or self.resourceValue[resource]

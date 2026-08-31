@@ -261,6 +261,18 @@ function MaterialPipeline:freeMaterialInstance(materialInstance)
 	self.materialInstances[materialInstance] = nil
 end
 
+--- @param materialInstance RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
+--- @return integer
+function MaterialPipeline:getMaterialInstanceIndex(materialInstance)
+	assert(
+		self.materialInstances[materialInstance],
+		"material instance is not in material pipeline"
+	)
+
+	local index = self.materialInstancesBuffer:getIndexCount(materialInstance)
+	return index
+end
+
 function MaterialPipeline:repack()
 	self.atlas:repack()
 

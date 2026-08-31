@@ -8,6 +8,7 @@ local EventScope = require("rat-scratch-common").EventScope
 --- @field private animator RatScratch.Graphics.Graphics3D.Animator
 --- @field private mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>
 --- @field private material RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
+--- @field private transform love.Transform
 --- @overload fun(scope: RatScratch.Common.EventScope): RatScratch.Pipeline.ObjectHandleEvent
 local ObjectHandleEvent = Object(Event)
 
@@ -18,6 +19,7 @@ ObjectHandleEvent.MATERIAL_ADDED = EventScope.create()
 ObjectHandleEvent.MATERIAL_REMOVED = EventScope.create()
 ObjectHandleEvent.ANIMATOR_ADDED = EventScope.create()
 ObjectHandleEvent.ANIMATOR_REMOVED = EventScope.create()
+ObjectHandleEvent.TRANSFORMED = EventScope.create()
 
 function ObjectHandleEvent:new(scope)
 	Event.new(self, scope)
@@ -41,6 +43,10 @@ end
 
 function ObjectHandleEvent:getMaterial()
 	return self.material
+end
+
+function ObjectHandleEvent:getTransform()
+	return self.transform
 end
 
 --- @param resource RatScratch.Resource.Resource
@@ -120,6 +126,15 @@ function ObjectHandleEvent.fromMaterialRemoved(mesh, material)
 		Event.get(ObjectHandleEvent, ObjectHandleEvent.MATERIAL_REMOVED)
 	event.mesh = mesh
 	event.material = material
+
+	return event
+end
+
+--- @param transform love.Transform
+--- @return RatScratch.Pipeline.ObjectHandleEvent
+function ObjectHandleEvent.fromTransformed(transform)
+	local event = Event.get(ObjectHandleEvent, ObjectHandleEvent.TRANSFORMED)
+	event.transform = transform
 
 	return event
 end

@@ -89,6 +89,30 @@ function Transform.transposeTransform(transform, result)
 	return result
 end
 
+--- @param transform love.Transform
+--- @return number ...
+function Transform.getTransposedMatrix(transform)
+	local m11, m21, m31, m41, m12, m22, m32, m42, m13, m23, m33, m43, m14, m24, m34, m44 =
+		transform:getMatrix()
+
+	return m11,
+		m12,
+		m13,
+		m14,
+		m21,
+		m22,
+		m23,
+		m24,
+		m31,
+		m32,
+		m33,
+		m34,
+		m41,
+		m42,
+		m43,
+		m44
+end
+
 --- @param translation RatScratch.Math.Vector3
 --- @param transform love.Transform?
 --- @return love.Transform

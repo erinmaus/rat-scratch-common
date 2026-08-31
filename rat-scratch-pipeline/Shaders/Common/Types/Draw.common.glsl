@@ -2,7 +2,7 @@ struct RatScratchPipelineObjectInstance
 {
 	mat4 worldTransform;
 	uvec2 modelInstanceIndexCount;
-	uvec2 animationPlaybackIndexCount;
+	uvec2 boneTransformIndexCount;
 };
 
 struct RatScratchPipelineAnimationPlayback
@@ -14,7 +14,6 @@ struct RatScratchPipelineModelInstance
 {
 	uint objectInstanceIndex;
 	uint modelIndex;
-	uvec2 boneTransformIndexCount;
 };
 
 struct RatScratchPipelineMeshInstance
