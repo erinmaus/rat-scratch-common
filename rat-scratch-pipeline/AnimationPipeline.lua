@@ -409,6 +409,17 @@ function AnimationPipeline:getAnimatorBoneIndexCount(animator)
 	return self.boneTransformsBuffer:getIndexCount(animator)
 end
 
+--- @param animator RatScratch.Graphics.Graphics3D.Animator
+--- @return RatScratch.Pipeline.Buffer.PipelinePointer<RatScratch.Graphics.Graphics3D.Animator>
+function AnimationPipeline:getAnimatorBonePointer(animator)
+	assert(
+		self.animators[animator],
+		"animator does not exist in animation pipeline"
+	)
+
+	return self.boneTransformsBuffer:newPointer(animator)
+end
+
 do
 	local cacheBone = {}
 	local cacheTransposedInverseBindPose = love.math.newTransform()

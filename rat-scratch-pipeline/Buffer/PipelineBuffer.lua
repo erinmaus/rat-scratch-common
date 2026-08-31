@@ -55,6 +55,14 @@ function PipelineBuffer:getCount()
 	return self.context:getCount()
 end
 
+--- @generic T
+--- @param self RatScratch.Pipeline.Buffer.PipelineBuffer<T>
+--- @param instance T
+--- @return RatScratch.Pipeline.Buffer.PipelinePointer<T>
+function PipelineBuffer:newPointer(instance)
+	return self.context:newPointer(instance)
+end
+
 --- @private
 --- @param event RatScratch.Pipeline.Buffer.PipelineBufferContextEvent
 function PipelineBuffer:_resize(event)

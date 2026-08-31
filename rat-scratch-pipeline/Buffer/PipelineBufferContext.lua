@@ -7,6 +7,7 @@ local Common = require("rat-scratch-math").Common
 local EventSource = require("rat-scratch-common").EventSource
 local PipelineBufferContextEvent =
 	require("rat-scratch-pipeline.Buffer.PipelineBufferContextEvent")
+local PipelinePointer = require("rat-scratch-pipeline.Buffer.PipelinePointer")
 
 --- @generic T
 --- @class RatScratch.Pipeline.Buffer.PipelineBufferContext<T> : RatScratch.Common.BaseObject
@@ -20,6 +21,7 @@ local PipelineBufferContextEvent =
 --- @field private count integer
 --- @field private maxInstanceIndex integer
 --- @field private isCompacted boolean
+--- @field private instanceToPointer table<T, RatScratch.Pipeline.Buffer.PipelinePointer>
 local PipelineBufferContext = Object()
 
 --- @param count integer
@@ -37,6 +39,7 @@ function PipelineBufferContext:new(count)
 	self.maxInstanceIndex = 0
 	self.count = 0
 	self.isCompacted = true
+	self.instanceToPointer = setmetatable({}, { __mode = "v" })
 
 	local freeInstance = self.tablePool:pop()
 	freeInstance[1], freeInstance[2] = 1, count
@@ -118,6 +121,11 @@ function PipelineBufferContext:compact()
 		self.eventSource:process(
 			PipelineBufferContextEvent.fromCompact(instance, n, index, count)
 		)
+
+		local pointer = self.instanceToPointer[instance]
+		if pointer then
+			pointer:move()
+		end
 
 		n = n + count
 	end
@@ -297,6 +305,22 @@ end
 --- @generic T
 --- @param self RatScratch.Pipeline.Buffer.PipelineBufferContext<T>
 --- @param instance T
+--- @return RatScratch.Pipeline.Buffer.PipelinePointer<T>
+function PipelineBufferContext:newPointer(instance)
+	local pointer = self.instanceToPointer[instance]
+	if pointer then
+		return pointer
+	end
+
+	pointer = PipelinePointer(self, instance)
+	self.instanceToPointer[instance] = pointer
+
+	return pointer
+end
+
+--- @generic T
+--- @param self RatScratch.Pipeline.Buffer.PipelineBufferContext<T>
+--- @param instance T
 --- @param count integer
 function PipelineBufferContext:registerOrResize(instance, count)
 	if self:has(instance) then
@@ -378,6 +402,11 @@ function PipelineBufferContext:resize(instance, newCount)
 		instanceInfo[2] = newCount
 	end
 
+	local pointer = self.instanceToPointer[instance]
+	if pointer then
+		pointer:move()
+	end
+
 	self.count = self.count + (newCount - count)
 	return self:getIndexCount(instance)
 end
@@ -408,6 +437,11 @@ function PipelineBufferContext:unregister(instance)
 
 	self.tablePool:free(table.remove(self.instances, index))
 	self.indexCountByInstance[instance] = nil
+
+	local pointer = self.instanceToPointer[instance]
+	if pointer then
+		self.instanceToPointer[instance] = nil
+	end
 
 	self.count = self.count - count
 	self.isCompacted = false
