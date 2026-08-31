@@ -3,16 +3,11 @@ local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
 local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
+local ModelInstancesHandle =
+	require("rat-scratch-pipeline.ModelInstancesHandle")
 local PipelineMultiBuffer =
 	require("rat-scratch-pipeline.Buffer.PipelineMultiBuffer")
 local Transform = require("rat-scratch-math").Transform
-
---- @alias RatScratch.Pipeline.ModelPipelineShaderRole
---- | "evaluate"
---- | "copy"
---- | "blend"
---- | "compose"
---- | "apply_inverse_bind_pose"
 
 --- @class RatScratch.Pipeline.ModelPipeline : RatScratch.Common.BaseObject
 --- @field private staticVertexBuffer RatScratch.Pipeline.Buffer.PipelineMultiBuffer<RatScratch.Pipeline.Graphics3D.PipelineMesh>
@@ -27,13 +22,15 @@ local Transform = require("rat-scratch-math").Transform
 --- @field private modelsByIndex RatScratch.Pipeline.Graphics3D.PipelineModel[]
 --- @field private dirtyModels table<RatScratch.Pipeline.Graphics3D.PipelineModel, true>
 --- @field private dirtyModelBuffers table<RatScratch.Pipeline.Graphics3D.PipelineModel, true>
+--- @field private modelInstances table<RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle, true>
+--- @field private dirtyModelInstances table<RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle, true>
 --- @overload fun(): RatScratch.Pipeline.ModelPipeline
 local ModelPipeline = Object()
 
 ModelPipeline.MODEL_INSTANCE_FORMAT = {
 	{ location = 0, name = "objectInstanceIndex", format = "uint32" },
 	{ location = 1, name = "modelIndex", format = "uint32" },
-	{ location = 2, name = "boneTransformIndexCount", format = "uint32vec2" },
+	{ location = 3, name = "meshInstanceIndexCount", format = "uint32vec2" },
 }
 
 ModelPipeline.MESH_INSTANCE_FORMAT = {
@@ -78,6 +75,10 @@ ModelPipeline.DEFAULT_MESH_COUNT = ModelPipeline.DEFAULT_MODEL_COUNT * 64
 ModelPipeline.DEFAULT_MESHLET_COUNT = ModelPipeline.DEFAULT_MESH_COUNT * 64
 ModelPipeline.DEFAULT_MESHLET_SKINNED_BOUNDS_COUNT = ModelPipeline.DEFAULT_MESHLET_COUNT
 	* 4
+ModelPipeline.DEFAULT_MODEL_INSTANCE_COUNT = ModelPipeline.DEFAULT_MESHLET_COUNT
+	* 8
+ModelPipeline.DEFAULT_MESH_INSTANCE_COUNT = ModelPipeline.DEFAULT_MODEL_INSTANCE_COUNT
+	* 16
 
 --- @param pipelineConfig RatScratch.Pipeline.PipelineConfig
 function ModelPipeline:new(pipelineConfig)
@@ -141,11 +142,26 @@ function ModelPipeline:new(pipelineConfig)
 		ModelPipeline.DEFAULT_MESHLET_SKINNED_BOUNDS_COUNT
 	)
 
+	self.modelInstancesBuffer = PipelineBuffer(
+		ModelPipeline.MODEL_INSTANCE_FORMAT,
+		{ shaderstorage = true },
+		ModelPipeline.DEFAULT_MODEL_INSTANCE_COUNT
+	)
+
+	self.meshInstancesBuffer = PipelineBuffer(
+		ModelPipeline.MESH_INSTANCE_FORMAT,
+		{ shaderstorage = true },
+		ModelPipeline.DEFAULT_MESH_INSTANCE_COUNT
+	)
+
 	self.models = {}
 	self.modelsByIndex = {}
 
 	self.dirtyModels = {}
 	self.dirtyModelBuffers = {}
+
+	self.modelInstances = {}
+	self.dirtyModelInstances = {}
 end
 
 --- @param model RatScratch.Pipeline.Graphics3D.PipelineModel
@@ -374,6 +390,45 @@ function ModelPipeline:_updateModelBuffers()
 	self.indexBuffer:flush()
 end
 
+--- @private
+--- @param instances RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle
+function ModelPipeline:_updateModelInstancesHandle(instances)
+	self.modelInstancesBuffer:resize(instances, instances:getHandleCount())
+
+	for i = 1, instances:getHandleCount() do
+		local handle = instances:getHandle(i)
+
+		local meshIndex, meshCount =
+			self.meshInstancesBuffer:getIndexCount(handle)
+		self.modelInstancesBuffer:set(
+			instances,
+			i,
+			1,
+			math.max(instances:getObjectIndex() - 1, 0),
+			self.modelsBuffer:getIndexCount(handle.model:get()) - 1,
+			meshIndex - 1,
+			meshCount
+		)
+
+		for j = 1, #handle.meshes do
+			self.modelsBuffer:set(
+				instances,
+				j,
+				1,
+				math.max(handle.meshes[j] - 1, 0)
+			)
+		end
+	end
+end
+
+--- @private
+function ModelPipeline:_updateModelInstancesHandles()
+	for instances in pairs(self.dirtyModelInstances) do
+		self:_updateModelInstancesHandle(instances)
+		self.dirtyModelInstances[instances] = nil
+	end
+end
+
 function ModelPipeline:compact()
 	self.modelsBuffer:flush()
 	self.meshesBuffer:flush()
@@ -386,6 +441,12 @@ function ModelPipeline:compact()
 	for _, model in ipairs(self.modelsByIndex) do
 		self:_updateModel(model)
 	end
+
+	self.modelInstancesBuffer:compact()
+	self.meshInstancesBuffer:compact()
+	for instances in pairs(self.modelInstances) do
+		self:_updateModelInstancesHandle(instances)
+	end
 end
 
 function ModelPipeline:flush()
@@ -396,11 +457,58 @@ function ModelPipeline:flush()
 	if next(self.dirtyModelBuffers) then
 		self:_updateModelBuffers()
 	end
+
+	if next(self.dirtyModelInstances) then
+		self:_updateModelInstancesHandles()
+	end
 end
 
---- @param delta number
-function ModelPipeline:update(delta)
-	self:flush()
+--- @return RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle
+function ModelPipeline:newModelInstances()
+	local instances = ModelInstancesHandle(self)
+	self.modelInstances[instances] = true
+
+	return instances
+end
+
+--- @param instances RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle
+function ModelPipeline:freeModelInstances(instances)
+	assert(
+		self:hasModelInstances(instances),
+		"model instances handle does not belong to pipeline"
+	)
+
+	self.modelInstances[instances] = nil
+
+	for i = 1, instances:getHandleCount() do
+		local handle = instances:getHandle(i)
+		self:unregisterModelInstance(handle)
+	end
+end
+
+--- @param instances RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle
+function ModelPipeline:hasModelInstances(instances)
+	return self.modelInstances[instances] ~= nil
+end
+
+--- @param instances RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle
+function ModelPipeline:updateModelInstances(instances)
+	assert(
+		self:hasModelInstances(instances),
+		"model instances handle does not belong to pipeline"
+	)
+
+	self.dirtyModelInstances[instances] = true
+end
+
+--- @param instance RatScratch.Pipeline.ModelPipeline.ModelInstance
+function ModelPipeline:registerModelInstance(instance)
+	self.meshInstancesBuffer:register(instance, #instance.meshes)
+end
+
+--- @param instance RatScratch.Pipeline.ModelPipeline.ModelInstance
+function ModelPipeline:unregisterModelInstance(instance)
+	self.meshInstancesBuffer:unregister(instance)
 end
 
 return ModelPipeline
