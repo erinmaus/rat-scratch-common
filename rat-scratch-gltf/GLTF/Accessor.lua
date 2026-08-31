@@ -32,8 +32,8 @@ function GLTFAccessor:new(parser, accessor)
 		not accessor.normalized
 			or (
 				componentTypeInfo.integer
-				and componentTypeInfo.positive ~= 0
-				and componentTypeInfo.negative ~= 0
+				and componentTypeInfo.positive > 0
+				and componentTypeInfo.negative >= 0
 			),
 		"only some integer types can be normalized"
 	)
@@ -99,7 +99,7 @@ function GLTFAccessor:read(index, result)
 		self.data[self.get](self.data, basePosition, self.componentCount)
 
 	if self.normalized then
-		for i = 1, self.elementCount do
+		for i = 1, self.componentCount do
 			local value = result[i]
 
 			if value < 0 and self.normalizedNegativeDenominator > 0 then
