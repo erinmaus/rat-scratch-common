@@ -835,7 +835,7 @@ function GLTFBuilder:_addMaterialDefinition(materialDefinition)
 					index = baseColorTextureIndex,
 				},
 
-				pbrMetallicRoughness = metallicRoughnessTextureIndex and {
+				metallicRoughnessTexture = metallicRoughnessTextureIndex and {
 					index = metallicRoughnessTextureIndex,
 				},
 
