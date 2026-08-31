@@ -64,4 +64,19 @@ function Path.resolve(absolutePath, relativePath, rootPath, rootPaths)
 	return table.concat(resultPathComponents, "/")
 end
 
+--- @param absolutePath string
+--- @param path string
+function Path.makeRelative(absolutePath, path)
+	absolutePath =
+		absolutePath:gsub("\\", "/"):gsub("//+", "/"):gsub("([^/])$", "%1/")
+	path = path:gsub("\\", "/"):gsub("//+", "/")
+
+	local i, j = path:find(absolutePath, 1, true)
+	if i and j and i == 1 then
+		return path:sub(j + 1)
+	end
+
+	return path
+end
+
 return Path
