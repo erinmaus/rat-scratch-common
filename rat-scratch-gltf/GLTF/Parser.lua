@@ -908,10 +908,7 @@ function GLTFParser:_loadMesh(meshData, isSkinned, options)
 			isSkinned = hasBoneIndex and hasBoneWeight
 		end
 
-		--- @type RatScratch.Graphics.Graphics3D.MeshFormatAttribute[]
-		local format = {}
-
-		local attributes = (
+		local targetAttributes = (
 			options.attributes
 			and (
 				(
@@ -925,7 +922,12 @@ function GLTFParser:_loadMesh(meshData, isSkinned, options)
 					and options.attributes.static.output
 				)
 			)
-		) or self.attributes
+		)
+
+		--- @type RatScratch.Graphics.Graphics3D.MeshFormatAttribute[]
+		local format = {}
+
+		local attributes = targetAttributes or self.attributes
 
 		for _, attribute in ipairs(attributes:getFormat()) do
 			local attributeName =
@@ -944,7 +946,7 @@ function GLTFParser:_loadMesh(meshData, isSkinned, options)
 			if attributes:hasAttribute(attributeName) then
 				local attributeAccessor = self:getAccessorParser(accessorIndex)
 				self:_loadVertices(
-					format,
+					targetAttributes and targetAttributes:getFormat() or format,
 					vertices,
 					attributes:getVertexElementFromAttribute(attributeName),
 					attributeAccessor
@@ -972,8 +974,13 @@ function GLTFParser:_loadMesh(meshData, isSkinned, options)
 			)
 
 			outputFormat = targetFormat
-			outputBuffers, outputIndices =
-				Mesh.marshal(targetRoles, format, vertices, indices, indexMode)
+			outputBuffers, outputIndices = Mesh.marshal(
+				targetRoles,
+				outputFormat,
+				vertices,
+				indices,
+				indexMode
+			)
 		else
 			local targetFormat, targetRoles = _tryGetFormatsAndRoles(
 				options.attributes and options.attributes.static,
@@ -982,8 +989,13 @@ function GLTFParser:_loadMesh(meshData, isSkinned, options)
 			)
 
 			outputFormat = targetFormat
-			outputBuffers, outputIndices =
-				Mesh.marshal(targetRoles, format, vertices, indices, indexMode)
+			outputBuffers, outputIndices = Mesh.marshal(
+				targetRoles,
+				outputFormat,
+				vertices,
+				indices,
+				indexMode
+			)
 		end
 
 		--- @type RatScratch.Graphics.Graphics3D.MeshDefinition

@@ -41,6 +41,36 @@ function GLTFAttributes.makeDefault()
 	return result
 end
 
+-- Cannot create a RatScratch.Graphics.Graphics3D.Model from this standard formats
+-- because of alignment issues - this is specifically for data manipulation
+-- of a GLTF.
+
+function GLTFAttributes.makeSkinnedStandard()
+	local result = GLTFAttributes()
+
+	result:defineAttribute("POSITION", "VertexPosition", 0, "floatvec3")
+	result:defineAttribute("TEXCOORD_0", "VertexTexCoord", 1, "floatvec2")
+	result:defineAttribute("COLOR_0", "VertexColor", 2, "floatvec4")
+	result:defineAttribute("NORMAL", "VertexNormal", 10, "floatvec3")
+	result:defineAttribute("TANGENT", "VertexTangent", 11, "floatvec4")
+	result:defineAttribute("JOINTS_0", "VertexBoneIndex", 20, "uint32vec4")
+	result:defineAttribute("WEIGHTS_0", "VertexBoneWeight", 21, "floatvec4")
+
+	return result
+end
+
+function GLTFAttributes.makeStaticStandard()
+	local result = GLTFAttributes()
+
+	result:defineAttribute("POSITION", "VertexPosition", 0, "floatvec3")
+	result:defineAttribute("TEXCOORD_0", "VertexTexCoord", 1, "floatvec2")
+	result:defineAttribute("COLOR_0", "VertexColor", 2, "floatvec4")
+	result:defineAttribute("NORMAL", "VertexNormal", 10, "floatvec3")
+	result:defineAttribute("TANGENT", "VertexTangent", 11, "floatvec4")
+
+	return result
+end
+
 --- @param format RatScratch.Graphics.Graphics3D.MeshFormatAttribute[]
 --- @param vertexElementToGLTFAttribute? table<string, string>
 function GLTFAttributes.fromFormat(format, vertexElementToGLTFAttribute)
