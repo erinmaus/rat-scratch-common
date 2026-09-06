@@ -26,6 +26,7 @@ local PipelineScenePointer =
 --- @class RatScratch.Pipeline.ObjectHandle : RatScratch.Common.BaseObject
 --- @field private id integer
 --- @field private world RatScratch.Pipeline.World
+--- @field private scene RatScratch.Pipeline.Scene
 --- @field private transform love.Transform
 --- @field private animatorProvider RatScratch.Pipeline.Graphics3D.ObjectHandleAnimatorProvider
 --- @field private animator? RatScratch.Graphics.Graphics3D.Animator
@@ -63,8 +64,24 @@ function ObjectHandle:new(id, world)
 	self.pointers = {}
 end
 
+--- @param scene RatScratch.Pipeline.Scene
+function ObjectHandle:move(scene)
+	if self.scene then
+		self.scene:removeObject(self)
+	end
+
+	self.scene = scene
+	if scene then
+		scene:addObject(self)
+	end
+end
+
 function ObjectHandle:getWorld()
 	return self.world
+end
+
+function ObjectHandle:getScene()
+	return self.scene
 end
 
 function ObjectHandle:getID()

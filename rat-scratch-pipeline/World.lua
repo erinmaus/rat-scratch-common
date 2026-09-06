@@ -3,6 +3,7 @@ local assert = require("rat-scratch-common").Debug.assert
 local Animation = require("rat-scratch-graphics").Graphics3D.Animation
 local Skeleton = require("rat-scratch-graphics").Graphics3D.Skeleton
 local AnimationPipeline = require("rat-scratch-pipeline.AnimationPipeline")
+local DrawPipeline = require("rat-scratch-pipeline.DrawPipeline")
 local MaterialPipeline = require("rat-scratch-pipeline.MaterialPipeline")
 local ModelPipeline = require("rat-scratch-pipeline.ModelPipeline")
 local ObjectHandle = require("rat-scratch-pipeline.ObjectHandle")
@@ -19,12 +20,14 @@ local ResourceTrackerEvent =
 	require("rat-scratch-pipeline.impl.ResourceTrackerEvent")
 
 --- @class RatScratch.Pipeline.World : RatScratch.Common.BaseObject
+--- @field private pipelineRuntime RatScratch.Pipeline.PipelineRuntime
 --- @field private pipelines RatScratch.Pipeline.Pipelines
 --- @field private objectHandles table<RatScratch.Pipeline.ObjectHandle, true>
 --- @field private objectHandleToModelInstancesHandle table<RatScratch.Pipeline.ObjectHandle, RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle>
 --- @field private modelInstancesHandleToObjectHandle table<RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle, RatScratch.Pipeline.ObjectHandle>
 --- @field private animatorToObjectHandle table<RatScratch.Graphics.Graphics3D.Animator, RatScratch.Pipeline.ObjectHandle>
 --- @field private dirtyObjectHandles table<RatScratch.Pipeline.ObjectHandle, true>
+--- @field private dirtyObjectHandleDraws table<RatScratch.Pipeline.ObjectHandle, true>
 --- @field private dirtyMaterialObjectHandles table<RatScratch.Pipeline.ObjectHandle, true>
 --- @field private nextObjectHandleID integer
 --- @field private modelResources RatScratch.Pipeline.ResourceTracker<RatScratch.Pipeline.Graphics3D.PipelineModel>
@@ -36,10 +39,12 @@ local World = Object()
 
 --- @param pipelineRuntime RatScratch.Pipeline.PipelineRuntime
 function World:new(pipelineRuntime)
+	self.pipelineRuntime = pipelineRuntime
 	self.pipelines = Pipelines(pipelineRuntime)
 
 	self.objectHandles = {}
 	self.dirtyObjectHandles = {}
+	self.dirtyObjectHandleDraws = {}
 	self.objectHandleToModelInstancesHandle = {}
 	self.modelInstancesHandleToObjectHandle = {}
 	self.animatorToObjectHandle = {}
@@ -115,6 +120,16 @@ function World:new(pipelineRuntime)
 		[Animation] = self.animationResources,
 		["love.ImageData"] = self.textureResources,
 	}
+
+	self.scenes = {}
+end
+
+function World:getPipelineRuntime()
+	return self.pipelineRuntime
+end
+
+function World:getPipelineConfig()
+	return self.pipelineRuntime:getConfig()
 end
 
 --- @generic T : RatScratch.Common.BaseObject
@@ -175,7 +190,9 @@ function World:_tryAddModel(resource)
 
 	local model = resource:get()
 	local modelPipeline = self.pipelines:get(ModelPipeline)
-	modelPipeline:addModel(model)
+	if not modelPipeline:hasModel(model) then
+		modelPipeline:addModel(model)
+	end
 end
 
 --- @private
@@ -186,7 +203,9 @@ function World:_tryRemoveModel(model)
 	end
 
 	local modelPipeline = self.pipelines:get(ModelPipeline)
-	modelPipeline:removeModel(model)
+	if modelPipeline:hasModel(model) then
+		modelPipeline:removeModel(model)
+	end
 end
 
 --- @private
@@ -214,6 +233,8 @@ function World:_onUpdateModel(event)
 			end
 
 			handle:add(event:getResource():get())
+
+			self.dirtyObjectHandleDraws[object] = true
 		end
 	end
 
@@ -324,6 +345,12 @@ function World:_onUpdateTexture(event)
 	self:_tryAddTexture(event:getResource())
 end
 
+--- @param object RatScratch.Pipeline.ObjectHandle
+--- @return RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle
+function World:getModelInstancesHandle(object)
+	return self.objectHandleToModelInstancesHandle[object]
+end
+
 function World:newObject()
 	local objectHandle = ObjectHandle(self.nextObjectHandleID, self)
 	self.objectHandles[objectHandle] = true
@@ -377,6 +404,7 @@ function World:newObject()
 	return objectHandle
 end
 
+--- @private
 --- @param event RatScratch.Pipeline.Buffer.PipelineBufferContextEvent<RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle>
 function World:_onModelInstancesPointerMove(event)
 	local modelInstances = event:getInstance()
@@ -472,7 +500,7 @@ end
 --- @param objectHandle RatScratch.Pipeline.ObjectHandle
 function World:_onRemoveMaterial(event, objectHandle)
 	self.dirtyObjectHandles[objectHandle] = true
-	self.dirtyMaterialObjectHandles[objectHandle] = trueend
+	self.dirtyMaterialObjectHandles[objectHandle] = true
 end
 
 --- @private
@@ -502,19 +530,70 @@ function World:_updateObjectHandleMaterials(objectHandle)
 	end
 end
 
-do
-	--- @private
-	--- @param objectHandle RatScratch.Pipeline.ObjectHandle
-	function World:_updateObjectHandle(objectHandle)
-		objectHandle:flush()
+--- @private
+--- @param objectHandle RatScratch.Pipeline.ObjectHandle
+function World:_updateObjectHandle(objectHandle)
+	objectHandle:flush()
 
-		local objectPipeline = self.pipelines:get(ObjectPipeline)
-		objectPipeline:updateObject(objectHandle)
+	local objectPipeline = self.pipelines:get(ObjectPipeline)
+	objectPipeline:updateObject(objectHandle)
 
-		if self.dirtyMaterialObjectHandles[objectHandle] then
-			self:_updateObjectHandleMaterials(objectHandle)
-			self.dirtyMaterialObjectHandles[objectHandle] = nil
+	if self.dirtyMaterialObjectHandles[objectHandle] then
+		self:_updateObjectHandleMaterials(objectHandle)
+		self.dirtyMaterialObjectHandles[objectHandle] = nil
+	end
+end
+
+--- @private
+--- @param objectHandle RatScratch.Pipeline.ObjectHandle
+function World:_updateObjectHandleDraw(objectHandle)
+	local scene = objectHandle:getScene()
+	local drawPipeline = scene:getPipeline(DrawPipeline)
+
+	local modelInstances = self.objectHandleToModelInstancesHandle[objectHandle]
+	local meshletCount = modelInstances:calculateMeshletCount()
+
+	local draws = drawPipeline:resizeDrawable(objectHandle, meshletCount)
+	local currentDraw = 1
+
+	local objectInstancePointer = self:getPipeline(ObjectPipeline)
+		:getObjectPointer(objectHandle)
+	for i = 1, modelInstances:getHandleCount() do
+		local handle = modelInstances:getHandle(i)
+		local model = handle.model:get()
+		local modelInstancePointer = self:getPipeline(ModelPipeline)
+			:getModelInstancesPointer(modelInstances)
+		local meshInstancesPointer = self:getPipeline(ModelPipeline)
+			:getModelInstancePointer(handle)
+		local modelPointer = self:getPipeline(ModelPipeline)
+			:getModelPointer(model)
+
+		for j = 1, model:getMeshCount() do
+			local mesh = model:getMesh(j)
+			local meshletPointer = self:getPipeline(ModelPipeline)
+				:getMeshletsPointer(mesh)
+
+			for k = 1, mesh:getMeshletCount() do
+				local draw = draws[currentDraw]
+
+				draw:setPointer("objectInstanceIndex", objectInstancePointer)
+				draw:setPointer("modelInstanceIndex", modelInstancePointer, i)
+				draw:setPointer("meshInstanceIndex", meshInstancesPointer, j)
+				draw:setPointer("modelIndex", modelPointer, i)
+				draw:setPointer("meshIndex", meshInstancesPointer, j)
+				draw:setPointer("meshletPointer", meshletPointer, k)
+
+				currentDraw = currentDraw + 1
+			end
 		end
+	end
+end
+
+--- @private
+function World:_updateObjectHandleDraws()
+	for objectHandle in pairs(self.dirtyObjectHandleDraws) do
+		self:_updateObjectHandleDraw(objectHandle)
+		self.dirtyObjectHandleDraws[objectHandle] = nil
 	end
 end
 
@@ -533,6 +612,10 @@ function World:flush()
 
 	if next(self.dirtyObjectHandles) then
 		self:_updateObjectHandles()
+	end
+
+	if next(self.dirtyObjectHandleDraws) then
+		self:_updateObjectHandleDraws()
 	end
 
 	self.pipelines:get(AnimationPipeline):update()
