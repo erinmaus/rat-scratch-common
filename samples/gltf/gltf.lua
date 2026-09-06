@@ -78,58 +78,61 @@ function demo.update(deltaTime)
 end
 
 function demo.drawGLTF()
-	local model = demo.gltf.scene:getModel(1)
-	for i = 1, model:getMeshCount() do
-		local mesh = model:getMesh(i)
-		local material = mesh:getMaterial()
+	for j = 1, demo.gltf.scene:getModelCount() do
+		local model = demo.gltf.scene:getModel(j)
+		for i = 1, model:getMeshCount() do
+			local mesh = model:getMesh(i)
+			local material = mesh:getMaterial()
 
-		love.graphics.push("all")
+			love.graphics.push("all")
 
-		local camera
-		do
-			local mx = love.mouse.getPosition()
-			local delta = mx / love.graphics.getWidth()
-			local angle = Common.lerp(-math.pi, math.pi, delta)
+			local camera
+			do
+				local mx = love.mouse.getPosition()
+				local delta = mx / love.graphics.getWidth()
+				local angle = Common.lerp(-math.pi, math.pi, delta)
 
-			camera = Transform.makeRotationTransform(
-				Quaternion.fromAxisAngle(Vector3.UNIT_Y, angle)
+				camera = Transform.makeRotationTransform(
+					Quaternion.fromAxisAngle(Vector3.UNIT_Y, angle)
+				)
+			end
+
+			local scale
+			do
+				local _, my = love.mouse.getPosition()
+				local delta =
+					Common.saturate((my - 32) / love.graphics.getHeight())
+				scale = Common.lerp(0.25, 400, delta ^ 2)
+			end
+
+			local projection = Transform.makePerspectiveTransform(
+				math.rad(45),
+				love.graphics.getWidth() / love.graphics.getHeight(),
+				0.1,
+				1000
 			)
+
+			camera = Transform.makeTranslationTransform(Vector3(0, 0, -scale))
+				* camera
+
+			love.graphics.setDepthMode("lequal", true)
+			love.graphics.setProjection(projection)
+			love.graphics.applyTransform(camera)
+			love.graphics.applyTransform(model:getTransform())
+
+			local loveMesh = mesh:getMesh()
+			if material and material:getTexture() then
+				loveMesh:setTexture(material:getTexture())
+			end
+
+			if material and material:getColor() then
+				love.graphics.setColor(material:getColor())
+			end
+
+			love.graphics.draw(loveMesh)
+
+			love.graphics.pop()
 		end
-
-		local scale
-		do
-			local _, my = love.mouse.getPosition()
-			local delta = Common.saturate((my - 32) / love.graphics.getHeight())
-			scale = Common.lerp(0.25, 400, delta ^ 2)
-		end
-
-		local projection = Transform.makePerspectiveTransform(
-			math.rad(45),
-			love.graphics.getWidth() / love.graphics.getHeight(),
-			0.1,
-			1000
-		)
-
-		camera = Transform.makeTranslationTransform(Vector3(0, 0, -scale))
-			* camera
-
-		love.graphics.setDepthMode("lequal", true)
-		love.graphics.setProjection(projection)
-		love.graphics.applyTransform(camera)
-		love.graphics.applyTransform(model:getTransform())
-
-		local loveMesh = mesh:getMesh()
-		if material and material:getTexture() then
-			loveMesh:setTexture(material:getTexture())
-		end
-
-		if material and material:getColor() then
-			love.graphics.setColor(material:getColor())
-		end
-
-		love.graphics.draw(loveMesh)
-
-		love.graphics.pop()
 	end
 end
 
