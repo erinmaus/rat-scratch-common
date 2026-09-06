@@ -62,10 +62,10 @@ end
 --- @param model RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineModel>
 function ModelInstancesHandle:remove(model)
 	if self.models[model] then
+		self.pipeline:unregisterModelInstance(self.models[model])
+
 		self.models[model] = nil
 		Table.remove(self.modelsByIndex, model)
-
-		self.pipeline:unregisterModelInstance()
 	end
 end
 
@@ -103,6 +103,20 @@ function ModelInstancesHandle:setMaterial(model, meshIndex, materialIndex)
 	if handle then
 		handle.meshes[meshIndex] = materialIndex
 	end
+end
+
+function ModelInstancesHandle:calculateMeshletCount()
+	local count = 0
+	for _, handle in ipairs(self.modelsByIndex) do
+		local model = handle.model:get()
+		if model then
+			for i = 1, model:getMeshCount() do
+				count = count + model:getMesh(i):getMeshletCount()
+			end
+		end
+	end
+
+	return count
 end
 
 return ModelInstancesHandle

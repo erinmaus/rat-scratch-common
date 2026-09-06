@@ -46,6 +46,23 @@ function ObjectPipeline:addObject(objectHandle)
 end
 
 --- @param objectHandle RatScratch.Pipeline.ObjectHandle
+--- @return integer
+function ObjectPipeline:getObjectIndex(objectHandle)
+	assert(
+		self.objectHandles[objectHandle],
+		"object does not exist in pipeline"
+	)
+	local index = self.objectInstancesBuffer:getIndexCount(objectHandle)
+	return index
+end
+
+--- @param objectHandle RatScratch.Pipeline.ObjectHandle
+--- @return RatScratch.Pipeline.Buffer.PipelinePointer
+function ObjectPipeline:getObjectPointer(objectHandle)
+	return self.objectInstancesBuffer:newPointer(objectHandle)
+end
+
+--- @param objectHandle RatScratch.Pipeline.ObjectHandle
 function ObjectPipeline:removeObject(objectHandle)
 	assert(
 		self.objectHandles[objectHandle],

@@ -165,6 +165,11 @@ function ModelPipeline:new(pipelineRuntime)
 end
 
 --- @param model RatScratch.Pipeline.Graphics3D.PipelineModel
+function ModelPipeline:hasModel(model)
+	return self.models[model] ~= nil
+end
+
+--- @param model RatScratch.Pipeline.Graphics3D.PipelineModel
 function ModelPipeline:addModel(model)
 	assert(not self.models[model], "model already exists in model pipeline")
 
@@ -188,9 +193,9 @@ function ModelPipeline:addModel(model)
 
 		self.staticVertexBuffer:register(mesh, mesh:getVertexCount())
 
-		for j = 1, self.self:getPipelineConfig():getVertexFormatCountByRole("static") do
-			local vertexBufferInfo =
-				self.self:getPipelineConfig():getVertexFormatByRole("static", j)
+		for j = 1, self:getPipelineConfig():getVertexFormatCountByRole("static") do
+			local vertexBufferInfo = self:getPipelineConfig()
+				:getVertexFormatByRole("static", j)
 			if mesh:hasVertexData(vertexBufferInfo:getBufferName()) then
 				self.skinnedVertexBuffer:register(mesh, mesh:getVertexCount())
 				break
@@ -232,14 +237,46 @@ function ModelPipeline:removeModel(model)
 	end
 end
 
+--- @param model RatScratch.Pipeline.Graphics3D.PipelineModel
+function ModelPipeline:getModelPointer(model)
+	return self.modelsBuffer:newPointer(model)
+end
+
+--- @param model RatScratch.Pipeline.Graphics3D.PipelineModel
+function ModelPipeline:getModelIndex(model)
+	local index = self.modelsBuffer:getIndexCount(model)
+	return index
+end
+
+--- @param model RatScratch.Pipeline.Graphics3D.PipelineModel
+function ModelPipeline:getMeshesPointer(model)
+	return self.meshesBuffer:newPointer(model)
+end
+
+--- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
+function ModelPipeline:getMeshesIndexCount(mesh)
+	return self.meshesBuffer:getIndexCount(mesh)
+end
+
+--- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
+function ModelPipeline:getMeshletsPointer(mesh)
+	return self.meshletsBuffer:newPointer(mesh)
+end
+
+--- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
+--- @return integer, integer
+function ModelPipeline:getMeshletsIndexCount(mesh)
+	return self.meshletsBuffer:getIndexCount(mesh)
+end
+
 --- @private
 --- @param model RatScratch.Pipeline.Graphics3D.PipelineModel
 function ModelPipeline:_updateModelBuffer(model)
 	for i = 1, model:getMeshCount() do
 		local mesh = model:getMesh(i)
-		for j = 1, self.self:getPipelineConfig():getVertexFormatCountByRole("static") do
-			local vertexBufferInfo =
-				self.self:getPipelineConfig():getVertexFormatByRole("static", i)
+		for j = 1, self:getPipelineConfig():getVertexFormatCountByRole("static") do
+			local vertexBufferInfo = self:getPipelineConfig()
+				:getVertexFormatByRole("static", i)
 			local vertexData =
 				mesh:getVertexData(vertexBufferInfo:getBufferName())
 			if vertexData then
@@ -248,9 +285,8 @@ function ModelPipeline:_updateModelBuffer(model)
 		end
 
 		if self.skinnedVertexBuffer:has(mesh) then
-			for j = 1, self.self:getPipelineConfig():getVertexFormatCountByRole("skinned") do
-				local vertexBufferInfo = self.self
-					:getPipelineConfig()
+			for j = 1, self:getPipelineConfig():getVertexFormatCountByRole("skinned") do
+				local vertexBufferInfo = self:getPipelineConfig()
 					:getVertexFormatByRole("skinned", i)
 				local vertexData =
 					mesh:getVertexData(vertexBufferInfo:getBufferName())
@@ -272,8 +308,7 @@ function ModelPipeline:_updateMeshlet(mesh, meshlet, meshletIndex)
 	local skinnedBoundsIndex, skinnedBoundsCount =
 		self.meshletsSkinnedBoundsBuffer:getIndexCount(meshlet)
 	local staticCenter, staticRadius = meshlet:getStaticBounds()
-	local indexCount = self.self
-		:getPipelineConfig()
+	local indexCount = self:getPipelineConfig()
 		:getMeshletFormat()
 		:getTriangleCount() * 3
 	local indexOffset = self.indexBuffer:getIndexCount(mesh)
@@ -522,7 +557,29 @@ function ModelPipeline:registerModelInstance(instance)
 end
 
 --- @param instance RatScratch.Pipeline.ModelPipeline.ModelInstance
+--- @return boolean
+function ModelPipeline:hasModelInstance(instance)
+	return self.meshInstancesBuffer:has(instance)
+end
+
+--- @param instance RatScratch.Pipeline.ModelPipeline.ModelInstance
+--- @return RatScratch.Pipeline.Buffer.PipelinePointer<any>
+function ModelPipeline:getModelInstancePointer(instance)
+	assert(
+		self:hasModelInstance(instance),
+		"model instance does not belong to pipeline"
+	)
+
+	return self.meshInstancesBuffer:newPointer(instance)
+end
+
+--- @param instance RatScratch.Pipeline.ModelPipeline.ModelInstance
 function ModelPipeline:unregisterModelInstance(instance)
+	assert(
+		self:hasModelInstance(instance),
+		"model instance does not belong to pipeline"
+	)
+
 	self.meshInstancesBuffer:unregister(instance)
 end
 

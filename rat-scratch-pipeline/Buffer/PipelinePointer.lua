@@ -49,7 +49,7 @@ function PipelinePointer:move()
 	self.eventSource:process(
 		PipelineBufferContextEvent.fromMove(
 			self.instance,
-			self.context:getIndexCount(self.instanceP)
+			self.context:getIndexCount(self.instance)
 		)
 	)
 end
