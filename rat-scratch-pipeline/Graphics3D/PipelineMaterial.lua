@@ -95,7 +95,7 @@ function PipelineMaterial:getIntegerFormat()
 end
 
 function PipelineMaterial:getFloatFormat()
-	return self.integerFormat
+	return self.floatFormat
 end
 
 function PipelineMaterial:getUniformCount()
@@ -177,7 +177,7 @@ function PipelineMaterial.fromDefinition(materialDefinition)
 	else
 		for _, uniform in ipairs(materialDefinition.uniforms) do
 			table.insert(
-				uniform,
+				uniforms,
 				PipelineMaterialUniform(
 					uniform.name,
 					uniform.format,

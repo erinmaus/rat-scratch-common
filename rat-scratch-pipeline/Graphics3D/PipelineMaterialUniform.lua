@@ -84,12 +84,16 @@ end
 
 function PipelineMaterialUniform:getIsInteger()
 	return self.format == "texture"
-		or BufferFormat.isFormatScalarFloat(self.format)
+		or BufferFormat.isFormatScalarFloat(
+			BufferFormat.getFormatScalar(self.format)
+		)
 end
 
 function PipelineMaterialUniform:getIsFloat()
 	return self.format ~= "texture"
-		and BufferFormat.isFormatScalarFloat(self.format)
+		and BufferFormat.isFormatScalarFloat(
+			BufferFormat.getFormatScalar(self.format)
+		)
 end
 
 --- @param data love.Data

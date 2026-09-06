@@ -52,13 +52,13 @@ function PipelineModelMeshPointer:getTexturePointer(texture)
 	end
 
 	if pointer[texture] then
-		return pointer
+		return pointer[texture]
 	end
 
 	local scene = PipelineModelMeshPointer.SCENES_POOL[self.parent]
 	if not scene then
 		scene = Resource(ResourceLoader.newID())
-		scene:set(PipelineScene(self.parent:get()))
+		scene:set(PipelineScene({ self.parent:get() }))
 
 		self.parent:listen(ResourceEvent.MODIFY, self._modifyScene, self)
 		self.parent:listen(ResourceEvent.RELEASE, self._releaseScene, self)

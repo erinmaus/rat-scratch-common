@@ -33,6 +33,7 @@ local PipelineScenePointer =
 --- @field private skeleton? RatScratch.Resource.Resource<RatScratch.Graphics.Graphics3D.Skeleton>
 --- @field private animations RatScratch.Resource.Resource<RatScratch.Graphics.Graphics3D.Animation>[]
 --- @field private animationToResource table<RatScratch.Graphics.Graphics3D.Animation, RatScratch.Resource.Resource<RatScratch.Graphics.Graphics3D.Animation>>
+--- @field private animationCollections table<RatScratch.Resource.Resource<RatScratch.Graphics.Graphics3D.Animation[]>, true>
 --- @field private models RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineModel>[]
 --- @field private resourcesByInstance table<RatScratch.Resource.Resource, true>
 --- @field private eventSource RatScratch.Common.EventSource<RatScratch.Pipeline.ObjectHandle>
@@ -53,6 +54,7 @@ function ObjectHandle:new(id, world)
 	self.models = {}
 	self.animations = {}
 	self.animationToResource = {}
+	self.animationCollections = {}
 	self.resourcesByInstance = {}
 	self.eventSource = EventSource(self)
 
@@ -60,8 +62,33 @@ function ObjectHandle:new(id, world)
 	self.overrideMaterials = {}
 	self.resourceToUniforms = {}
 	self.meshUniformToResource = {}
+	self.uniformsDirty = false
 
 	self.pointers = {}
+end
+
+function ObjectHandle:free()
+	for _, materialInstance in pairs(self.defaultMaterials) do
+		self.world
+			:getPipeline(MaterialPipeline)
+			:freeMaterialInstance(materialInstance)
+	end
+	Table.clear(self.defaultMaterials)
+
+	for _, materialInstance in pairs(self.overrideMaterials) do
+		self.world
+			:getPipeline(MaterialPipeline)
+			:freeMaterialInstance(materialInstance)
+	end
+	Table.clear(self.overrideMaterials)
+
+	if self.skeleton then
+		self:detachSkeleton()
+	end
+
+	for i = #self.models, 1, -1 do
+		self:detachModel(self.models[i])
+	end
 end
 
 --- @param scene RatScratch.Pipeline.Scene
@@ -145,17 +172,8 @@ function ObjectHandle:addResource(resource, resourceType)
 	self.eventSource:process(
 		ObjectHandleEvent.fromResourceAdded(resource, resourceType)
 	)
-	resource:listen(ResourceEvent.MODIFY, self._onResourceUpdate, self)
 
 	return true
-end
-
---- @private
---- @generic T
---- @param event RatScratch.Resource.ResourceEvent<T>
---- @param resource T
-function ObjectHandle:_onResourceUpdate(event, resource)
-	self.eventSource:process(ObjectHandleEvent.fromResourceUpdate(resource))
 end
 
 --- @param resource RatScratch.Resource.Resource
@@ -165,8 +183,6 @@ function ObjectHandle:removeResource(resource, resourceType)
 	if not self.resourcesByInstance[resource] then
 		return false
 	end
-
-	resource:silence(ResourceEvent.MODIFY, self._onResourceUpdate, self)
 
 	self.resourcesByInstance[resource] = nil
 	self.eventSource:process(
@@ -234,19 +250,19 @@ function ObjectHandle:detachSkeleton()
 		return false
 	end
 
-	if self.animations then
-		for i = #self.animations, 1, -1 do
-			local animation = self.animations[i]
-			self:detachAnimation(animation)
-		end
+	for animations in pairs(self.animationCollections) do
+		self:detachAnimationCollection(animations)
 	end
 
-	if not self:removeResource(self.skeleton, Skeleton) then
-		return false
+	for i = #self.animations, 1, -1 do
+		local animation = self.animations[i]
+		self:detachAnimation(animation)
 	end
 
 	self.skeleton:silence(ResourceEvent.MODIFY, self._onSkeletonUpdate, self)
 	self.skeleton:silence(ResourceEvent.RELEASE, self._onSkeletonRelease, self)
+
+	self:removeResource(self.skeleton, Skeleton)
 
 	if self.animator then
 		self.eventSource:process(
@@ -312,6 +328,8 @@ function ObjectHandle:attachAnimationCollection(animations)
 		return false
 	end
 
+	self.animationCollections[animations] = true
+
 	animations
 		:getParent()
 		:listen(ResourceEvent.MODIFY, self._onAnimationCollectionUpdate, self)
@@ -337,7 +355,7 @@ function ObjectHandle:_updateAnimationCollection(animations, previousAnimations)
 		count = previousAnimations:getAnimationCount(1)
 		for i = 1, count do
 			local previousAnimation = previousAnimations:getAnimation(1, i)
-			local previousAnimationResource =
+			local animationResource =
 				self.animationToResource[previousAnimation]
 
 			local nextAnimation = scene:getAnimation(1, i)
@@ -349,9 +367,12 @@ function ObjectHandle:_updateAnimationCollection(animations, previousAnimations)
 					)
 				end
 			else
-				self:removeResource(previousAnimationResource, Animation)
-				Table.remove(self.animations, previousAnimationResource)
+				self:removeResource(animationResource, Animation)
+				Table.remove(self.animations, animationResource)
 			end
+
+			self.animationToResource[previousAnimation] = nil
+			self.animationToResource[nextAnimation] = animationResource
 		end
 	else
 		count = 0
@@ -396,16 +417,26 @@ function ObjectHandle:_removeAnimationCollection(animations)
 			Table.remove(self.animations, animationResource)
 		end
 	end
+
+	animations
+		:getParent()
+		:silence(ResourceEvent.MODIFY, self._onAnimationCollectionUpdate, self)
+	animations
+		:getParent()
+		:silence(
+			ResourceEvent.RELEASE,
+			self._onAnimationCollectionRelease,
+			self
+		)
+
+	self.animationCollections[animations] = nil
 end
 
 --- @private
 --- @param event RatScratch.Resource.ResourceEvent<RatScratch.Pipeline.Graphics3D.PipelineScene>
 --- @param animations RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineScene>
 function ObjectHandle:_onAnimationCollectionRelease(event, animations)
-	if not self:removeResource(animations, PipelineScene) then
-		return
-	end
-
+	self:removeResource(animations, PipelineScene)
 	self:_removeAnimationCollection(animations)
 end
 
@@ -430,7 +461,7 @@ end
 --- @param animations RatScratch.Pipeline.Resource.PipelineScenePointer<RatScratch.Graphics.Graphics3D.Animation[]>
 --- @return boolean
 function ObjectHandle:detachAnimationCollection(animations)
-	if not self:removeResource(animations, PipelineScene) then
+	if not self:removeResource(animations:getParent(), PipelineScene) then
 		return false
 	end
 
@@ -455,6 +486,8 @@ function ObjectHandle:attachModel(model)
 		return
 	end
 
+	self:_updateModel(model)
+
 	model:listen(ResourceEvent.MODIFY, self._onModelUpdate, self)
 	model:listen(ResourceEvent.RELEASE, self._onModelRelease, self)
 
@@ -472,7 +505,7 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 		PipelineModelMeshPointer.newModelMeshPointer(modelResource, meshIndex)
 	local materialInstance = self.defaultMaterials[meshResource]
 	if not materialInstance then
-		materialInstance = materialPipeline:newMaterialInstance("BasicPBR")
+		materialInstance = materialPipeline:newMaterialInstance("Basic")
 		self.defaultMaterials[meshResource] = materialInstance
 	end
 
@@ -494,7 +527,7 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 	if materialProperties:getTexture() then
 		self:setModelMeshMaterialUniformByArguments(
 			meshResource,
-			"albedoFactor",
+			"albedoTexture",
 			meshResource:getTexturePointer("albedo")
 		)
 	end
@@ -549,7 +582,7 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 	self:setModelMeshMaterialUniformByArguments(
 		meshResource,
 		"emissiveFactor",
-		materialProperties:getColor()
+		materialProperties:getEmissive()
 	)
 
 	if materialProperties:getEmissiveTexture() then
@@ -584,6 +617,13 @@ function ObjectHandle:_updateModel(modelResource, previousModel)
 			local mesh =
 				PipelineModelMeshPointer.newModelMeshPointer(modelResource, i)
 
+			local uniforms = self.meshUniformToResource[mesh]
+			if uniforms then
+				for uniform in pairs(uniforms) do
+					self:_unbindUniformResource(mesh, uniform)
+				end
+			end
+
 			if self.overrideMaterials[mesh] then
 				materialPipeline:freeMaterialInstance(
 					self.overrideMaterials[mesh]
@@ -615,8 +655,13 @@ function ObjectHandle:_removeModel(modelResource)
 			PipelineModelMeshPointer.newModelMeshPointer(modelResource, i)
 
 		local uniforms = self.meshUniformToResource[mesh]
-		for _, resource in pairs(uniforms) do
-			self:removeResource(resource, "love.ImageData")
+		if uniforms then
+			for uniform, resource in pairs(uniforms) do
+				self:removeResource(resource, "love.ImageData")
+				self:_unbindUniformResource(mesh, uniform)
+			end
+
+			self.meshUniformToResource[mesh] = nil
 		end
 
 		if self.overrideMaterials[mesh] then
@@ -629,6 +674,8 @@ function ObjectHandle:_removeModel(modelResource)
 			self.defaultMaterials[mesh] = nil
 		end
 	end
+
+	Table.remove(self.models, modelResource)
 end
 
 --- @private
@@ -642,7 +689,7 @@ end
 --- @param event RatScratch.Resource.ResourceEvent<RatScratch.Pipeline.Graphics3D.PipelineModel>
 --- @param model RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineModel>
 function ObjectHandle:_onModelRelease(event, model)
-	self:_removeModel(model)
+	self:detachModel(model)
 end
 
 --- @param mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>
@@ -688,6 +735,8 @@ function ObjectHandle:setModelMeshMaterial(mesh, material)
 			)
 		)
 	end
+
+	self.uniformsDirty = true
 end
 
 --- @param mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>
@@ -696,7 +745,7 @@ function ObjectHandle:unsetModelMeshMaterial(mesh)
 end
 
 --- @param mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>
---- @return RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
+--- @return RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance?
 function ObjectHandle:getMeshMaterial(mesh)
 	return self.overrideMaterials[mesh] or self.defaultMaterials[mesh]
 end
@@ -726,6 +775,9 @@ function ObjectHandle:_unbindUniformResource(mesh, uniform)
 	end
 
 	self.meshUniformToResource[mesh][uniform] = nil
+	if not next(self.meshUniformToResource[mesh]) then
+		self.meshUniformToResource[mesh] = nil
+	end
 end
 
 --- @private
@@ -773,17 +825,21 @@ function ObjectHandle:setModelMeshMaterialUniformByArguments(
 )
 	local materialInstance = self.overrideMaterials[mesh]
 		or self.defaultMaterials[mesh]
+	if not materialInstance then
+		return
+	end
+
 	local material = materialInstance:getMaterial()
 	local uniform = material:getUniform(uniformKey)
 
 	if uniform:getFormat() == "texture" then
+		self:_unbindUniformResource(mesh, uniform)
+
 		local value = ...
-		if value == nil then
-			self:_unbindUniformResource(mesh, uniform)
-		else
+		if value ~= nil then
 			--- @cast value RatScratch.Resource.Resource<love.ImageData>
 			assert(
-				Object.isDerived(Object.getType(value), Resource),
+				Object.isDerived(Resource, Object.getType(value)),
 				"value is not resource"
 			)
 			self:addResource(value, "love.ImageData")
@@ -806,16 +862,20 @@ function ObjectHandle:setModelMeshMaterialUniformByValue(
 )
 	local materialInstance = self.overrideMaterials[mesh]
 		or self.defaultMaterials[mesh]
+	if not materialInstance then
+		return
+	end
+
 	local material = materialInstance:getMaterial()
 	local uniform = material:getUniform(uniformKey)
 
 	if uniform:getFormat() == "texture" then
-		if value == nil then
-			self:_unbindUniformResource(mesh, uniform)
-		else
+		self:_unbindUniformResource(mesh, uniform)
+
+		if value ~= nil then
 			--- @cast value RatScratch.Resource.Resource<love.ImageData>
 			assert(
-				Object.isDerived(Object.getType(value), Resource),
+				Object.isDerived(Resource, Object.getType(value)),
 				"value is not resource"
 			)
 			self:addResource(value, "love.ImageData")
@@ -837,8 +897,6 @@ function ObjectHandle:detachModel(model)
 
 	model:silence(ResourceEvent.MODIFY, self._onModelUpdate, self)
 	model:silence(ResourceEvent.RELEASE, self._onModelRelease, self)
-
-	Table.remove(self.models, model)
 end
 
 --- @private

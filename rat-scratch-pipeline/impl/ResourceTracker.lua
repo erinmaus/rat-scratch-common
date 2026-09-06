@@ -62,15 +62,13 @@ function ResourceTracker:add(resource, object)
 	objects[object] = true
 
 	if isNew then
-		self.objectsByResource[resource] = {}
-
 		self.eventSource:process(
 			ResourceTrackerEvent.fromAdd(resource, objects)
 		)
 		resource:listen(ResourceEvent.MODIFY, self._onResourceUpdate, self)
 	end
 
-	self.resourceValue[resource] = resource:get()
+	self.resourceValue[resource] = (resource:getIsReady() and resource:get())
 		or self.resourceValue[resource]
 
 	if resource:getIsReady() then
@@ -145,7 +143,7 @@ function ResourceTracker:flush()
 		)
 	end
 
-	Table.clear(self.dirtyResources)
+	Table.clear(self.dirtyResourcesByIndex)
 end
 
 return ResourceTracker

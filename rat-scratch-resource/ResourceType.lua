@@ -1,5 +1,6 @@
 local Object = require("rat-scratch-common").Object
 local Path = require("rat-scratch-common").Path
+local Resource = require("rat-scratch-resource.Resource")
 
 --- @class RatScratch.Resource.ResourceDependency
 --- @field public dependencyID string
@@ -22,7 +23,7 @@ function ResourceType:isRenderThread()
 end
 
 function ResourceType:isResourceThread()
-	return not love.graphics
+	return love.graphics == nil
 end
 
 function ResourceType:getRootPath()
@@ -66,9 +67,31 @@ end
 --- @generic D
 --- @param self RatScratch.Resource.ResourceType<T, D>
 --- @param id integer
+--- @return RatScratch.Resource.Resource<T>
+function ResourceType:newResource(id)
+	return Resource(id)
+end
+
+--- @generic T
+--- @generic D
+--- @param self RatScratch.Resource.ResourceType<T, D>
+--- @param id integer
 --- @param data D
 --- @return T
 function ResourceType:instantiateFromData(id, data)
+	local resource = Resource(id)
+	self:updateFromData(resource, data)
+
+	return resource
+end
+
+--- @generic T
+--- @generic D
+--- @param self RatScratch.Resource.ResourceType<T, D>
+--- @param resource T
+--- @param data D
+--- @return T
+function ResourceType:updateFromData(resource, data)
 	return self:ABSTRACT()
 end
 

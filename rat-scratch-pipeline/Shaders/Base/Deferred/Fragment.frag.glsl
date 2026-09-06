@@ -5,8 +5,8 @@
 #include "@Pipeline/Common/Pack.common.glsl"
 #include "@Pipeline/Common/Types/Fragment.common.glsl"
 
-#include "@Generated/Pipeline/Material/Fragment.common.glsl"
 #include "@Generated/Pipeline/Material/Properties.common.glsl"
+#include "@Generated/Pipeline/Material/Fragment.common.glsl"
 
 layout(location = 0) out vec4 rat_GBufferAlbedo;	 // generally rgba8, colors
 layout(location = 1) out vec4 rat_GBufferEmissive;	 // generally rgba8, emissive colors rgb, a = unused

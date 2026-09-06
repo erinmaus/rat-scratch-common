@@ -45,6 +45,7 @@ function World:new(pipelineRuntime)
 	self.objectHandles = {}
 	self.dirtyObjectHandles = {}
 	self.dirtyObjectHandleDraws = {}
+	self.dirtyMaterialObjectHandles = {}
 	self.objectHandleToModelInstancesHandle = {}
 	self.modelInstancesHandleToObjectHandle = {}
 	self.animatorToObjectHandle = {}
@@ -227,14 +228,10 @@ function World:_onUpdateModel(event)
 		for i = 1, event:getObjectCount() do
 			local object = event:getObject(i)
 			local handle = self.objectHandleToModelInstancesHandle[object]
-
-			if event:getPreviousValue() then
-				handle:remove(event:getPreviousValue())
+			if handle then
+				handle:update(event:getResource())
+				self.dirtyObjectHandleDraws[object] = true
 			end
-
-			handle:add(event:getResource():get())
-
-			self.dirtyObjectHandleDraws[object] = true
 		end
 	end
 
@@ -401,6 +398,8 @@ function World:newObject()
 		self
 	)
 
+	self.pipelines:get(ObjectPipeline):addObject(objectHandle)
+
 	return objectHandle
 end
 
@@ -412,20 +411,69 @@ function World:_onModelInstancesPointerMove(event)
 	self.dirtyObjectHandles[objectHandle] = true
 end
 
+--- @param objectHandle RatScratch.Pipeline.ObjectHandle
 function World:freeObject(objectHandle)
 	assert(self.objectHandles[objectHandle], "object handle not in world")
 
+	objectHandle:silence(
+		ObjectHandleEvent.RESOURCE_ADDED,
+		self._onAddResource,
+		self
+	)
+
+	objectHandle:silence(
+		ObjectHandleEvent.RESOURCE_REMOVED,
+		self._onRemoveResource,
+		self
+	)
+	objectHandle:silence(
+		ObjectHandleEvent.ANIMATOR_ADDED,
+		self._onAddAnimator,
+		self
+	)
+	objectHandle:silence(
+		ObjectHandleEvent.ANIMATOR_REMOVED,
+		self._onRemoveAnimator,
+		self
+	)
+	objectHandle:silence(
+		ObjectHandleEvent.MATERIAL_ADDED,
+		self._onAddMaterial,
+		self
+	)
+	objectHandle:silence(
+		ObjectHandleEvent.MATERIAL_REMOVED,
+		self._onRemoveMaterial,
+		self
+	)
+
+	objectHandle:free()
+
 	self.objectHandles[objectHandle] = nil
 	self.dirtyObjectHandles[objectHandle] = nil
+	self.dirtyObjectHandleDraws[objectHandle] = nil
+	self.dirtyMaterialObjectHandles[objectHandle] = nil
 
 	local modelPipeline = self.pipelines:get(ModelPipeline)
 	local modelInstances = self.objectHandleToModelInstancesHandle[objectHandle]
 	modelPipeline:freeModelInstances(modelInstances)
 	self.objectHandleToModelInstancesHandle[objectHandle] = nil
 	self.modelInstancesHandleToObjectHandle[modelInstances] = nil
+
+	local modelInstancesPointer =
+		modelPipeline:getModelInstancesPointer(modelInstances)
+	modelInstancesPointer:silence(
+		PipelineBufferContextEvent.MOVE,
+		self._onModelInstancesPointerMove,
+		self
+	)
+
+	self.pipelines:get(ObjectPipeline):removeObject(objectHandle)
 end
 
 function World:updateObject(objectHandle)
+	assert(self.objectHandles[objectHandle], "object handle not in world")
+
 	self.dirtyObjectHandles[objectHandle] = true
 end
 
@@ -548,6 +596,10 @@ end
 --- @param objectHandle RatScratch.Pipeline.ObjectHandle
 function World:_updateObjectHandleDraw(objectHandle)
 	local scene = objectHandle:getScene()
+	if not scene then
+		return
+	end
+
 	local drawPipeline = scene:getPipeline(DrawPipeline)
 
 	local modelInstances = self.objectHandleToModelInstancesHandle[objectHandle]
@@ -581,7 +633,7 @@ function World:_updateObjectHandleDraw(objectHandle)
 				draw:setPointer("meshInstanceIndex", meshInstancesPointer, j)
 				draw:setPointer("modelIndex", modelPointer, i)
 				draw:setPointer("meshIndex", meshInstancesPointer, j)
-				draw:setPointer("meshletPointer", meshletPointer, k)
+				draw:setPointer("meshletIndex", meshletPointer, k)
 
 				currentDraw = currentDraw + 1
 			end
@@ -609,6 +661,11 @@ function World:flush()
 	self.pipelines:get(AnimationPipeline):flush()
 	self.pipelines:get(MaterialPipeline):flush()
 	self.pipelines:get(ModelPipeline):flush()
+
+	self.modelResources:flush()
+	self.skeletonResources:flush()
+	self.animationResources:flush()
+	self.textureResources:flush()
 
 	if next(self.dirtyObjectHandles) then
 		self:_updateObjectHandles()

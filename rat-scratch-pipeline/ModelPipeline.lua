@@ -24,7 +24,7 @@ local Transform = require("rat-scratch-math").Transform
 --- @field private dirtyModelBuffers table<RatScratch.Pipeline.Graphics3D.PipelineModel, true>
 --- @field private modelInstances table<RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle, true>
 --- @field private dirtyModelInstances table<RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle, true>
---- @overload fun(): RatScratch.Pipeline.ModelPipeline
+--- @overload fun(pipelineRuntime: RatScratch.Pipeline.PipelineRuntime): RatScratch.Pipeline.ModelPipeline
 local ModelPipeline = Object(Pipeline)
 
 ModelPipeline.MODEL_INSTANCE_FORMAT = {
@@ -39,21 +39,21 @@ ModelPipeline.MESH_INSTANCE_FORMAT = {
 
 ModelPipeline.MODEL_FORMAT = {
 	{ location = 0, name = "localTransform", format = "floatmat4x4" },
-	{ location = 1, name = "meshIndexCount", format = "uint32vec2 " },
+	{ location = 1, name = "meshIndexCount", format = "uint32vec2" },
 }
 
 ModelPipeline.MESH_FORMAT = {
 	{ location = 0, name = "meshletIndexCount", format = "uint32vec2" },
 	{ location = 1, name = "indexOffset", format = "uint32" },
-	{ location = 2, name = "staticBaseVertexOffset", format = "uint32 " },
-	{ location = 3, name = "skinnedBaseVertexOffset", format = "uint32 " },
+	{ location = 2, name = "staticBaseVertexOffset", format = "uint32" },
+	{ location = 3, name = "skinnedBaseVertexOffset", format = "uint32" },
 }
 
 ModelPipeline.MESHLET_FORMAT = {
 	{ location = 0, name = "staticCenterRadius", format = "floatvec4" },
-	{ location = 0, name = "indexOffset", format = "uint32" },
+	{ location = 1, name = "indexOffset", format = "uint32" },
 	{
-		location = 0,
+		location = 2,
 		name = "skinnedMeshletBoundsIndexCount",
 		format = "uint32vec2",
 	},
@@ -88,19 +88,21 @@ function ModelPipeline:new(pipelineRuntime)
 	for i = 1, self:getPipelineConfig():getVertexFormatCountByRole("static") do
 		table.insert(
 			staticFormats,
-			self:getPipelineConfig():getVertexFormatByRole("static", i)
+			self:getPipelineConfig()
+				:getVertexFormatByRole("static", i)
+				:getInputFormat()
 		)
 	end
 
 	self.staticVertexBuffer = PipelineMultiBuffer(
 		staticFormats,
-		{ shaderstorage = true, vertex = true },
+		{ shaderstorage = true },
 		ModelPipeline.DEFAULT_VERTEX_COUNT
 	)
 
 	self.indexBuffer = PipelineMultiBuffer(
 		{ BufferFormat.get(ModelPipeline.INDEX_FORMAT) },
-		{ shaderstorage = true, index = true },
+		{ shaderstorage = true },
 		ModelPipeline.DEFAULT_VERTEX_COUNT
 	)
 
@@ -108,13 +110,15 @@ function ModelPipeline:new(pipelineRuntime)
 	for i = 1, self:getPipelineConfig():getVertexFormatCountByRole("skinned") do
 		table.insert(
 			skinnedFormats,
-			self:getPipelineConfig():getVertexFormatByRole("skinned", i)
+			self:getPipelineConfig()
+				:getVertexFormatByRole("skinned", i)
+				:getInputFormat()
 		)
 	end
 
 	self.skinnedVertexBuffer = PipelineMultiBuffer(
 		skinnedFormats,
-		{ shaderstorage = true, vertex = true },
+		{ shaderstorage = true },
 		ModelPipeline.DEFAULT_VERTEX_COUNT
 	)
 
@@ -173,13 +177,16 @@ end
 function ModelPipeline:addModel(model)
 	assert(not self.models[model], "model already exists in model pipeline")
 
+	self.models[model] = true
+	table.insert(self.modelsByIndex, model)
+
 	self.dirtyModels[model] = true
 	self.dirtyModelBuffers[model] = true
 
 	self.modelsBuffer:register(model, 1)
 	self.meshesBuffer:register(model, model:getMeshCount())
 	for i = 1, model:getMeshCount() do
-		local mesh = model:getMesh()
+		local mesh = model:getMesh(i)
 
 		self.meshletsBuffer:register(mesh, mesh:getMeshletCount())
 
@@ -187,15 +194,15 @@ function ModelPipeline:addModel(model)
 			local meshlet = mesh:getMeshlet(j)
 			self.meshletsSkinnedBoundsBuffer:register(
 				meshlet,
-				meshlet:getSkinnedBoundsCount()
+				math.max(meshlet:getSkinnedBoundsCount(), 1)
 			)
 		end
 
 		self.staticVertexBuffer:register(mesh, mesh:getVertexCount())
 
-		for j = 1, self:getPipelineConfig():getVertexFormatCountByRole("static") do
+		for j = 1, self:getPipelineConfig():getVertexFormatCountByRole("skinned") do
 			local vertexBufferInfo = self:getPipelineConfig()
-				:getVertexFormatByRole("static", j)
+				:getVertexFormatByRole("skinned", j)
 			if mesh:hasVertexData(vertexBufferInfo:getBufferName()) then
 				self.skinnedVertexBuffer:register(mesh, mesh:getVertexCount())
 				break
@@ -208,7 +215,7 @@ end
 
 --- @param model RatScratch.Pipeline.Graphics3D.PipelineModel
 function ModelPipeline:removeModel(model)
-	assert(not self.models[model], "model does not exist in model pipeline")
+	assert(self.models[model], "model does not exist in model pipeline")
 
 	self.models[model] = nil
 	Table.remove(self.modelsByIndex, model)
@@ -353,9 +360,9 @@ end
 function ModelPipeline:_updateMesh(model, mesh, meshIndex)
 	local meshletIndex, meshletCount = self.meshletsBuffer:getIndexCount(mesh)
 	local indexOffset = self.indexBuffer:getIndexCount(mesh)
-	local staticVertexIndex = self.staticVertexBuffer:getIndexCount(model)
-	local skinnedVertexIndex = self.skinnedVertexBuffer:has(model)
-			and self.staticVertexBuffer:getIndexCount(model)
+	local staticVertexIndex = self.staticVertexBuffer:getIndexCount(mesh)
+	local skinnedVertexIndex = self.skinnedVertexBuffer:has(mesh)
+			and self.skinnedVertexBuffer:getIndexCount(mesh)
 		or 0
 
 	self.meshesBuffer:set(

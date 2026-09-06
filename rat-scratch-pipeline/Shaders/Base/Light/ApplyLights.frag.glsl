@@ -5,9 +5,9 @@
 #include "@Pipeline/Common/Lights.common.glsl"
 
 // #include "@Generated/Config.common.glsl"
-#include "@Generated/Pipeline/Light/ApplyLights.common.glsl"
-#include "@Generated/Pipeline/Light/Lights.common.glsl"
 #include "@Generated/Pipeline/Material/Properties.common.glsl"
+#include "@Generated/Pipeline/Light/Lights.common.glsl"
+#include "@Generated/Pipeline/Light/ApplyLights.common.glsl"
 
 const uvec3 RAT_SCRATCH_CONFIG_LIGHT_CELLS = uvec3(16, 16, 16);
 const uint RAT_SCRATCH_CONFIG_LIGHTS_PER_CELL = 32;

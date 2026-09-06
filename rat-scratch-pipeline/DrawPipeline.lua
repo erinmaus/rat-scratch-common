@@ -1,6 +1,7 @@
 local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
+local Pipeline = require("rat-scratch-pipeline.impl.Pipeline")
 local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local Draw = require("rat-scratch-pipeline.Draw")
@@ -8,7 +9,7 @@ local PipelineMultiBuffer =
 	require("rat-scratch-pipeline.Buffer.PipelineMultiBuffer")
 local Transform = require("rat-scratch-math").Transform
 
---- @class RatScratch.Pipeline.DrawPipeline : RatScratch.Common.BaseObject
+--- @class RatScratch.Pipeline.DrawPipeline : RatScratch.Pipeline.impl.Pipeline
 --- @field private drawables table<RatScratch.Pipeline.ObjectHandle, true>
 --- @field private dirtyDrawables table<RatScratch.Pipeline.ObjectHandle, true>
 --- @field private drawableToDraws table<RatScratch.Pipeline.ObjectHandle, RatScratch.Pipeline.Draw[]>
@@ -16,8 +17,8 @@ local Transform = require("rat-scratch-math").Transform
 --- @field private indirectDrawBuffer love.GraphicsBuffer
 --- @field private camerasBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>
 --- @field private drawsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.ObjectHandle>
---- @overload fun(): RatScratch.Pipeline.DrawPipeline
-local DrawPipeline = Object()
+--- @overload fun(pipelineRuntime: RatScratch.Pipeline.PipelineRuntime): RatScratch.Pipeline.DrawPipeline
+local DrawPipeline = Object(Pipeline)
 
 DrawPipeline.DRAW_FORMAT = {
 	{ location = 0, name = "objectInstanceIndex", format = "uint32" },
@@ -64,21 +65,19 @@ DrawPipeline.CAMERA_FORMAT = {
 	},
 	{
 		location = 8,
-		name = "inverseProjectionViewTransform",
-		format = "floatmat4x4",
-	},
-	{
-		location = 9,
 		name = "inversePreviousProjectionViewTransform",
 		format = "floatmat4x4",
 	},
-	{ location = 10, name = "position", format = "floatvec4" },
+	{ location = 9, name = "position", format = "floatvec4" },
 }
 
 DrawPipeline.DEFAULT_CAMERA_COUNT = 64
 DrawPipeline.DEFAULT_DRAW_COUNT = 1024 * 16 * DrawPipeline.DEFAULT_CAMERA_COUNT
 
-function DrawPipeline:new()
+--- @param pipelineRuntime RatScratch.Pipeline.PipelineRuntime
+function DrawPipeline:new(pipelineRuntime)
+	Pipeline.new(self, pipelineRuntime)
+
 	self.drawables = {}
 	self.dirtyDrawables = {}
 	self.drawableToDraws = {}
@@ -110,7 +109,15 @@ function DrawPipeline:addDrawable(object)
 	self.drawables[object] = true
 end
 
---- @param object RatScratch.Pipeline.ObjectHandleEvent
+--- @param object RatScratch.Pipeline.ObjectHandle
+function DrawPipeline:removeDrawable(object)
+	assert(self.drawables[object], "object is in not drawables list")
+
+	self.drawables[object] = nil
+	self.drawsBuffer:unregister(object)
+end
+
+--- @param object RatScratch.Pipeline.ObjectHandle
 function DrawPipeline:updateDrawable(object)
 	assert(self.drawables[object], "object is not in drawables list")
 
@@ -123,11 +130,10 @@ end
 --- @param meshletCount integer
 function DrawPipeline:resizeDrawable(object, meshletCount)
 	assert(self.drawables[object], "object is not in drawables list")
-	assert(
-		meshletCount >= 1,
-		"meshlet count must be >= 1; got %d",
-		meshletCount
-	)
+
+	if meshletCount == 0 then
+		return
+	end
 
 	self.drawsBuffer:registerOrResize(object, meshletCount)
 
@@ -136,6 +142,8 @@ function DrawPipeline:resizeDrawable(object, meshletCount)
 
 	draws = Draw.newBatch(meshletCount, data, 1, draws)
 	self.drawableToDraws[object] = draws
+
+	self:updateDrawable(object)
 
 	return draws
 end

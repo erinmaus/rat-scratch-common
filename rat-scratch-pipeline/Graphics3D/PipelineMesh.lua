@@ -1,4 +1,5 @@
 local Object = require("rat-scratch-common").Object
+local Table = require("rat-scratch-common").Table
 local Material = require("rat-scratch-graphics").Graphics3D.Material
 local PipelineMeshlet =
 	require("rat-scratch-pipeline.Graphics3D.PipelineMeshlet")
@@ -28,9 +29,8 @@ function PipelineMesh:new(
 )
 	self.vertexCount = vertexCount
 	self.indexCount = indexCount
-	self.vertices = vertices
 	self.indices = indices
-	self.vertices = {}
+	self.vertices = Table.cloneHash(vertices)
 	self.meshlets = meshlets
 	self.material = material
 end

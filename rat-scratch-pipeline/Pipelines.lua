@@ -27,7 +27,7 @@ end
 --- @return T
 function Pipelines:get(pipelineType)
 	assert(
-		Object.isType(pipelineType) and Object.isDerived(pipelineType, Pipeline),
+		Object.isType(pipelineType) and Object.isDerived(Pipeline, pipelineType),
 		"pipeline type argument '%s' is not derived from RatScratch.Pipeline.impl.Pipeline or is not RatScratch.Common.BaseObject-type",
 		Object.isType(pipelineType) and pipelineType._DEBUG.shortName or "???"
 	)

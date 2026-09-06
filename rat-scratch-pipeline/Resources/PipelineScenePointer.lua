@@ -55,10 +55,17 @@ function PipelineScenePointer:new(parent, pointer)
 	self.parent = parent
 	self.pointer = pointer
 
+	if self.parent:getIsReady() then
+		local result = self.pointer(self.parent:get())
+		if result then
+			self:set(result)
+		end
+	end
+
 	self.modifyID =
 		parent:listen(ResourceEvent.MODIFY, self._onParentModify, self)
 	self.releaseID =
-		parent:listen(ResourceEvent.MODIFY, self._onParentRelease, self)
+		parent:listen(ResourceEvent.RELEASE, self._onParentRelease, self)
 end
 
 function PipelineScenePointer:getParent()

@@ -75,6 +75,7 @@ function Material:setNormalScale(value)
 	self.normalScale = value
 end
 
+--- @return number, number, number
 function Material:getEmissive()
 	return Table.unpack(self.emissive, 1, 3)
 end

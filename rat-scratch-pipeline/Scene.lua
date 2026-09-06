@@ -33,10 +33,12 @@ end
 
 --- @param object RatScratch.Pipeline.ObjectHandle
 function Scene:addObject(object)
-	assert(self.objectHandles[object], "object is in scene")
+	assert(not self.objectHandles[object], "object is in scene")
 
 	self.objectHandles[object] = true
 	self.dirtyObjectHandles[object] = true
+
+	self.pipelines:get(DrawPipeline):addDrawable(object)
 end
 
 --- @param object RatScratch.Pipeline.ObjectHandle
@@ -45,6 +47,8 @@ function Scene:removeObject(object)
 
 	self.objectHandles[object] = nil
 	self.dirtyObjectHandles[object] = nil
+
+	self.pipelines:get(DrawPipeline):removeDrawable(object)
 end
 
 --- @param object RatScratch.Pipeline.ObjectHandle
@@ -89,20 +93,11 @@ end
 --- @param object RatScratch.Pipeline.ObjectHandle
 function Scene:_updateDirtyObjectHandle(object)
 	local modelInstances = self.world:getModelInstancesHandle(object)
-
-	local meshletCount = 0
-	for i = 1, modelInstances:getHandleCount() do
-		local handle = modelInstances:getHandle(i)
-		local model = handle.model:get()
-		local meshes = handle.meshes
-		for j = 1, #meshes do
-			local mesh = model:getMesh(j)
-			meshletCount = meshletCount + mesh:getMeshletCount()
-		end
-	end
+	local meshletCount = modelInstances:calculateMeshletCount()
 
 	local drawPipeline = self:getPipeline(DrawPipeline)
-	drawPipeline:updateDrawable()
+	drawPipeline:resizeDrawable(object, meshletCount)
+	drawPipeline:updateDrawable(object)
 end
 
 --- @private
@@ -117,6 +112,8 @@ function Scene:flush()
 	if next(self.dirtyObjectHandles) then
 		self:_updateDirtyObjectHandles()
 	end
+
+	self.pipelines:get(DrawPipeline):flush()
 end
 
 return Scene

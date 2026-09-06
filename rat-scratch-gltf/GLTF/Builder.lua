@@ -786,7 +786,9 @@ end
 --- @param materialDefinitionTexture RatScratch.Graphics.Graphics3D.MaterialDefinitionTexture
 --- @return integer?
 function GLTFBuilder:_addMaterialDefinitionTexture(materialDefinitionTexture)
-	if not materialDefinitionTexture then
+	if
+		not (materialDefinitionTexture and materialDefinitionTexture.texture)
+	then
 		return nil
 	end
 

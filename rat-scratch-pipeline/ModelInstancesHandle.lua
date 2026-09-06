@@ -11,7 +11,7 @@ local Table = require("rat-scratch-common").Table
 
 --- @class RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle
 --- @field private pipeline RatScratch.Pipeline.ModelPipeline
---- @field private modelsByIndex RatScratch.Pipeline.ModelPipeline.ModelInstance[]
+--- @field private modelsByIndex RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineModel>[]
 --- @field private models table<RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineModel>, RatScratch.Pipeline.ModelPipeline.ModelInstance>
 --- @overload fun(pipeline: RatScratch.Pipeline.ModelPipeline): RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle
 local ModelInstancesHandle = Object()
@@ -47,12 +47,12 @@ function ModelInstancesHandle:add(model)
 		}
 
 		for i = 1, model:get():getMeshCount() do
-			modelInstance[i] = 0
+			modelInstance.meshes[i] = 0
 		end
 
 		self.models[model] = modelInstance
+		self.pipeline:registerModelInstance(modelInstance)
 
-		self:updateModelInstances(model)
 		return true
 	end
 
@@ -67,6 +67,12 @@ function ModelInstancesHandle:remove(model)
 		self.models[model] = nil
 		Table.remove(self.modelsByIndex, model)
 	end
+end
+
+--- @param model RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineModel>
+function ModelInstancesHandle:update(model)
+	self:remove(model)
+	self:add(model)
 end
 
 function ModelInstancesHandle:getHandleCount()
@@ -107,8 +113,9 @@ end
 
 function ModelInstancesHandle:calculateMeshletCount()
 	local count = 0
-	for _, handle in ipairs(self.modelsByIndex) do
-		local model = handle.model:get()
+	for _, modelResource in ipairs(self.modelsByIndex) do
+		local model = modelResource:getIsReady() and modelResource:get()
+
 		if model then
 			for i = 1, model:getMeshCount() do
 				count = count + model:getMesh(i):getMeshletCount()

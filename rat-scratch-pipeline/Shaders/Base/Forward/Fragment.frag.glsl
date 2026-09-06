@@ -11,8 +11,8 @@ void ratDiscard(out RatScratchPipelineFragmentOutput fragmentOutput)
 #include "@Pipeline/Common/Pack.common.glsl"
 #include "@Pipeline/Common/Types/Fragment.common.glsl"
 
-#include "@Generated/Pipeline/Material/Fragment.common.glsl"
 #include "@Generated/Pipeline/Material/Properties.common.glsl"
+#include "@Generated/Pipeline/Material/Fragment.common.glsl"
 
 #include "@Pipeline/Base/Light/ApplyLights.frag.glsl"
 
