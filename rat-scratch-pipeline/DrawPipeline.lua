@@ -110,7 +110,7 @@ function DrawPipeline:addDrawable(object)
 	self.drawables[object] = true
 end
 
---- @param object RatScratch.Pipeline.ObjectHandleEvent
+--- @param object RatScratch.Pipeline.ObjectHandle
 function DrawPipeline:updateDrawable(object)
 	assert(self.drawables[object], "object is not in drawables list")
 

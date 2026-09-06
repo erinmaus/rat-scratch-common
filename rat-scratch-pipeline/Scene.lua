@@ -89,20 +89,11 @@ end
 --- @param object RatScratch.Pipeline.ObjectHandle
 function Scene:_updateDirtyObjectHandle(object)
 	local modelInstances = self.world:getModelInstancesHandle(object)
-
-	local meshletCount = 0
-	for i = 1, modelInstances:getHandleCount() do
-		local handle = modelInstances:getHandle(i)
-		local model = handle.model:get()
-		local meshes = handle.meshes
-		for j = 1, #meshes do
-			local mesh = model:getMesh(j)
-			meshletCount = meshletCount + mesh:getMeshletCount()
-		end
-	end
+	local meshletCount = modelInstances:calculateMeshletCount()
 
 	local drawPipeline = self:getPipeline(DrawPipeline)
-	drawPipeline:updateDrawable()
+	drawPipeline:resizeDrawable(object, meshletCount)
+	drawPipeline:updateDrawable(object)
 end
 
 --- @private

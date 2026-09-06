@@ -145,17 +145,8 @@ function ObjectHandle:addResource(resource, resourceType)
 	self.eventSource:process(
 		ObjectHandleEvent.fromResourceAdded(resource, resourceType)
 	)
-	resource:listen(ResourceEvent.MODIFY, self._onResourceUpdate, self)
 
 	return true
-end
-
---- @private
---- @generic T
---- @param event RatScratch.Resource.ResourceEvent<T>
---- @param resource T
-function ObjectHandle:_onResourceUpdate(event, resource)
-	self.eventSource:process(ObjectHandleEvent.fromResourceUpdate(resource))
 end
 
 --- @param resource RatScratch.Resource.Resource
@@ -165,8 +156,6 @@ function ObjectHandle:removeResource(resource, resourceType)
 	if not self.resourcesByInstance[resource] then
 		return false
 	end
-
-	resource:silence(ResourceEvent.MODIFY, self._onResourceUpdate, self)
 
 	self.resourcesByInstance[resource] = nil
 	self.eventSource:process(
@@ -472,7 +461,7 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 		PipelineModelMeshPointer.newModelMeshPointer(modelResource, meshIndex)
 	local materialInstance = self.defaultMaterials[meshResource]
 	if not materialInstance then
-		materialInstance = materialPipeline:newMaterialInstance("BasicPBR")
+		materialInstance = materialPipeline:newMaterialInstance("Basic")
 		self.defaultMaterials[meshResource] = materialInstance
 	end
 
@@ -494,7 +483,7 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 	if materialProperties:getTexture() then
 		self:setModelMeshMaterialUniformByArguments(
 			meshResource,
-			"albedoFactor",
+			"albedoTexture",
 			meshResource:getTexturePointer("albedo")
 		)
 	end
@@ -783,7 +772,7 @@ function ObjectHandle:setModelMeshMaterialUniformByArguments(
 		else
 			--- @cast value RatScratch.Resource.Resource<love.ImageData>
 			assert(
-				Object.isDerived(Object.getType(value), Resource),
+				Object.isDerived(Resource, Object.getType(value)),
 				"value is not resource"
 			)
 			self:addResource(value, "love.ImageData")
@@ -815,7 +804,7 @@ function ObjectHandle:setModelMeshMaterialUniformByValue(
 		else
 			--- @cast value RatScratch.Resource.Resource<love.ImageData>
 			assert(
-				Object.isDerived(Object.getType(value), Resource),
+				Object.isDerived(Resource, Object.getType(value)),
 				"value is not resource"
 			)
 			self:addResource(value, "love.ImageData")

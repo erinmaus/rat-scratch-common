@@ -148,6 +148,10 @@ function Draw.newBatch(count, a, b, c)
 		index = index + componentCount
 	end
 
+	for i = #result, count + 1, -1 do
+		table.remove(result, i)
+	end
+
 	return result
 end
 

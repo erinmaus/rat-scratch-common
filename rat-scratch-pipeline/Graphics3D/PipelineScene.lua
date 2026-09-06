@@ -56,25 +56,29 @@ end
 function PipelineScene.fromDefinition(sceneDefinition)
 	local skeletons = {}
 	local definitionToSkeleton = {}
-	for _, skeletonDefinition in ipairs(sceneDefinition.skeletons) do
-		local skeleton = Skeleton.fromDefinition(skeletonDefinition)
-		table.insert(skeletons, skeleton)
-		definitionToSkeleton[skeletonDefinition] = skeleton
+	if sceneDefinition.skeletons then
+		for _, skeletonDefinition in ipairs(sceneDefinition.skeletons) do
+			local skeleton = Skeleton.fromDefinition(skeletonDefinition)
+			table.insert(skeletons, skeleton)
+			definitionToSkeleton[skeletonDefinition] = skeleton
+		end
 	end
 
 	local animations = {}
-	for _, animationDefinitions in pairs(sceneDefinition.animations) do
-		local skeleton = definitionToSkeleton[animationDefinitions.skeleton]
-		if skeleton then
-			animations[skeleton] = {}
+	if sceneDefinition.animations then
+		for _, animationDefinitions in pairs(sceneDefinition.animations) do
+			local skeleton = definitionToSkeleton[animationDefinitions.skeleton]
+			if skeleton then
+				animations[skeleton] = {}
 
-			for _, animationDefinition in
-				ipairs(animationDefinitions.animations)
-			do
-				table.insert(
-					animations[skeleton],
-					Animation.fromDefinition(animationDefinition, skeleton)
-				)
+				for _, animationDefinition in
+					ipairs(animationDefinitions.animations)
+				do
+					table.insert(
+						animations[skeleton],
+						Animation.fromDefinition(animationDefinition, skeleton)
+					)
+				end
 			end
 		end
 	end

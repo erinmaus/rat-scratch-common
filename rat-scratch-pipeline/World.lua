@@ -45,6 +45,7 @@ function World:new(pipelineRuntime)
 	self.objectHandles = {}
 	self.dirtyObjectHandles = {}
 	self.dirtyObjectHandleDraws = {}
+	self.dirtyMaterialObjectHandles = {}
 	self.objectHandleToModelInstancesHandle = {}
 	self.modelInstancesHandleToObjectHandle = {}
 	self.animatorToObjectHandle = {}
@@ -401,6 +402,8 @@ function World:newObject()
 		self
 	)
 
+	self.pipelines:get(ObjectPipeline):addObject(objectHandle)
+
 	return objectHandle
 end
 
@@ -423,6 +426,8 @@ function World:freeObject(objectHandle)
 	modelPipeline:freeModelInstances(modelInstances)
 	self.objectHandleToModelInstancesHandle[objectHandle] = nil
 	self.modelInstancesHandleToObjectHandle[modelInstances] = nil
+
+	self.pipelines:get(ObjectPipeline):addObject(objectHandle)
 end
 
 function World:updateObject(objectHandle)

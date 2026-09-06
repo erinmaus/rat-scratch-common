@@ -499,6 +499,10 @@ local FORMAT_POOL = setmetatable({}, { __mode = "k" })
 --- @param format RatScratch.Graphics.Graphics3D.InputBufferFormatAttribute[]
 --- @return RatScratch.Graphics.Graphics3D.BufferFormat
 function BufferFormat.get(format)
+	if Object.getType(format) == BufferFormat then
+		return format
+	end
+
 	local result = FORMAT_POOL[format]
 	if not result then
 		result = BufferFormat(format)

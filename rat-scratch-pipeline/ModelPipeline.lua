@@ -39,21 +39,21 @@ ModelPipeline.MESH_INSTANCE_FORMAT = {
 
 ModelPipeline.MODEL_FORMAT = {
 	{ location = 0, name = "localTransform", format = "floatmat4x4" },
-	{ location = 1, name = "meshIndexCount", format = "uint32vec2 " },
+	{ location = 1, name = "meshIndexCount", format = "uint32vec2" },
 }
 
 ModelPipeline.MESH_FORMAT = {
 	{ location = 0, name = "meshletIndexCount", format = "uint32vec2" },
 	{ location = 1, name = "indexOffset", format = "uint32" },
-	{ location = 2, name = "staticBaseVertexOffset", format = "uint32 " },
-	{ location = 3, name = "skinnedBaseVertexOffset", format = "uint32 " },
+	{ location = 2, name = "staticBaseVertexOffset", format = "uint32" },
+	{ location = 3, name = "skinnedBaseVertexOffset", format = "uint32" },
 }
 
 ModelPipeline.MESHLET_FORMAT = {
 	{ location = 0, name = "staticCenterRadius", format = "floatvec4" },
-	{ location = 0, name = "indexOffset", format = "uint32" },
+	{ location = 1, name = "indexOffset", format = "uint32" },
 	{
-		location = 0,
+		location = 2,
 		name = "skinnedMeshletBoundsIndexCount",
 		format = "uint32vec2",
 	},
@@ -88,19 +88,21 @@ function ModelPipeline:new(pipelineRuntime)
 	for i = 1, self:getPipelineConfig():getVertexFormatCountByRole("static") do
 		table.insert(
 			staticFormats,
-			self:getPipelineConfig():getVertexFormatByRole("static", i)
+			self:getPipelineConfig()
+				:getVertexFormatByRole("static", i)
+				:getInputFormat()
 		)
 	end
 
 	self.staticVertexBuffer = PipelineMultiBuffer(
 		staticFormats,
-		{ shaderstorage = true, vertex = true },
+		{ shaderstorage = true },
 		ModelPipeline.DEFAULT_VERTEX_COUNT
 	)
 
 	self.indexBuffer = PipelineMultiBuffer(
 		{ BufferFormat.get(ModelPipeline.INDEX_FORMAT) },
-		{ shaderstorage = true, index = true },
+		{ shaderstorage = true },
 		ModelPipeline.DEFAULT_VERTEX_COUNT
 	)
 
@@ -108,13 +110,15 @@ function ModelPipeline:new(pipelineRuntime)
 	for i = 1, self:getPipelineConfig():getVertexFormatCountByRole("skinned") do
 		table.insert(
 			skinnedFormats,
-			self:getPipelineConfig():getVertexFormatByRole("skinned", i)
+			self:getPipelineConfig()
+				:getVertexFormatByRole("skinned", i)
+				:getInputFormat()
 		)
 	end
 
 	self.skinnedVertexBuffer = PipelineMultiBuffer(
 		skinnedFormats,
-		{ shaderstorage = true, vertex = true },
+		{ shaderstorage = true },
 		ModelPipeline.DEFAULT_VERTEX_COUNT
 	)
 

@@ -1,9 +1,7 @@
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
+local assert = require("rat-scratch-common").Debug.assert
 local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
-local EventSource = require("rat-scratch-common").EventSource
-local PipelineMaterialInstanceEvent =
-	require("rat-scratch-pipeline.Graphics3D.PipelineMaterialInstanceEvent")
 
 --- @class RatScratch.Pipeline.Graphics3D.PipelineMaterialUniformsBuffer : RatScratch.Common.BaseObject
 --- @field private material RatScratch.Pipeline.Graphics3D.PipelineMaterial
@@ -18,6 +16,9 @@ local PipelineMaterialUniformsBuffer = Object()
 --- @param material RatScratch.Pipeline.Graphics3D.PipelineMaterial
 --- @param materialPipeline RatScratch.Pipeline.MaterialPipeline
 function PipelineMaterialUniformsBuffer:new(material, materialPipeline)
+	self.material = material
+	self.materialPipeline = materialPipeline
+
 	self.integerValues = {}
 	self.integerData =
 		love.data.newByteData(material:getIntegerFormat():getStride())
@@ -117,7 +118,7 @@ function PipelineMaterialUniformsBuffer:setUniformByValue(uniformKey, value)
 		return false
 	end
 
-	BufferFormat.copyFromFlatTableToByteData(format, 1, 0, 1, value, data)
+	BufferFormat.copyFromFlatTableToByteData(format, 1, 0, 1, selfValue, data)
 
 	return true
 end

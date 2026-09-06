@@ -40,15 +40,18 @@ function PipelineMultiBuffer:new(formats, flags, count)
 	self.buffers = {}
 	self.data = {}
 	for _, format in ipairs(formats) do
-		table.insert(self.formats, BufferFormat(format))
+		local formatInstance = BufferFormat.get(format)
+
+		table.insert(self.formats, formatInstance)
 		table.insert(
 			self.data,
-			PipelineBufferData(format, self.context:getReservedCount())
+			PipelineBufferData(formatInstance, self.context:getReservedCount())
 		)
+
 		table.insert(
-			self.data,
+			self.buffers,
 			love.graphics.newBuffer(
-				format,
+				formatInstance:getFormat(),
 				self.context:getReservedCount(),
 				self.flags
 			)
@@ -152,7 +155,7 @@ end
 function PipelineMultiBuffer:register(instance, count)
 	local i, c = self.context:register(instance, count)
 
-	for j = 1, #self.bufferCount do
+	for j = 1, self.bufferCount do
 		self.data[j]:initialize(i, c)
 	end
 
@@ -171,7 +174,7 @@ function PipelineMultiBuffer:resize(instance, newCount)
 	local c = index + count - 1
 
 	if c > 0 then
-		for j = 1, #self.bufferCount do
+		for j = 1, self.bufferCount do
 			self.data[j]:initialize(i, c)
 		end
 	end

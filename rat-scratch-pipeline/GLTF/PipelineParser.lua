@@ -87,19 +87,20 @@ end
 --- @private
 --- @param index integer
 --- @param result integer[]
---- @return RatScratch.Pipeline.GLTF.GLTFPipelineParser
 function PipelineParser:_collectModelNodes(index, result)
 	local node = self.parser:getNode(index)
 	if node.mesh then
 		table.insert(
 			result,
-			Search.lessThanEqual(result + 1, index, _lessInteger),
+			Search.lessThanEqual(result, index, _lessInteger) + 1,
 			index
 		)
 	end
 
-	for _, child in ipairs(node.children) do
-		self:_collectModelNodes(child, result)
+	if node.children then
+		for _, child in ipairs(node.children) do
+			self:_collectModelNodes(child, result)
+		end
 	end
 end
 
@@ -154,6 +155,8 @@ function PipelineParser:loadSceneDefinition(index)
 
 			model.skeleton = skeletonsByID[node.skin]
 		end
+
+		table.insert(sceneDefinition.models, model)
 	end
 
 	return sceneDefinition
@@ -189,7 +192,8 @@ end
 --- @param index integer
 --- @return RatScratch.Pipeline.Graphics3D.PipelineModelDefinition
 function PipelineParser:loadModelDefinition(index)
-	local indexSize = self.pipelineConfig:getIndexFormat():getStride()
+	local indexSize =
+		self.pipelineConfig:getIndexFormat():getIndexFormat():getStride()
 	local meshletIndexSize = self.pipelineConfig
 		:getMeshletFormat()
 		:getTriangleCount() * 3 * indexSize

@@ -1,6 +1,9 @@
+local PATH = ...
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
 local assert = require("rat-scratch-common").Debug.assert
+local RatScratchModule = require("lib.rat-scratch-module")
+local Resource = require("rat-scratch-resource.Resource")
 
 --- @class RatScratch.Resource.ResourceLoader : RatScratch.Common.BaseObject
 --- @overload fun(): RatScratch.Resource.ResourceLoader
@@ -9,14 +12,38 @@ local ResourceLoader = Object()
 ResourceLoader.INPUT_CHANNEL = love.thread.newChannel()
 ResourceLoader.OUTPUT_CHANNEL = love.thread.newChannel()
 
+local _call = _call
+
+local call = function(func, ...)
+	return true, func(...)
+end
+
+--- comment
+--- @param enabled boolean
+function ResourceLoader.toggleDebug(enabled)
+	if enabled then
+		_call = call
+	else
+		_call = _call
+	end
+end
+
 function ResourceLoader.initialize()
 	local processorCount = math.max(love.system.getProcessorCount() - 2, 4)
 
 	--- @type love.Thread[]
 	local threads = {}
 	for i = 1, processorCount do
-		local thread =
-			love.thread.newThread("Inkfright/Data/ResourceLoaderThread.lua")
+		local thread = RatScratchModule.newThread(
+			PATH,
+			("%s/Threads/ResourceLoaderThread.lua"):format(
+				RatScratchModule.getSelfPath(PATH)
+			),
+			ResourceLoader.OUTPUT_CHANNEL,
+			ResourceLoader.INPUT_CHANNEL,
+			i
+		)
+
 		thread:start(
 			ResourceLoader.OUTPUT_CHANNEL,
 			ResourceLoader.INPUT_CHANNEL,
@@ -65,22 +92,43 @@ function ResourceLoader.update()
 				local resource = ResourceLoader.RESOURCE_ID_TO_RESOURCE[id]
 				if resource then
 					local resources = ResourceLoader.RESOURCES[resource.type]
-					local success, result = pcall(
-						resources.instance.instantiateFromData,
-						resources.instance,
-						id,
-						data
-					)
-					if not success then
-						result = resources.instance:instantiateFromData(
+
+					local resourceResult
+					if not resource.resource then
+						local success, result = _call(
+							resources.instance.instantiateFromData,
+							resources.instance,
 							id,
-							resources.instance:createDefaultResource()
+							data
 						)
+						if not success then
+							result = resources.instance:instantiateFromData(
+								id,
+								resources.instance:createDefaultResource()
+							)
+						end
+
+						resourceResult = result
+					else
+						local success, result = _call(
+							resources.instance.updateFromData,
+							resources.instance,
+							resource.resource,
+							data
+						)
+						if not success then
+							result = resources.instance:updateFromData(
+								resource.resource,
+								resources.instance:createDefaultResource()
+							)
+						end
+
+						resourceResult = result
 					end
 
 					ResourceLoader._loadResource(
 						resource,
-						result,
+						resourceResult,
 						modifiedTimes
 					)
 				end
@@ -174,11 +222,15 @@ end
 --- @param value RatScratch.Resource.Resource
 --- @param modifiedTimes table<string, integer>
 function ResourceLoader._loadResource(resource, value, modifiedTimes)
-	if resource.resource then
+	if resource.resource and value ~= resource.resource then
+		ResourceLoader.RESOURCE_INSTANCE_TO_RESOURCE_META[resource.resource] =
+			nil
 		resource.resource:release()
 	end
 
 	resource.resource = value
+	ResourceLoader.RESOURCE_INSTANCE_TO_RESOURCE_META[value] = resource
+
 	resource.reloading = math.max(resource.reloading - 1, 0)
 
 	Table.clear(resource.modifiedTimes)
@@ -241,6 +293,12 @@ ResourceLoader.RESOURCE_ID_TO_RESOURCE = setmetatable({}, { __mode = "v" })
 --- @type table<string, RatScratch.Resource.ResourceLoader.Resource>
 ResourceLoader.DEPENDENCY_ID_TO_RESOURCE = setmetatable({}, { __mode = "v" })
 
+--- @type table<RatScratch.Resource.Resource, RatScratch.Resource.ResourceLoader.Resource>
+ResourceLoader.RESOURCE_INSTANCE_TO_RESOURCE_META = setmetatable(
+	{},
+	{ __mode = "k" }
+)
+
 --- @private
 --- @param resourceType RatScratch.Resource.ResourceType
 --- @return RatScratch.Resource.ResourceLoader.Resources
@@ -277,6 +335,7 @@ function ResourceLoader._newLoad(resourceType, filename)
 
 	local id = ResourceLoader.newID()
 	local resource = ResourceLoader._newResource(id, resourceType, filename)
+	resource.resource = Resource(id)
 
 	resources.resources[filename] = resource
 	ResourceLoader.RESOURCE_ID_TO_RESOURCE[id] = resource
@@ -299,16 +358,16 @@ function ResourceLoader.newID()
 	return id
 end
 
---- @param resourceType RatScratch.Resource.ResourceType
+--- @param resourceType RatScratch.Resource.ResourceType | unknown
 --- @param filename string
---- @return integer
+--- @return RatScratch.Resource.Resource
 function ResourceLoader.load(resourceType, filename)
 	local resource = ResourceLoader._tryLoad(resourceType, filename)
 	if not resource then
 		resource = ResourceLoader._newLoad(resourceType, filename)
 	end
 
-	return resource.id
+	return resource.resource
 end
 
 --- @param id integer | string

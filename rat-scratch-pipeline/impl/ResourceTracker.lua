@@ -70,7 +70,7 @@ function ResourceTracker:add(resource, object)
 		resource:listen(ResourceEvent.MODIFY, self._onResourceUpdate, self)
 	end
 
-	self.resourceValue[resource] = resource:get()
+	self.resourceValue[resource] = (resource:getIsReady() and resource:get())
 		or self.resourceValue[resource]
 
 	if resource:getIsReady() then

@@ -6,17 +6,20 @@ local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
 local Atlas = require("rat-scratch-graphics").Atlas.Atlas
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local Pipeline = require("rat-scratch-pipeline.impl.Pipeline")
+local PipelineMaterial =
+	require("rat-scratch-pipeline.Graphics3D.PipelineMaterial")
 local PipelineMaterialInstance =
 	require("rat-scratch-pipeline.Graphics3D.PipelineMaterialInstance")
 local PipelineMaterialInstanceEvent =
 	require("rat-scratch-pipeline.Graphics3D.PipelineMaterialInstanceEvent")
 local PipelineMultiBuffer =
 	require("rat-scratch-pipeline.Buffer.PipelineMultiBuffer")
-local ShaderPreprocessor = require("rat-scratch-graphics.ShaderPreprocessor")
+local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
 local ffi = require("ffi")
 local ImageDataAtlasHandle =
 	require("rat-scratch-graphics").Atlas.ImageDataAtlasHandle
 local RatScratchModule = require("lib.rat-scratch-module")
+local json = require("lib.json")
 
 --- @alias RatScratch.Pipeline.MaterialPipeline.ShaderPass
 --- | "deferred"
@@ -47,7 +50,7 @@ local RatScratchModule = require("lib.rat-scratch-module")
 --- @field private dirtyTextures table<love.ImageData, true>
 --- @field private texturesBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<love.ImageData>
 --- @overload fun(pipelineRuntime: RatScratch.Pipeline.PipelineRuntime): RatScratch.Pipeline.MaterialPipeline
-local MaterialPipeline = Object()
+local MaterialPipeline = Object(Pipeline)
 
 MaterialPipeline.TEXTURE_FORMAT = {
 	{ location = 0, name = "size", format = "floatvec2" },
@@ -111,6 +114,17 @@ function MaterialPipeline:new(pipelineRuntime)
 		{ shaderstorage = true },
 		MaterialPipeline.DEFAULT_TEXTURES_COUNT
 	)
+
+	local defaultMaterialData = love.filesystem.read(
+		("%s/Config/Default/BasicMaterial.json"):format(
+			RatScratchModule.getSelfPath(PATH)
+		)
+	)
+	local defaultMaterialJSON = json.decode(defaultMaterialData)
+
+	self.defaultMaterial =
+		PipelineMaterial.fromDefinition(defaultMaterialJSON.material)
+	self:addMaterial(self.defaultMaterial)
 end
 
 --- @param material RatScratch.Pipeline.Graphics3D.PipelineMaterial
@@ -215,7 +229,7 @@ function MaterialPipeline:newMaterialInstance(material)
 	assert(
 		self.materials[material],
 		"material %s not in material pipeline",
-		material:getName()
+		Object.isType(material) and material:getName() or material
 	)
 
 	local materialInstance = PipelineMaterialInstance(material, self)
@@ -229,8 +243,8 @@ function MaterialPipeline:newMaterialInstance(material)
 		self
 	)
 
-	self.dirtyMaterialInstances[material] = true
-	self.materialInstances[material] = { setEventID = id }
+	self.dirtyMaterialInstances[materialInstance] = true
+	self.materialInstances[materialInstance] = { setEventID = id }
 	table.insert(self.materialInstancesByIndex, materialInstance)
 
 	return materialInstance
