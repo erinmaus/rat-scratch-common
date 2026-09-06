@@ -216,6 +216,37 @@ end
 --- @param self RatScratch.Pipeline.Buffer.PipelineMultiBuffer<T>
 --- @param buffer integer
 --- @param instance T
+--- @param table number[]
+--- @param index? integer
+--- @param count? integer
+--- @param tableIndex? integer
+function PipelineMultiBuffer:copyTable(
+	buffer,
+	instance,
+	table,
+	index,
+	count,
+	tableIndex
+)
+	local i, maxCount = self.context:getIndexCount(instance)
+
+	index = i + math.min(index or 1, maxCount) - 1
+	count = count
+		or math.floor((#table / self.formats[buffer]:getComponentCount()))
+	tableIndex = tableIndex or 1
+
+	self.data[buffer]:copyFromTable(
+		index,
+		Common.clamp(count, 0, maxCount - index + 1),
+		table,
+		tableIndex
+	)
+end
+
+--- @generic T
+--- @param self RatScratch.Pipeline.Buffer.PipelineMultiBuffer<T>
+--- @param buffer integer
+--- @param instance T
 --- @param data love.Data
 --- @param index? integer
 --- @param count? integer
@@ -228,15 +259,16 @@ function PipelineMultiBuffer:copyData(
 	count,
 	offset
 )
-	local _, maxCount = self.context:getIndexCount(instance)
+	local i, maxCount = self.context:getIndexCount(instance)
 
-	index = index or 0
-	count = count or data:getSize() / self.formats[buffer]:getStride()
+	index = i + math.min(index or 1, maxCount) - 1
+	count = count
+		or math.floor(data:getSize() / self.formats[buffer]:getStride())
 	offset = offset or 0
 
 	self.data[buffer]:copyFromData(
 		index,
-		math.min(count, maxCount),
+		Common.clamp(count, 0, maxCount - index + 1),
 		data,
 		offset
 	)
@@ -253,7 +285,7 @@ function PipelineMultiBuffer:clear(buffer, instance, index, count)
 	local _, maxCount = self.context:getIndexCount(instance)
 
 	index = Common.clamp(index, 1, maxCount)
-	count = Common.clamp(index, 0, maxCount - index + 1)
+	count = Common.clamp(count or 1, 0, maxCount - index + 1)
 
 	self.data[buffer]:initialize(index, count)
 end

@@ -95,7 +95,7 @@ end
 --- @param data number[]
 --- @param offset? integer
 function PipelineBufferTableData:copyFromTable(index, count, data, offset)
-	offset = offset or 0
+	offset = offset or 1
 
 	local componentCount = self:getFormat():getComponentCount()
 	Table.transfer(

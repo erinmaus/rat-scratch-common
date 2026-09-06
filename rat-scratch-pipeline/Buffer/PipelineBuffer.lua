@@ -2,6 +2,7 @@ local jit = require("jit")
 local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
+local Common = require("rat-scratch-math").Common
 local PipelineBufferContext =
 	require("rat-scratch-pipeline.Buffer.PipelineBufferContext")
 local PipelineBufferContextEvent =
@@ -146,6 +147,65 @@ end
 --- @param instance T
 function PipelineBuffer:unregister(instance)
 	self.context:unregister(instance)
+end
+
+--- @generic T
+--- @param self RatScratch.Pipeline.Buffer.PipelineBuffer<T>
+--- @param instance T
+--- @param table number[]
+--- @param index? integer
+--- @param count? integer
+--- @param tableIndex? integer
+function PipelineBuffer:copyTable(instance, table, index, count, tableIndex)
+	local i, maxCount = self.context:getIndexCount(instance)
+
+	index = i + math.min(index or 1, maxCount) - 1
+	count = count or math.floor((#table / self.format:getComponentCount()))
+	tableIndex = tableIndex or 1
+
+	self.data:copyFromTable(
+		index,
+		Common.clamp(count, 0, maxCount - index + 1),
+		table,
+		tableIndex
+	)
+end
+
+--- @generic T
+--- @param self RatScratch.Pipeline.Buffer.PipelineBuffer<T>
+--- @param instance T
+--- @param data love.Data
+--- @param index? integer
+--- @param count? integer
+--- @param offset? integer
+function PipelineBuffer:copyData(instance, data, index, count, offset)
+	local i, maxCount = self.context:getIndexCount(instance)
+
+	index = i + math.min(index or 1, maxCount) - 1
+	count = count or math.floor(data:getSize() / self.format:getStride())
+	offset = offset or 0
+
+	self.data:copyFromData(
+		index,
+		Common.clamp(count, 0, maxCount - index + 1),
+		data,
+		offset
+	)
+end
+
+--- @generic T
+--- @param self RatScratch.Pipeline.Buffer.PipelineBuffer<T>
+--- @param instance T
+--- @param index? integer
+--- @param count? integer
+function PipelineBuffer:clear(instance, index, count)
+	index = index or 1
+	local _, maxCount = self.context:getIndexCount(instance)
+
+	index = Common.clamp(index, 1, maxCount)
+	count = Common.clamp(count or 1, 0, maxCount - index + 1)
+
+	self.data:initialize(index, count)
 end
 
 --- @generic T

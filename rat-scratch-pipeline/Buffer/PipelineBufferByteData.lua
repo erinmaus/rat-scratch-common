@@ -92,7 +92,7 @@ end
 --- @param data number[]
 --- @param offset? integer
 function PipelineBufferByteData:copyFromTable(index, count, data, offset)
-	offset = offset or 0
+	offset = offset or 1
 
 	BufferFormat.copyFromFlatTableToByteData(
 		self:getFormat(),
