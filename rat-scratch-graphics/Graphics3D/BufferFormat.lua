@@ -546,6 +546,24 @@ function BufferFormat.resetValue(format, vertex, offset)
 	end
 end
 
+--- @param format RatScratch.Graphics.Graphics3D.MeshFormatAttribute[] | RatScratch.Graphics.Graphics3D.BufferFormat
+--- @param vertex number[]
+--- @param attribute number | string
+--- @param offset? integer
+--- @param ... number
+function BufferFormat.setValue(format, vertex, attribute, offset, ...)
+	local formatInstance = Object.isDerived(
+		Object.getType(format),
+		BufferFormat
+	) and format or BufferFormat.get(format)
+	offset = offset or 0
+
+	local c, o = formatInstance:getCountOffset(attribute)
+	local i = o + offset
+	local j = o + c + offset - 1
+	Table.copy(vertex, i, j, ...)
+end
+
 --- @param inputFormat RatScratch.Graphics.Graphics3D.MeshFormatAttribute[] | RatScratch.Graphics.Graphics3D.BufferFormat
 --- @param inputVertex number[]
 --- @param outputFormat RatScratch.Graphics.Graphics3D.MeshFormatAttribute[] | RatScratch.Graphics.Graphics3D.BufferFormat
