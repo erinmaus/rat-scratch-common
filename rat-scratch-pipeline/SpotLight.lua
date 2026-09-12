@@ -2,6 +2,8 @@ local Object = require("rat-scratch-common").Object
 local Vector3 = require("rat-scratch-math").Vector3
 local Common = require("rat-scratch-math").Common
 local Light = require("rat-scratch-pipeline.Light")
+local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
+local Pack = require("rat-scratch-pipeline.Utility.Pack")
 
 --- @class RatScratch.Pipeline.SpotLight : RatScratch.Pipeline.Light
 --- @field position RatScratch.Math.Vector3
@@ -18,6 +20,42 @@ function SpotLight:new()
 	self.direction = Vector3(0, 0, 1)
 	self.attenuation = 0
 	self.cutoff = 0
+end
+
+--- @param data number[]
+--- @param offset? integer
+function SpotLight:toData(data, offset)
+	Light.toData(self, data, offset)
+
+	BufferFormat.setValue(
+		Light.LIGHT_FORMAT_INSTANCE,
+		data,
+		"direction",
+		offset,
+		Pack.encodeNormal(self.direction:get())
+	)
+
+	local x, y, z = self.position:get()
+
+	BufferFormat.setValue(
+		Light.LIGHT_FORMAT_INSTANCE,
+		data,
+		"position",
+		offset,
+		x,
+		y,
+		z,
+		0
+	)
+
+	BufferFormat.setValue(
+		Light.LIGHT_FORMAT_INSTANCE,
+		data,
+		"attenuation",
+		offset,
+		self.attenuation,
+		math.cos(self.cutoff)
+	)
 end
 
 --- @return number

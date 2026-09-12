@@ -27,21 +27,24 @@ uint ratGetLightType(in RatScratchPipelineLight baseLight)
 
 void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchPipelineAmbientLight ambientLight)
 {
-	ambientLight.color = inputLight.color;
-	ambientLight.ambience = inputLight.color.a;
+	ambientLight.color = vec4(inputLight.color.rgb, 1.0);
+	ambientLight.ultraviolet = inputLight.color.a;
+	ambientLight.ambience = inputLight.attenuation.x;
 	ambientLight.occlusionTextureIndexCount = inputLight.shadowTextureIndexCount;
 }
 
 void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchPipelineDirectionalLight directionalLight)
 {
-	directionalLight.color = inputLight.color;
+	directionalLight.color = vec4(inputLight.color.rgb, 1.0);
+	directionalLight.ultraviolet = inputLight.color.a;
 	directionalLight.direction = decodeNormal(inputLight.direction);
 	directionalLight.shadowTextureIndexCount = inputLight.shadowTextureIndexCount;
 }
 
 void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchPipelinePointLight pointLight)
 {
-	pointLight.color = inputLight.color;
+	pointLight.color = vec4(inputLight.color.rgb, 1.0);
+	pointLight.ultraviolet = inputLight.color.a;
 	pointLight.position = inputLight.position.xyz;
 	pointLight.attenuation = inputLight.attenuation.x;
 	pointLight.shadowTextureIndexCount = inputLight.shadowTextureIndexCount;
@@ -49,7 +52,8 @@ void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchPipelinePo
 
 void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchPipelineSpotLight spotLight)
 {
-	spotLight.color = inputLight.color;
+	spotLight.color = vec4(inputLight.color.rgb, 1.0);
+	spotLight.ultraviolet = inputLight.color.a;
 	spotLight.position = inputLight.position.xyz;
 	spotLight.direction = decodeNormal(inputLight.direction);
 	spotLight.attenuation = inputLight.attenuation.x;
