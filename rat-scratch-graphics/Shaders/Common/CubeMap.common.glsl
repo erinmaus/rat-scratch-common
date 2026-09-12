@@ -3,11 +3,11 @@ const uint RAT_SCRATCH_CUBE_MAP_FACES = 6;
 const vec3[] RAT_SCRATCH_CUBE_MAP_NORMALS = vec3[](vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0),
 												   vec3(0.0, -1.0, 0.0), vec3(0.0, 0.0, 1.0), vec3(0.0, 0.0, -1.0), );
 
-const vec3 RAT_SRATCH_CUBE_MAP_TANGENTS[6] = vec3[](vec3(0.0, 0.0, 1.0), vec3(0.0, 0.0, -1.0), vec3(1.0, 0.0, 0.0),
-													vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0));
+const vec3[] RAT_SCRATCH_CUBE_MAP_TANGENTS = vec3[](vec3(0.0, 0.0, -1.0), vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0),
+													vec3(1.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0));
 
-const vec3 RAT_SRATCH_CUBE_MAP_BITANGENTS[6] = vec3[](vec3(0.0, -1.0, 0.0), vec3(0.0, -1.0, 0.0), vec3(0.0, 0.0, 1.0),
-													  vec3(0.0, 0.0, -1.0), vec3(0.0, -1.0, 0.0), vec3(0.0, -1.0, 0.0));
+const vec3[] RAT_SCRATCH_CUBE_MAP_BITANGENTS = vec3[](vec3(0.0, 1.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, -1.0),
+													  vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 1.0, 0.0));
 
 vec2 ratCubeMapImplDirectionToTextureCoordinate(vec3 direction, uint faceIndex)
 {
@@ -27,7 +27,7 @@ vec4 ratSampleSeamlessCubeArrayLod(sampler2DArray cubeArray, vec3 direction, flo
 
 	for (uint i = 0; i < RAT_SCRATCH_CUBE_MAP_FACES; ++i)
 	{
-		float weight = max(0.0, dot(dir, RAT_CUBE_MAP_NORMALS[i]));
+		float weight = max(0.0, dot(dir, RAT_SCRATCH_CUBE_MAP_NORMALS[i]));
 
 		if (weight > 0.0)
 		{
