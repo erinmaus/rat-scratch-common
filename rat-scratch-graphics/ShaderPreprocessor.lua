@@ -133,7 +133,7 @@ end
 local function wrapIncludeContent(content, filename)
 	local includeGuardIdentifier =
 		filename:gsub("[^%w_]", "_"):gsub("(__+)", "_")
-	local defineGuardBegin = ("#ifndef rat_include_%s\n#define rat_include_%s 1\n#line 1"):format(
+	local defineGuardBegin = ("#ifndef rat_include_%s\n#define rat_include_%s 1\n"):format(
 		includeGuardIdentifier,
 		includeGuardIdentifier
 	)
@@ -267,13 +267,6 @@ local function process(state, parent, filename, variables)
 				table.insert(
 					lines,
 					string.format('// end "%s"', includeFilename)
-				)
-				table.insert(
-					lines,
-					string.format(
-						"#line %d\n",
-						currentFile.currentLineNumber + 1
-					)
 				)
 
 				state.include[resolvedPath] = true
