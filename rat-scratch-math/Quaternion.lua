@@ -84,8 +84,6 @@ do
 	--- @param result RatScratch.Math.Quaternion
 	--- @return RatScratch.Math.Quaternion
 	function Quaternion.lookAt(source, target, up, result)
-		local E = Common.EPSILON
-
 		result = result or Quaternion()
 		up = up or Vector3.UNIT_Y
 
@@ -104,55 +102,74 @@ do
 			return result
 		end
 
-		local trace = R.x + U.y + F.z
+		return Quaternion.fromMatrix(R, U, F, result)
+	end
+end
+
+do
+	local _normalRowX = Vector3()
+	local _normalRowY = Vector3()
+	local _normalRowZ = Vector3()
+
+	--- @param rowX RatScratch.Math.Vector3
+	--- @param rowY RatScratch.Math.Vector3
+	--- @param rowZ RatScratch.Math.Vector3
+	--- @param result RatScratch.Math.Quaternion?
+	--- @return RatScratch.Math.Quaternion
+	function Quaternion.fromMatrix(rowX, rowY, rowZ, result)
+		result = result or Quaternion()
+		result:from()
+
+		local rx = rowX:normalize(_normalRowX)
+		local ry = rowY:normalize(_normalRowY)
+		local rz = rowZ:normalize(_normalRowZ)
+
+		local trace = rx.x + ry.y + rz.z
 		if trace > 0 then
 			local s = 0.5 / math.sqrt(trace + 1)
-			if math.abs(s) < E then
-				result:from()
-			else
-				result.x = (U.z - F.y) * s
-				result.y = (F.x - R.z) * s
-				result.z = (R.y - U.x) * s
+			if Common.greaterThan(s, 0) then
+				result.x = (ry.z - rz.y) * s
+				result.y = (rz.x - rx.z) * s
+				result.z = (rx.y - ry.x) * s
 				result.w = 0.25 / s
 			end
-		end
-
-		if R.x > U.y and R.x > F.z then
-			local s = 2 * math.sqrt(1 + R.x - U.y - F.z)
-			if math.abs(s) < E then
-				result:from()
-			else
+		elseif rx.x > ry.y and rx.x > rz.z then
+			local s = 2 * math.sqrt(1 + rx.x - ry.y - rz.z)
+			if Common.greaterThan(s, 0) then
 				result.x = 0.25 * s
-				result.y = (U.x + R.y) / s
-				result.z = (F.x + R.z) / s
-				result.w = (U.z - F.y) / s
+				result.y = (ry.x + rx.y) / s
+				result.z = (rz.x + rx.z) / s
+				result.w = (ry.z - rz.y) / s
 			end
-		end
-
-		if U.y > F.z then
-			local s = 2 * math.sqrt(1 + U.y - R.x - F.z)
-			if math.abs(s) < E then
-				result:from()
-			else
-				result.x = (U.x + R.y) / s
+		elseif ry.y > rz.z then
+			local s = 2 * math.sqrt(1 + ry.y - rx.x - rz.z)
+			if Common.greaterThan(s, 0) then
+				result.x = (ry.x + rx.y) / s
 				result.y = 0.25 * s
-				result.z = (F.y + U.z) / s
-				result.w = (F.x - R.z) / s
+				result.z = (rz.y + ry.z) / s
+				result.w = (rz.x - rx.z) / s
 			end
 		else
-			local s = 2 * math.sqrt(1 + F.z - R.x - U.y)
-			if math.abs(s) < E then
-				result:from()
-			else
-				result.x = (F.x + R.z) / s
-				result.y = (F.y + U.z) / s
+			local s = 2 * math.sqrt(1 + rz.z - rx.x - ry.y)
+			if Common.greaterThan(s, 0) then
+				result.x = (rz.x + rx.z) / s
+				result.y = (rz.y + ry.z) / s
 				result.z = 0.25 * s
-				result.w = (R.y - U.x) / s
+				result.w = (rx.y - ry.x) / s
 			end
 		end
 
 		return result
 	end
+end
+
+--- @param normal RatScratch.Math.Vector3
+--- @param tangent RatScratch.Math.Vector3
+--- @param bitangent RatScratch.Math.Vector3
+--- @param result RatScratch.Math.Quaternion?
+--- @return RatScratch.Math.Quaternion
+function Quaternion.fromTBN(normal, tangent, bitangent, result)
+	return Quaternion.fromMatrix(tangent, bitangent, normal, result)
 end
 
 do
