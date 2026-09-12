@@ -19,10 +19,9 @@ function demo.load()
 	local parser = GLTF.loadFromFilesystem("samples/assets/gltf/shoe.glb")
 	local baseScene = parser:loadScene(1)
 
-	local pipelineConfig = PipelineConfig.loadDefault()
-	local pipelineRuntime = PipelineRuntime(pipelineConfig)
+	local pipelineRuntime = PipelineRuntime.loadDefault()
 
-	local extendedScene = ExtendedScene(baseScene, pipelineConfig)
+	local extendedScene = ExtendedScene(baseScene, pipelineRuntime:getConfig())
 	local extendedModel = extendedScene:getModel(1)
 
 	local world = World(pipelineRuntime)

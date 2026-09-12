@@ -4,20 +4,18 @@
 #include "@Pipeline/Common/Index.common.glsl"
 #include "@Pipeline/Common/Lights.common.glsl"
 
-// #include "@Generated/Config.common.glsl"
+#include "@Generated/Pipeline/Config.common.glsl"
 #include "@Generated/Pipeline/Material/Properties.common.glsl"
 #include "@Generated/Pipeline/Light/Lights.common.glsl"
 #include "@Generated/Pipeline/Light/ApplyLights.common.glsl"
 
-const uvec3 RAT_SCRATCH_CONFIG_LIGHT_CELLS = uvec3(16, 16, 16);
-const uint RAT_SCRATCH_CONFIG_LIGHTS_PER_CELL = 32;
-
 uint ratApplyLightsImplGetIndex(vec3 position, uint i)
 {
 	vec3 clampedPosition = clamp(position, vec3(0.0), vec3(1.0));
-	uvec3 coordinate = uvec3(round(clampedPosition * vec3(RAT_SCRATCH_CONFIG_LIGHT_CELLS)));
+	uvec3 coordinate = uvec3(round(clampedPosition * vec3(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS)));
 
-	uvec4 dimensions = uvec4(RAT_SCRATCH_CONFIG_LIGHT_CELLS, RAT_SCRATCH_CONFIG_LIGHTS_PER_CELL + 1);
+	uvec4 dimensions =
+		uvec4(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS, RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL + 1);
 	return coordinateToIndex(uvec4(coordinate, i), dimensions);
 }
 

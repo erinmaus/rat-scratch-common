@@ -621,9 +621,14 @@ function MaterialPipeline:_rebuildMaterialTemplateShadersPass(
 end
 
 --- @private
+--- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
 --- @param virtualPaths table
-function MaterialPipeline:_rebuildDeferredShaders(baseConfig, virtualPaths)
+function MaterialPipeline:_rebuildDeferredShaders(
+	qualityPreset,
+	baseConfig,
+	virtualPaths
+)
 	--- @type RatScratch.Graphics.ShaderPreprocessOptions
 	local config = {
 		rootPath = baseConfig.rootPath,
@@ -633,23 +638,30 @@ function MaterialPipeline:_rebuildDeferredShaders(baseConfig, virtualPaths)
 
 	-- TODO: layered rendering
 	return {
-		draw = ShaderPreprocessor.newShader(
+		draw = self:getPipelineRuntime():loadShader(
 			"@Pipeline/Base/Deferred/Fragment.frag.glsl",
 			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
+			qualityPreset,
 			config
 		),
-		light = ShaderPreprocessor.newShader(
+		light = self:getPipelineRuntime():loadShader(
 			"@Pipeline/Base/Deferred/Light.frag.glsl",
 			"@Pipeline/Base/Deferred/Light.vert.glsl",
+			qualityPreset,
 			config
 		),
 	}
 end
 
 --- @private
+--- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
 --- @param virtualPaths table
-function MaterialPipeline:_rebuildForwardShaders(baseConfig, virtualPaths)
+function MaterialPipeline:_rebuildForwardShaders(
+	qualityPreset,
+	baseConfig,
+	virtualPaths
+)
 	--- @type RatScratch.Graphics.ShaderPreprocessOptions
 	local config = {
 		rootPath = baseConfig.rootPath,
@@ -659,18 +671,24 @@ function MaterialPipeline:_rebuildForwardShaders(baseConfig, virtualPaths)
 
 	-- TODO: layered rendering
 	return {
-		draw = ShaderPreprocessor.newShader(
+		draw = self:getPipelineRuntime():loadShader(
 			"@Pipeline/Base/Forward/Fragment.frag.glsl",
 			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
+			qualityPreset,
 			config
 		),
 	}
 end
 
 --- @private
+--- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
 --- @param virtualPaths table
-function MaterialPipeline:_rebuildDepthShaders(baseConfig, virtualPaths)
+function MaterialPipeline:_rebuildDepthShaders(
+	qualityPreset,
+	baseConfig,
+	virtualPaths
+)
 	--- @type RatScratch.Graphics.ShaderPreprocessOptions
 	local config = {
 		rootPath = baseConfig.rootPath,
@@ -680,18 +698,24 @@ function MaterialPipeline:_rebuildDepthShaders(baseConfig, virtualPaths)
 
 	-- TODO: layered rendering
 	return {
-		draw = ShaderPreprocessor.newShader(
+		draw = self:getPipelineRuntime():loadShader(
 			"@Pipeline/Base/Deferred/Depth.frag.glsl",
 			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
+			qualityPreset,
 			config
 		),
 	}
 end
 
 --- @private
+--- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
 --- @param virtualPaths table
-function MaterialPipeline:_rebuildDepthDiscardShaders(baseConfig, virtualPaths)
+function MaterialPipeline:_rebuildDepthDiscardShaders(
+	qualityPreset,
+	baseConfig,
+	virtualPaths
+)
 	--- @type RatScratch.Graphics.ShaderPreprocessOptions
 	local config = {
 		rootPath = baseConfig.rootPath,
@@ -701,26 +725,42 @@ function MaterialPipeline:_rebuildDepthDiscardShaders(baseConfig, virtualPaths)
 
 	-- TODO: layered rendering
 	return {
-		draw = ShaderPreprocessor.newShader(
+		draw = self:getPipelineRuntime():loadShader(
 			"@Pipeline/Base/Deferred/DepthDiscard.frag.glsl",
 			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
+			qualityPreset,
 			config
 		),
 	}
 end
 
 --- @private
+--- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
 --- @param virtualPaths table
-function MaterialPipeline:_rebuildShaders(baseConfig, virtualPaths)
-	self.shaders = {
+function MaterialPipeline:_rebuildShaders(
+	qualityPreset,
+	baseConfig,
+	virtualPaths
+)
+	self.shaders[qualityPreset] = {
 		deferred = self:_rebuildDeferredShaders(
+			qualityPreset,
 			baseConfig,
 			virtualPaths.deferred
 		),
-		forward = self:_rebuildForwardShaders(baseConfig, virtualPaths.forward),
-		depth = self:_rebuildDepthShaders(baseConfig, virtualPaths.depth),
+		forward = self:_rebuildForwardShaders(
+			qualityPreset,
+			baseConfig,
+			virtualPaths.forward
+		),
+		depth = self:_rebuildDepthShaders(
+			qualityPreset,
+			baseConfig,
+			virtualPaths.depth
+		),
 		depthDiscard = self:_rebuildDepthDiscardShaders(
+			qualityPreset,
 			baseConfig,
 			virtualPaths.depthDiscard
 		),
@@ -761,7 +801,14 @@ function MaterialPipeline:_rebuildMaterialShaders()
 		),
 	}
 
-	self:_rebuildShaders(baseConfig, baseVirtualShaders)
+	local runtime = self:getPipelineRuntime()
+	for i = 1, runtime:getQualityPresetCount() do
+		self:_rebuildShaders(
+			runtime:getQualityPreset(i),
+			baseConfig,
+			baseVirtualShaders
+		)
+	end
 end
 
 --- @private

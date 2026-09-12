@@ -45,17 +45,28 @@ local PipelineDefinitionVertexBufferAttributeTransform = {}
 --- @field public format RatScratch.Graphics.Graphics3D.BufferAttributeFormat
 local PipelineDefinitionIndexBuffer = {}
 
---- @class RatScratch.Pipeline.PipelineRuntime
---- @field public pipeline RatScratch.Pipeline.PipelineRuntimeConfig
+--- @class RatScratch.Pipeline.PipelineRuntimeDefinition
+--- @field public runtime RatScratch.Pipeline.PipelineRuntimeConfig
 local PipelineRuntime = {}
 
 --- @class RatScratch.Pipeline.PipelineRuntimeConfig
---- @field public main RatScratch.Pipeline.PipelineRuntimeConfigVariable[]
---- @field public secondary? RatScratch.Pipeline.PipelineRuntimeConfigVariable[]
+--- @field qualityPresets string[]
+--- @field defaultQualityPreset string
+--- @field properties RatScratch.Pipeline.PipelineRuntimeConfigProperty[]
+--- @field settings RatScratch.Pipeline.PipelineRuntimeConfigSetting[]
 local PipelineRuntimeConfig = {}
 
---- @class RatScratch.Pipeline.PipelineRuntimeConfigVariable
---- @field public name string
---- @field public format RatScratch.Graphics.Graphics3D.BufferFormat
---- @field public value number[]
-local PipelineRuntimeConfigVariable = {}
+--- @class RatScratch.Pipeline.PipelineRuntimeConfigProperty
+--- @field public key string
+--- @field public identifier string
+--- @field public format RatScratch.Graphics.Graphics3D.BufferAttributeFormat | "boolean"
+--- @field public default (number | integer | boolean)[]
+local PipelineRuntimeConfigProperty = {}
+
+--- @class RatScratch.Pipeline.PipelineRuntimeConfigSetting
+--- @field public key string
+--- @field public properties string[]
+--- @field public presets RatScratch.Pipeline.PipelineRuntimeConfigSettingPreset
+local PipelineRuntimeConfigSetting = {}
+
+--- @alias RatScratch.Pipeline.PipelineRuntimeConfigSettingPreset table<string, table<string, table<string, (number | integer | boolean)[]>>>

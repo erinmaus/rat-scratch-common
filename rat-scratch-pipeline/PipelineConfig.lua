@@ -210,7 +210,7 @@ function PipelineConfig.loadDefault()
 
 	assert(
 		defaultConfigData,
-		"could not load default config at path '%s'",
+		"could not load default pipeline config at path '%s'",
 		defaultConfigFilename
 	)
 
