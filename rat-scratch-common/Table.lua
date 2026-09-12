@@ -181,6 +181,19 @@ function Table.clone(t, o)
 end
 
 --- @param t any[]
+--- @param o? table<any, true>
+--- @return table<any, true>
+function Table.arrayToSet(t, o)
+	o = o or Table.new(0, #t)
+
+	for _, value in ipairs(t) do
+		o[value] = true
+	end
+
+	return o
+end
+
+--- @param t any[]
 --- @param o? any[]
 function Table.cloneHash(t, o)
 	local result = o or {}
