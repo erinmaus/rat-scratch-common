@@ -42,35 +42,6 @@ DrawPipeline.INDIRECT_DRAW_FORMAT = {
 	{ location = 3, name = "firstInstance", format = "uint32" },
 }
 
-DrawPipeline.CAMERA_FORMAT = {
-	{ location = 0, name = "viewTransform", format = "floatmat4x4" },
-	{ location = 1, name = "inverseViewTransform", format = "floatmat4x4" },
-	{ location = 2, name = "previousViewTransform", format = "floatmat4x4" },
-	{
-		location = 3,
-		name = "inversePreviousViewTransform",
-		format = "floatmat4x4",
-	},
-	{ location = 4, name = "projectionTransform", format = "floatmat4x4" },
-	{
-		location = 5,
-		name = "inverseProjectionTransform",
-		format = "floatmat4x4",
-	},
-	{ location = 6, name = "projectionViewTransform", format = "floatmat4x4" },
-	{
-		location = 7,
-		name = "inverseProjectionViewTransform",
-		format = "floatmat4x4",
-	},
-	{
-		location = 8,
-		name = "inversePreviousProjectionViewTransform",
-		format = "floatmat4x4",
-	},
-	{ location = 9, name = "position", format = "floatvec4" },
-}
-
 DrawPipeline.DEFAULT_CAMERA_COUNT = 64
 DrawPipeline.DEFAULT_DRAW_COUNT = 1024 * 16 * DrawPipeline.DEFAULT_CAMERA_COUNT
 
@@ -87,12 +58,6 @@ function DrawPipeline:new(pipelineRuntime)
 		DrawPipeline.INDIRECT_DRAW_FORMAT,
 		1,
 		{ shaderstorage = true, indirectarguments = true }
-	)
-
-	self.camerasBuffer = PipelineBuffer(
-		DrawPipeline.CAMERA_FORMAT,
-		{ shaderstorage = true },
-		DrawPipeline.DEFAULT_CAMERA_COUNT
 	)
 
 	self.drawsBuffer = PipelineBuffer(

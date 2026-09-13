@@ -57,7 +57,7 @@ struct RatScratchPipelineCamera
 	mat4 inverseProjectionTransform;
 	mat4 projectionViewTransform;
 	mat4 inverseProjectionViewTransform;
-	vec4 position;
+	mat4 inversePreviousProjectionViewTransform;
 };
 
 struct RatScratchPipelineDraw
