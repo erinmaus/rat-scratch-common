@@ -18,4 +18,8 @@ return {
 	PipelineBufferTableData = require(
 		"rat-scratch-pipeline.Buffer.PipelineBufferTableData"
 	),
+	PipelineMultiBuffer = require(
+		"rat-scratch-pipeline.Buffer.PipelineMultiBuffer"
+	),
+	PipelinePointer = require("rat-scratch-pipeline.Buffer.PipelinePointer"),
 }
