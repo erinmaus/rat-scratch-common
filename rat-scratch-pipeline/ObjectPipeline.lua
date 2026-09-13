@@ -36,6 +36,15 @@ function ObjectPipeline:new(pipelineRuntime)
 	self.objectHandles = {}
 end
 
+function ObjectPipeline:bind(shader, qualityPreset)
+	if shader:hasUniform("rat_ObjectInstancesBuffer") then
+		shader:send(
+			"rat_ObjectInstancesBuffer",
+			self.objectInstancesBuffer:getBuffer()
+		)
+	end
+end
+
 --- @param objectHandle RatScratch.Pipeline.ObjectHandle
 function ObjectPipeline:addObject(objectHandle)
 	assert(not self.objectHandles[objectHandle], "object exists in pipeline")

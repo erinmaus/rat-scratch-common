@@ -280,6 +280,10 @@ function ObjectHandle:getSkeleton()
 	return self.skeleton
 end
 
+function ObjectHandle:getAnimator()
+	return self.animator
+end
+
 --- @param animation RatScratch.Resource.Resource<RatScratch.Graphics.Graphics3D.Animation>
 --- @return boolean
 function ObjectHandle:attachAnimation(animation)

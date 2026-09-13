@@ -9,6 +9,7 @@ local Pack = require("rat-scratch-pipeline.Utility.Pack")
 --- @field private vertexFormatInstance RatScratch.Graphics.Graphics3D.BufferFormat
 --- @field private transforms table<string, { packName: string, unpackName: string, pack: fun(...: number): ...: number; unpack: fun(...: number): ...: number }>
 --- @field private buffer string
+--- @field private shaderBufferName string
 local VertexBufferInfo = Object()
 
 --- @param info RatScratch.Pipeline.PipelineDefinitionVertexBuffer
@@ -18,6 +19,7 @@ function VertexBufferInfo:new(info)
 
 	self.transforms = {}
 	self.buffer = info.buffer
+	self.shaderBufferName = ("rat_%sBuffer"):format(self.buffer)
 
 	local inputScalar = BufferFormat.getFormatScalar(info.format[1].inputFormat)
 	for i, attribute in ipairs(info.format) do
@@ -90,6 +92,10 @@ end
 --- @return string
 function VertexBufferInfo:getBufferName()
 	return self.buffer
+end
+
+function VertexBufferInfo:getBufferShaderName()
+	return self.shaderBufferName
 end
 
 --- @param role string

@@ -5,11 +5,6 @@ restrict readonly buffer rat_ObjectInstancesBuffer
 	RatScratchPipelineObjectInstance rat_ObjectInstances[];
 };
 
-restrict readonly buffer rat_AnimationPlaybacksBuffer
-{
-	RatScratchPipelineAnimationPlayback rat_AnimationPlaybacks[];
-};
-
 restrict readonly buffer rat_ModelInstancesBuffer
 {
 	RatScratchPipelineModelInstance rat_ModelInstances[];
@@ -25,9 +20,9 @@ restrict readonly buffer rat_ModelsBuffer
 	RatScratchPipelineModel rat_Models[];
 };
 
-restrict readonly buffer rat_MeshsBuffer
+restrict readonly buffer rat_MeshesBuffer
 {
-	RatScratchPipelineMesh rat_Meshs[];
+	RatScratchPipelineMesh rat_Meshes[];
 };
 
 restrict readonly buffer rat_MeshletsBuffer
@@ -35,9 +30,9 @@ restrict readonly buffer rat_MeshletsBuffer
 	RatScratchPipelineMeshlet rat_Meshlets[];
 };
 
-restrict readonly buffer rat_SkinnedMeshletBoundssBuffer
+restrict readonly buffer rat_SkinnedMeshletBoundsBuffer
 {
-	RatScratchPipelineSkinnedMeshletBounds rat_SkinnedMeshletBoundss[];
+	RatScratchPipelineSkinnedMeshletBounds rat_SkinnedMeshletBounds[];
 };
 
 restrict readonly buffer rat_CamerasBuffer

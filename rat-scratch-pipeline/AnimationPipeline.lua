@@ -220,6 +220,15 @@ function AnimationPipeline:new(pipelineRuntime)
 	self.shaders = {}
 end
 
+function AnimationPipeline:bind(shader, qualityPreset)
+	if shader:hasUniform("rat_ObjectInstanceBoneTransforms") then
+		shader:send(
+			"rat_ObjectInstanceBoneTransforms",
+			self.boneTransformsBuffer:getBuffer()
+		)
+	end
+end
+
 --- @return love.graphics.GraphicsBuffer
 function AnimationPipeline:getBoneTransforms()
 	return self.boneTransformsBuffer:getBuffer()

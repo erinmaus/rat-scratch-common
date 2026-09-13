@@ -168,6 +168,55 @@ function ModelPipeline:new(pipelineRuntime)
 	self.dirtyModelInstances = {}
 end
 
+function ModelPipeline:bind(shader, qualityPreset)
+	for i = 1, self:getPipelineConfig():getVertexFormatCountByRole("static") do
+		local vertexBuffer = self:getPipelineConfig()
+			:getVertexFormatByRole("static", i)
+
+		if shader:hasUniform(vertexBuffer:getBufferShaderName()) then
+			shader:send(
+				vertexBuffer:getBufferShaderName(),
+				self.staticVertexBuffer:getBuffer(i)
+			)
+		end
+	end
+
+	for i = 1, self:getPipelineConfig():getVertexFormatCountByRole("skinned") do
+		local vertexBuffer = self:getPipelineConfig()
+			:getVertexFormatByRole("skinned", i)
+
+		if shader:hasUniform(vertexBuffer:getBufferShaderName()) then
+			shader:send(
+				vertexBuffer:getBufferShaderName(),
+				self.staticVertexBuffer:getBuffer(i)
+			)
+		end
+	end
+
+	if shader:hasUniform("rat_ModelInstancesBuffer") then
+		shader:send(
+			"rat_ModelInstancesBuffer",
+			self.modelInstancesBuffer:getBuffer()
+		)
+	end
+
+	if shader:hasUniform("rat_MeshInstancesBuffer") then
+		shader:send("rat_MeshInstancesBuffer", self.meshInstancesBuffer)
+	end
+
+	if shader:hasUniform("rat_ModelsBuffer") then
+		shader:send("rat_ModelsBuffer", self.modelsBuffer:getBuffer())
+	end
+
+	if shader:hasUniform("rat_ModelsBuffer") then
+		shader:send("rat_ModelsBuffer", self.meshesBuffer:getBuffer())
+	end
+
+	if shader:hasUniform("rat_MeshletsBuffer") then
+		shader:send("rat_MeshletsBuffer", self.meshletsBuffer:getBuffer())
+	end
+end
+
 --- @param model RatScratch.Pipeline.Graphics3D.PipelineModel
 function ModelPipeline:hasModel(model)
 	return self.models[model] ~= nil
@@ -274,6 +323,42 @@ end
 --- @return integer, integer
 function ModelPipeline:getMeshletsIndexCount(mesh)
 	return self.meshletsBuffer:getIndexCount(mesh)
+end
+
+--- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
+--- @return RatScratch.Pipeline.Buffer.PipelinePointer<RatScratch.Pipeline.Graphics3D.PipelineMesh>
+function ModelPipeline:getStaticBaseVertexPointer(mesh)
+	return self.staticVertexBuffer:newPointer(mesh)
+end
+
+--- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
+--- @return integer, integer
+function ModelPipeline:getStaticBaseVertexIndexCount(mesh)
+	return self.staticVertexBuffer:getIndexCount(mesh)
+end
+
+--- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
+--- @return RatScratch.Pipeline.Buffer.PipelinePointer<RatScratch.Pipeline.Graphics3D.PipelineMesh>
+function ModelPipeline:getSkinnedBaseVertexPointer(mesh)
+	return self.skinnedVertexBuffer:newPointer(mesh)
+end
+
+--- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
+--- @return integer, integer
+function ModelPipeline:getSkinnedBaseVertexIndexCount(mesh)
+	return self.skinnedVertexBuffer:getIndexCount(mesh)
+end
+
+--- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
+--- @return RatScratch.Pipeline.Buffer.PipelinePointer<RatScratch.Pipeline.Graphics3D.PipelineMesh>
+function ModelPipeline:getBaseIndexPointer(mesh)
+	return self.indexBuffer:newPointer(mesh)
+end
+
+--- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
+--- @return integer, integer
+function ModelPipeline:getBaseIndexIndexCount(mesh)
+	return self.indexBuffer:getIndexCount(mesh)
 end
 
 --- @private

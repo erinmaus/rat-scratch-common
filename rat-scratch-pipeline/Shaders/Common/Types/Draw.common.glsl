@@ -5,11 +5,6 @@ struct RatScratchPipelineObjectInstance
 	uvec2 boneTransformIndexCount;
 };
 
-struct RatScratchPipelineAnimationPlayback
-{
-	uint animationIndex;
-};
-
 struct RatScratchPipelineModelInstance
 {
 	uint objectInstanceIndex;

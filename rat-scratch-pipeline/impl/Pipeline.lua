@@ -18,6 +18,12 @@ function Pipeline:getPipelineConfig()
 	return self.pipelineRuntime:getConfig()
 end
 
+--- @param shader love.Shader
+--- @param qualityPreset string
+function Pipeline:bind(shader, qualityPreset)
+	-- Nothing.
+end
+
 function Pipeline:flush()
 	-- Nothing.
 end

@@ -80,7 +80,13 @@ function Atlas:_allocateLayer(newCount)
 		self.width,
 		self.height,
 		self.layers,
-		{ format = "rgba8", canvas = true, mipmaps = true, readable = true }
+		{
+			format = "rgba8",
+			canvas = true,
+			mipmaps = true,
+			readable = true,
+			viewformats = { "srgba8" },
+		}
 	)
 
 	local oldCanvas = self.canvas

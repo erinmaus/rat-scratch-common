@@ -67,6 +67,12 @@ function DrawPipeline:new(pipelineRuntime)
 	)
 end
 
+function DrawPipeline:bind(shader, qualityPreset)
+	if shader:hasUniform("rat_DrawsBuffer") then
+		shader:send("rat_DrawsBuffer", self.drawsBuffer:getBuffer())
+	end
+end
+
 --- @param object RatScratch.Pipeline.ObjectHandle
 function DrawPipeline:addDrawable(object)
 	assert(not self.drawables[object], "object is in drawables list")
