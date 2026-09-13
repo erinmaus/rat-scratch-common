@@ -25,8 +25,6 @@ local PipelineBuffer = Object()
 --- @param flags table
 --- @param count integer
 function PipelineBuffer:new(format, flags, count)
-	count = 8
-
 	self.format = BufferFormat(format)
 	self.flags = flags
 
