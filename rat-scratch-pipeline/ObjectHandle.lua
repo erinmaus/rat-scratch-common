@@ -639,6 +639,8 @@ function ObjectHandle:_updateModel(modelResource, previousModel)
 			end
 		end
 	end
+
+	self.eventSource:process(ObjectHandleEvent.fromDrawUpdated())
 end
 
 --- @private

@@ -2,9 +2,14 @@ local Object = require("rat-scratch-common").Object
 local Vector3 = require("rat-scratch-math").Vector3
 local Light = require("rat-scratch-pipeline.Light")
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
+local ArcballCamera = require("rat-scratch-pipeline.ArcballCamera")
+local Quaternion = require("rat-scratch-math").Quaternion
+local CubeMap = require("rat-scratch-graphics").CubeMap
 
 --- @class RatScratch.Pipeline.PointLight : RatScratch.Pipeline.Light
 --- @field position RatScratch.Math.Vector3
+--- @field attenuation number
+--- @field cameras (RatScratch.Pipeline.ArcballCamera | false)[]
 --- @overload fun(): RatScratch.Pipeline.PointLight
 local PointLight = Object(Light)
 
@@ -13,6 +18,14 @@ function PointLight:new()
 
 	self.position = Vector3(0)
 	self.attenuation = 0
+	self.cameras = {
+		false,
+		false,
+		false,
+		false,
+		false,
+		false,
+	}
 end
 
 --- @param data number[]
@@ -65,13 +78,28 @@ function PointLight:setPosition(value)
 end
 
 function PointLight:getCameraCount()
-	return 6
+	return CubeMap.FACES
 end
 
---- @param index integer
---- @return RatScratch.Pipeline.Camera
-function PointLight:getCamera(index)
-	-- TODO
+do
+	local _rotation = Quaternion()
+
+	--- @param index integer
+	--- @return RatScratch.Pipeline.Camera
+	function PointLight:getCamera(index)
+		local camera = self.cameras[index]
+		if not camera then
+			camera = ArcballCamera()
+			camera:setRotation(CubeMap.getRotation(index, _rotation))
+			self.cameras[index] = camera
+		end
+
+		camera:setNear(0.1)
+		camera:setFar(math.max(self.attenuation, 1))
+		camera:setTranslation(self.position)
+
+		return camera
+	end
 end
 
 return PointLight

@@ -15,6 +15,7 @@ local ObjectHandleEvent = Object(Event)
 ObjectHandleEvent.RESOURCE_ADDED = EventScope.create()
 ObjectHandleEvent.RESOURCE_REMOVED = EventScope.create()
 ObjectHandleEvent.RESOURCE_UPDATED = EventScope.create()
+ObjectHandleEvent.DRAW_UPDATED = EventScope.create()
 ObjectHandleEvent.MATERIAL_ADDED = EventScope.create()
 ObjectHandleEvent.MATERIAL_REMOVED = EventScope.create()
 ObjectHandleEvent.ANIMATOR_ADDED = EventScope.create()
@@ -86,6 +87,11 @@ function ObjectHandleEvent.fromResourceUpdated(resource)
 	end
 
 	return event
+end
+
+--- @return RatScratch.Pipeline.ObjectHandleEvent
+function ObjectHandleEvent.fromDrawUpdated()
+	return Event.get(ObjectHandleEvent, ObjectHandleEvent.DRAW_UPDATED)
 end
 
 --- @param animator RatScratch.Graphics.Graphics3D.Animator
