@@ -4,7 +4,7 @@ local Quaternion = require("rat-scratch-Math").Quaternion
 local Transform = require("rat-scratch-math").Transform
 local Camera = require("rat-scratch-pipeline.Camera")
 
---- @class RatScratch.Pipeline.ArcballCamera : RatScratch.Common.BaseObject
+--- @class RatScratch.Pipeline.ArcballCamera : RatScratch.Pipeline.Camera
 --- @field private distance number
 --- @field private translation RatScratch.Math.Vector3
 --- @field private rotation RatScratch.Math.Quaternion
