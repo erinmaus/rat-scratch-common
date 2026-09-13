@@ -14,6 +14,12 @@
         "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL",
         "format": "uint32",
         "default": [32]
+      },
+      {
+        "key": "pipeline.properties.lighting.maxLightsPerThread",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_THREAD",
+        "format": "uint32",
+        "default": [16]
       }
     ],
     "settings": [

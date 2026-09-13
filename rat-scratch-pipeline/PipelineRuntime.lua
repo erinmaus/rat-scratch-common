@@ -164,6 +164,19 @@ function PipelineRuntime:setCurrentProperties(currentProperties)
 	self:_loadConfigShaders()
 end
 
+--- @param qualityPreset string
+--- @param property string
+--- @return (integer | number | boolean)[]? ...
+function PipelineRuntime:getCurrentProperty(qualityPreset, property)
+	local value = self.currentProperties[qualityPreset]
+		and self.currentProperties[qualityPreset][property]
+	if value then
+		return unpack(value)
+	end
+
+	return nil
+end
+
 do
 	--- @type RatScratch.Graphics.ShaderPreprocessOptions?
 	local _defaultShaderOptions
@@ -181,6 +194,7 @@ do
 					Pipeline = ("%s/Shaders"):format(
 						RatScratchModule.getSelfPath(PATH)
 					),
+					Generated = "generated:/",
 				},
 			}
 		end

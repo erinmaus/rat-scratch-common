@@ -9,6 +9,6 @@ vec3 ratScreenPositionToWorldPosition(vec3 screenPosition, uint cameraIndex)
 	vec4 viewSpacePosition = camera.inverseProjectionTransform * clipSpacePosition;
 	viewSpacePosition /= vec4(viewSpacePosition.w);
 
-	vec4 worldSpacePosition = camera.inverseProjectionTransform * viewSpacePosition;
+	vec4 worldSpacePosition = camera.inverseViewTransform * viewSpacePosition;
 	return worldSpacePosition.xyz;
 }
