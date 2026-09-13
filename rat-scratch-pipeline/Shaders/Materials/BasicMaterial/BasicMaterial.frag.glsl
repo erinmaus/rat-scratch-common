@@ -30,4 +30,7 @@ void ratApplyFragmentMaterial(in RatScratchPipelineFragmentInput fragmentInput,
 
 	vec3 emissive = ratSampleTexture(materialProperties.emissiveTexture, fragmentInput.textureCoordinate).rgb;
 	fragmentOutput.emissive = emissive * materialProperties.emissiveFactor;
+
+	vec3 fluorescence = ratSampleTexture(materialProperties.fluorescenceTexture, fragmentInput.textureCoordinate).rgb;
+	fragmentOutput.fluorescence = fluorescence * materialProperties.fluorescenceFactor;
 }

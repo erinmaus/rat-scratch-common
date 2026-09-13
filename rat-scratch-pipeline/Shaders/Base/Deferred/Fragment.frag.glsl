@@ -8,11 +8,12 @@
 #include "@Generated/Pipeline/Material/Properties.common.glsl"
 #include "@Generated/Pipeline/Material/Fragment.common.glsl"
 
-layout(location = 0) out vec4 rat_GBufferAlbedo;	 // generally rgba8, colors
-layout(location = 1) out vec4 rat_GBufferEmissive;	 // generally rgba8, emissive colors rgb, a = unused
-layout(location = 2) out vec4 rat_GBufferNormal;	 // rg16f (encoded normals)
-layout(location = 3) out vec4 rat_GBufferProperties; // rgba8 (metal, roughness, occlusion, unused)
-layout(location = 4) out uint rat_GBufferMaterial;	 // r8 (material)
+layout(location = 0) out vec4 rat_GBufferAlbedo;	   // generally rgba8, colors
+layout(location = 1) out vec4 rat_GBufferEmissive;	   // generally rgb5a1, emissive colors rgb, a = unused
+layout(location = 2) out vec4 rat_GBufferFluorescence; // generally rgb5a1, fuorescence colors rgb, a = unused
+layout(location = 3) out vec4 rat_GBufferNormal;	   // rg16f (encoded normals)
+layout(location = 4) out vec4 rat_GBufferProperties;   // rgba8 (metal, roughness, occlusion, unused)
+layout(location = 5) out uint rat_GBufferMaterial;	   // r8 (material)
 
 void pixelmain()
 {
@@ -36,6 +37,7 @@ void pixelmain()
 
 	rat_GBufferAlbedo = fragmentOutput.albedo;
 	rat_GBufferEmissive = vec4(fragmentOutput.emissive, fragmentOutput.albedo.a);
+	rat_GBufferFluorescence = vec4(fragmentOutput.fluorescence, fragmentOutput.albedo.a);
 	rat_GBufferNormal = vec4(encodeNormal(clampNormal(fragmentOutput.normal)), 0.0, fragmentOutput.albedo.a);
 	rat_GBufferProperties =
 		vec4(fragmentOutput.metal, fragmentOutput.roughness, fragmentOutput.occlusion, fragmentOutput.albedo.a);

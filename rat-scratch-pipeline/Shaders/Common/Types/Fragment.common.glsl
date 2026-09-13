@@ -21,6 +21,7 @@ struct RatScratchPipelineFragmentOutput
 	vec3 position;
 	vec3 screenPosition;
 	vec4 albedo;
+	vec3 fluorescence;
 	vec3 emissive;
 	vec3 normal;
 	float metal;

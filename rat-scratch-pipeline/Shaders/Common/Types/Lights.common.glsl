@@ -54,4 +54,5 @@ struct RatScratchPipelineLightResult
 {
 	vec4 diffuse;
 	vec4 specular;
+	vec4 fluorescence;
 };

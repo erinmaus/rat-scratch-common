@@ -56,6 +56,15 @@
       {
         "name": "emissiveTexture",
         "format": "texture"
+      },
+      {
+        "name": "fluorescenceFactor",
+        "format": "float",
+        "value": [0, 0, 0]
+      },
+      {
+        "name": "fluorescenceTexture",
+        "format": "texture"
       }
     ]
   }
