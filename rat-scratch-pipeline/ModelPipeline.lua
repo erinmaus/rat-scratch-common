@@ -193,6 +193,10 @@ function ModelPipeline:bind(shader, qualityPreset)
 		end
 	end
 
+	if shader:hasUniform("rat_IndicesBuffer") then
+		shader:send("rat_IndicesBuffer", self.indexBuffer:getBuffer(1))
+	end
+
 	if shader:hasUniform("rat_ModelInstancesBuffer") then
 		shader:send(
 			"rat_ModelInstancesBuffer",
