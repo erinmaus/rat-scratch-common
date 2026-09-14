@@ -1051,6 +1051,7 @@ end
 function MaterialPipeline:flush()
 	if next(self.dirtyTextures) then
 		self:_flushTextures()
+		self.texturesBuffer:flush()
 	end
 
 	if self.materialsDirty then

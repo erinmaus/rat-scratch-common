@@ -137,6 +137,7 @@ function CameraFrame:update()
 		self.previousInverseProjection
 	)
 	self:_setMatrix("previousProjectionTransform", self.previousProjection)
+	self:_setMatrix("projectionViewTransform", self.currentProjectionView)
 	self:_setMatrix(
 		"inverseProjectionViewTransform",
 		self.currentInverseProjectionView
