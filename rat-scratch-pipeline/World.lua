@@ -658,11 +658,12 @@ function World:_updateObjectHandleDraw(objectHandle)
 					"indexOffset",
 					baseIndexPointer,
 					(k - 1)
-						* self.pipelineRuntime
-							:getConfig()
-							:getMeshletFormat()
-							:getTriangleCount()
-						* 3
+							* self.pipelineRuntime
+								:getConfig()
+								:getMeshletFormat()
+								:getTriangleCount()
+							* 3
+						+ 1
 				)
 
 				currentDraw = currentDraw + 1

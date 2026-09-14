@@ -76,18 +76,14 @@ function Atlas:_allocateLayer(newCount)
 
 	self.layers = newCount
 
-	local newCanvas = love.graphics.newTexture(
-		self.width,
-		self.height,
-		self.layers,
-		{
+	local newCanvas =
+		love.graphics.newTexture(self.width, self.height, self.layers, {
 			format = "rgba8",
 			canvas = true,
 			mipmaps = true,
 			readable = true,
 			viewformats = { "srgba8" },
-		}
-	)
+		})
 
 	local oldCanvas = self.canvas
 	if oldCanvas then
@@ -113,6 +109,8 @@ function Atlas:_allocateLayer(newCount)
 	end
 
 	self.canvas = newCanvas
+	self.canvas:generateMipmaps()
+
 	table.insert(self.roots, AtlasPackingNode(0, 0, self.width, self.height))
 end
 
@@ -166,6 +164,8 @@ function Atlas:_drawEntry(texture, entry)
 			entry:getHeight()
 		)
 	until isDone
+
+	self.canvas:generateMipmaps()
 end
 
 --- @param handle RatScratch.Graphics.Atlas.AtlasHandle

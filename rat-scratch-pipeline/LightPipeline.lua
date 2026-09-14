@@ -158,7 +158,7 @@ end
 function LightPipeline:_flushLights()
 	for light in pairs(self.dirtyLights) do
 		self:_flushLight(light)
-		self.dirtyLights[light] = true
+		self.dirtyLights[light] = nil
 	end
 end
 
