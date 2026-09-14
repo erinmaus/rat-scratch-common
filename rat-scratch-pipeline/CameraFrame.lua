@@ -9,11 +9,13 @@ local Transform = require("rat-scratch-math").Transform
 --- @field private currentView love.Transform
 --- @field private currentInverseView love.Transform
 --- @field private currentProjection love.Transform
+--- @field private currentInverseProjection love.Transform
 --- @field private currentProjectionView love.Transform
 --- @field private currentInverseProjectionView love.Transform
 --- @field private previousView love.Transform
 --- @field private previousInverseView love.Transform
 --- @field private previousProjection love.Transform
+--- @field private previousInverseProjection love.Transform
 --- @field private previousProjectionView love.Transform
 --- @field private previousInverseProjectionView love.Transform
 --- @overload fun(camera: RatScratch.Pipeline.Camera): RatScratch.Pipeline.CameraFrame
@@ -39,14 +41,19 @@ CameraFrame.CAMERA_FORMAT = {
 		name = "previousProjectionTransform",
 		format = "floatmat4x4",
 	},
-	{ location = 7, name = "projectionViewTransform", format = "floatmat4x4" },
 	{
-		location = 8,
+		location = 7,
+		name = "inversePreviousProjectionTransform",
+		format = "floatmat4x4",
+	},
+	{ location = 8, name = "projectionViewTransform", format = "floatmat4x4" },
+	{
+		location = 9,
 		name = "inverseProjectionViewTransform",
 		format = "floatmat4x4",
 	},
 	{
-		location = 9,
+		location = 10,
 		name = "inversePreviousProjectionViewTransform",
 		format = "floatmat4x4",
 	},
@@ -64,11 +71,13 @@ function CameraFrame:new(camera)
 	self.currentView = love.math.newTransform()
 	self.currentInverseView = love.math.newTransform()
 	self.currentProjection = love.math.newTransform()
+	self.currentInverseProjection = love.math.newTransform()
 	self.currentProjectionView = love.math.newTransform()
 	self.currentInverseProjectionView = love.math.newTransform()
 	self.previousView = love.math.newTransform()
 	self.previousInverseView = love.math.newTransform()
 	self.previousProjection = love.math.newTransform()
+	self.previousInverseProjection = love.math.newTransform()
 	self.previousProjectionView = love.math.newTransform()
 	self.previousInverseProjectionView = love.math.newTransform()
 
@@ -96,6 +105,9 @@ function CameraFrame:update()
 	self.previousView:setMatrix(self.currentView:getMatrix())
 	self.previousInverseView:setMatrix(self.currentInverseView:getMatrix())
 	self.previousProjection:setMatrix(self.currentProjection:getMatrix())
+	self.previousInverseProjection:setMatrix(
+		self.currentInverseProjection:getMatrix()
+	)
 	self.previousProjectionView:setMatrix(
 		self.currentProjectionView:getMatrix()
 	)
@@ -111,6 +123,7 @@ function CameraFrame:update()
 	self.currentProjectionView:apply(self.currentView)
 
 	self.currentInverseView:inverseOf(self.currentView)
+	self.currentInverseProjection:inverseOf(self.currentProjection)
 	self.currentInverseProjectionView:inverseOf(self.currentProjectionView)
 
 	self:_setMatrix("viewTransform", self.currentView)
@@ -118,6 +131,11 @@ function CameraFrame:update()
 	self:_setMatrix("previousViewTransform", self.previousView)
 	self:_setMatrix("inversePreviousViewTransform", self.currentInverseView)
 	self:_setMatrix("projectionTransform", self.currentProjection)
+	self:_setMatrix("inverseProjectionTransform", self.currentInverseProjection)
+	self:_setMatrix(
+		"inversePreviousProjectionTransform",
+		self.previousInverseProjection
+	)
 	self:_setMatrix("previousProjectionTransform", self.previousProjection)
 	self:_setMatrix(
 		"inverseProjectionViewTransform",
