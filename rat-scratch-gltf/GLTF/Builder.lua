@@ -91,8 +91,11 @@ function GLTFBuilder:addWorkingBufferView(workingBufferView)
 		byteStride = workingBufferView.dataStride,
 	})
 
-	self.workingBufferViews[bufferViewIndex] =
-		Table.deepClone(workingBufferView)
+	workingBufferView = Table.deepClone(workingBufferView)
+	workingBufferView.data = self:addData(workingBufferView.data)
+
+	self.workingBufferViews[bufferViewIndex] = workingBufferView
+
 	return bufferViewIndex, self:getBufferView(bufferViewIndex)
 end
 

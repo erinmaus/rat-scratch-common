@@ -10,6 +10,8 @@ local Table = require("rat-scratch-common").Table
 local ExtendedModel = require("rat-scratch-pipeline-tools").Model.ExtendedModel
 local ExtendedScene = require("rat-scratch-pipeline-tools").Model.ExtendedScene
 local PipelineConfig = require("rat-scratch-pipeline").PipelineConfig
+local ExtendedModelSerializer =
+	require("rat-scratch-pipeline-tools.Model.ExtendedModelSerializer")
 local ShaderPreprocessor = require("rat-scratch-graphics.ShaderPreprocessor")
 local ffi = require("ffi")
 
@@ -39,14 +41,30 @@ function demo.load()
 	local extendedScene = ExtendedScene(baseScene, pipelineConfig)
 	local extendedModel = extendedScene:getModel(1)
 
+	local builder = GLTF.Builder()
+
 	local meshDefinitions = parser:loadMesh(0, {
 		attributes = {
 			static = {
-				output = parser:getAttributes(),
-				static = parser:getAttributes(),
+				output = GLTF.Attributes.makeStaticStandard(),
+				static = GLTF.Attributes.makeStaticStandard(),
 			},
 		},
 	})
+
+	local scene = ExtendedScene(
+		parser:loadScene(1, {
+			attributes = {
+				static = {
+					output = GLTF.Attributes.makeStaticStandard(),
+				},
+			},
+		}),
+		pipelineConfig
+	)
+	scene:serialize(builder)
+	GLTF.saveGLB("shoe_pipeline.glb", builder:build("shoe_pipeline.glb"))
+
 	local scene = Scene.fromDefinition({
 		models = {
 			{

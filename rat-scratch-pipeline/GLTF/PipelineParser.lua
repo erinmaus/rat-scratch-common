@@ -235,6 +235,12 @@ function PipelineParser:loadModelDefinition(index)
 		end
 
 		local indices = self.parser:getBufferViewData(primitiveMeshlets.indices)
+		print(
+			">>> indices[0]",
+			indices:getUInt32(0),
+			indices:getUInt32(4),
+			indices:getUInt32(8)
+		)
 
 		--- @type RatScratch.Pipeline.Graphics3D.PipelineMeshletDefinition[]
 		local meshletDefinitions = {}

@@ -8,6 +8,9 @@ local Vector3 = require("rat-scratch-math").Vector3
 local Quaternion = require("rat-scratch-math").Quaternion
 local ArcballCamera = require("rat-scratch-pipeline").ArcballCamera
 local LightPipeline = require("rat-scratch-pipeline").LightPipeline
+local GLTF = require("rat-scratch-gltf")
+local ExtendedScene = require("rat-scratch-pipeline-tools").Model.ExtendedScene
+local PipelineConfig = require("rat-scratch-pipeline").PipelineConfig
 local PipelineSceneResourceType =
 	require("rat-scratch-pipeline").Resources.PipelineSceneResourceType
 local PipelineScenePointer =
@@ -16,7 +19,28 @@ local AnimationPipeline = require("rat-scratch-pipeline").AnimationPipeline
 
 local demo = {}
 
+local function makeGLB()
+	local pipelineConfig = PipelineConfig.loadDefault()
+
+	local parser = GLTF.loadFromFilesystem("samples/assets/gltf/shoe.glb")
+	local scene = parser:loadScene(1, {
+		attributes = {
+			static = {
+				output = GLTF.Attributes.makeStaticStandard(),
+			},
+		},
+	})
+
+	local extendedScene = ExtendedScene(scene, pipelineConfig)
+
+	local builder = GLTF.Builder()
+	extendedScene:serialize(builder)
+	GLTF.saveGLB("shoe_pipeline.glb", builder:build("shoe_pipeline.glb"))
+end
+
 function demo.load()
+	makeGLB()
+
 	ResourceLoader.toggleDebug(true)
 
 	local pipelineRuntime = PipelineRuntime.loadDefault()
@@ -27,10 +51,8 @@ function demo.load()
 	local object = world:newObject()
 	object:move(scene)
 
-	local sceneResource = ResourceLoader.load(
-		PipelineSceneResourceType,
-		"samples/assets/gltf/shoe_pipeline.glb"
-	)
+	local sceneResource =
+		ResourceLoader.load(PipelineSceneResourceType, "shoe_pipeline.glb")
 	local modelResource = PipelineScenePointer.newModelPointer(sceneResource, 1)
 	object:attachModel(modelResource)
 
