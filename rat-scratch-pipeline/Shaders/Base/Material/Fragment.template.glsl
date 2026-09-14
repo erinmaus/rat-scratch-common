@@ -1,7 +1,7 @@
 #include "@Pipeline/Common/Types/Fragment.common.glsl"
 
 void ratApplyNoneFragmentMaterial(in RatScratchPipelineFragmentInput fragmentInput,
-								  out RatScratchPipelineFragmentOutput fragmentOutput)
+								  inout RatScratchPipelineFragmentOutput fragmentOutput)
 {
 	// Nothing.
 }
@@ -9,7 +9,7 @@ void ratApplyNoneFragmentMaterial(in RatScratchPipelineFragmentInput fragmentInp
 /*** $("@Pipeline/Base/Material/FragmentApplyMaterialImpl.template.glsl", $RAT_SCRATCH_MATERIALS$) ***/
 
 void ratFragmentApplyMaterial(in RatScratchPipelineFragmentInput fragmentInput,
-							  out RatScratchPipelineFragmentOutput fragmentOutput)
+							  inout RatScratchPipelineFragmentOutput fragmentOutput)
 {
 	uint materialDefinitionIndex = rat_MaterialInstances[fragmentInput.materialInstance].materialDefinitionIndex;
 	fragmentOutput.materialDefinitionIndex = materialDefinitionIndex;

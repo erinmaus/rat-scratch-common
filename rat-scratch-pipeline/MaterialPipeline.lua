@@ -380,7 +380,7 @@ function MaterialPipeline:_flushTexture(texture)
 		bottom - top,
 		left,
 		top,
-		layer
+		layer - 1
 	)
 end
 
