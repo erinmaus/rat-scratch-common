@@ -68,6 +68,14 @@ function LightPipeline:new(pipelineRuntime)
 	self.cellShaders = {}
 end
 
+--- @param shader love.Shader
+--- @param qualityPreset string
+function LightPipeline:bind(shader, qualityPreset)
+	if shader:hasUniform("rat_LightsBuffer") then
+		shader:send("rat_LightsBuffer", self.lightsBuffer:getBuffer())
+	end
+end
+
 --- @param light RatScratch.Pipeline.Light
 function LightPipeline:addLight(light)
 	assert(not self.lights[light], "light already exists in light pipeline")
