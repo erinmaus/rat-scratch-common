@@ -102,11 +102,17 @@ function Draw:setPointer(attribute, pointer, pointerIndex)
 	if pointer then
 		table.insert(
 			self.validPointers,
-			Search.lessThanEqual(self.validPointers, index, _compare) + 1
+			Search.lessThanEqual(self.validPointers, index, _compare) + 1,
+			index
 		)
 
 		self.offsets[index] = (pointerIndex or 1) - 1
 	else
+		local i = Search.first(self.validPointers, index, _compare)
+		if i then
+			table.remove(self.validPointers, i)
+		end
+
 		self.offsets[index] = nil
 	end
 end
