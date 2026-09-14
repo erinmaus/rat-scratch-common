@@ -979,7 +979,7 @@ end
 --- @param materialInstance RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
 --- @return integer
 function MaterialPipeline:_rebuildMaterialInstanceUniformsImpl(materialInstance)
-	local index = 0
+	local index = 1
 	if materialInstance:getParent() then
 		index = index
 			+ self:_rebuildMaterialInstanceUniformsImpl(

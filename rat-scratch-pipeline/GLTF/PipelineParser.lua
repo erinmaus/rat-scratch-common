@@ -272,6 +272,8 @@ function PipelineParser:loadModelDefinition(index)
 		end
 
 		table.insert(modelDefinition.meshes, {
+			vertexCount = primitiveMeshlets.vertexCount,
+			indexCount = primitiveMeshlets.indexCount,
 			vertices = vertices,
 			indices = indices,
 			meshlets = meshletDefinitions,
