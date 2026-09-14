@@ -994,7 +994,7 @@ function MaterialPipeline:_rebuildMaterialInstanceUniformsImpl(materialInstance)
 
 	ffi.copy(
 		ffi.cast("uint8_t *", self.stagingMaterialData:getFFIPointer())
-			+ (index * ffi.sizeof("uint32_t")),
+			+ ((index - 1) * ffi.sizeof("uint32_t")),
 		materialInstance:getUniformsBuffer():getIntegerData():getFFIPointer(),
 		materialInstance:getUniformsBuffer():getIntegerData():getSize()
 	)
@@ -1016,7 +1016,7 @@ function MaterialPipeline:_rebuildMaterialInstanceUniformsImpl(materialInstance)
 
 	ffi.copy(
 		ffi.cast("uint8_t *", self.stagingMaterialData:getFFIPointer())
-			+ (index * ffi.sizeof("float")),
+			+ ((index - 1) * ffi.sizeof("float")),
 		materialInstance:getUniformsBuffer():getFloatData():getFFIPointer(),
 		materialInstance:getUniformsBuffer():getFloatData():getSize()
 	)
