@@ -26,7 +26,7 @@ restrict readonly buffer rat_ObjectInstanceBoneTransformsBuffer
 
 const uint RAT_SCRATCH_MAX_BONES_PER_VERTEX = 4;
 
-void ratVertexSkinnedDraw(in RatScratchPipelineDraw draw, out RatScratchPipelineFragmentInput fragment,
+void ratVertexSkinnedDraw(in RatScratchPipelineDraw draw, inout RatScratchPipelineFragmentInput fragment,
 						  uint indexOffset)
 {
 	RatScratchPipelineCamera camera = rat_Cameras[draw.cameraIndex];
@@ -35,7 +35,7 @@ void ratVertexSkinnedDraw(in RatScratchPipelineDraw draw, out RatScratchPipeline
 
 	RatScratchPipelineVertex vertex;
 	ratGetStaticVertex(vertex, staticIndex);
-	ratGetSkinnedVertex(vertex, staticIndex);
+	ratGetSkinnedVertex(vertex, skinnedIndex);
 
 	mat4 boneTransform = mat4(0.0);
 	for (uint i = 0; i < RAT_SCRATCH_MAX_BONES_PER_VERTEX; ++i)
@@ -75,7 +75,8 @@ void ratVertexSkinnedDraw(in RatScratchPipelineDraw draw, out RatScratchPipeline
 	fragment.materialInstance = rat_MeshInstances[draw.meshInstanceIndex].materialInstanceIndex;
 }
 
-void ratVertexStaticDraw(in RatScratchPipelineDraw draw, out RatScratchPipelineFragmentInput fragment, uint indexOffset)
+void ratVertexStaticDraw(in RatScratchPipelineDraw draw, inout RatScratchPipelineFragmentInput fragment,
+						 uint indexOffset)
 {
 	RatScratchPipelineCamera camera = rat_Cameras[draw.cameraIndex];
 	uint staticIndex = rat_Indices[draw.indexOffset + indexOffset] + draw.staticBaseVertexOffset;

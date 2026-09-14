@@ -43,14 +43,7 @@ function demo.load()
 
 	local builder = GLTF.Builder()
 
-	local meshDefinitions = parser:loadMesh(0, {
-		attributes = {
-			static = {
-				output = GLTF.Attributes.makeStaticStandard(),
-				static = GLTF.Attributes.makeStaticStandard(),
-			},
-		},
-	})
+	local meshDefinitions = parser:loadMesh(0)
 
 	local scene = ExtendedScene(
 		parser:loadScene(1, {
