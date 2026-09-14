@@ -34,14 +34,19 @@ CameraFrame.CAMERA_FORMAT = {
 		name = "inverseProjectionTransform",
 		format = "floatmat4x4",
 	},
-	{ location = 6, name = "projectionViewTransform", format = "floatmat4x4" },
 	{
-		location = 7,
+		location = 6,
+		name = "previousProjectionTransform",
+		format = "floatmat4x4",
+	},
+	{ location = 7, name = "projectionViewTransform", format = "floatmat4x4" },
+	{
+		location = 8,
 		name = "inverseProjectionViewTransform",
 		format = "floatmat4x4",
 	},
 	{
-		location = 8,
+		location = 9,
 		name = "inversePreviousProjectionViewTransform",
 		format = "floatmat4x4",
 	},

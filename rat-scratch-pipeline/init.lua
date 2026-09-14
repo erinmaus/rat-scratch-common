@@ -28,6 +28,7 @@ return {
 	Pipelines = require("rat-scratch-pipeline.Pipelines"),
 	PipelineConfig = require("rat-scratch-pipeline.PipelineConfig"),
 	PipelineRuntime = require("rat-scratch-pipeline.PipelineRuntime"),
+	PipelineRenderer = require("rat-scratch-pipeline.PipelineRenderer"),
 	PipelineProperty = require("rat-scratch-pipeline.PipelineProperty"),
 	PipelineSetting = require("rat-scratch-pipeline.PipelineSetting"),
 	PipelineSettingPreset = require(

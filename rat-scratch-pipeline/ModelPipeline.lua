@@ -201,15 +201,18 @@ function ModelPipeline:bind(shader, qualityPreset)
 	end
 
 	if shader:hasUniform("rat_MeshInstancesBuffer") then
-		shader:send("rat_MeshInstancesBuffer", self.meshInstancesBuffer)
+		shader:send(
+			"rat_MeshInstancesBuffer",
+			self.meshInstancesBuffer:getBuffer()
+		)
 	end
 
 	if shader:hasUniform("rat_ModelsBuffer") then
 		shader:send("rat_ModelsBuffer", self.modelsBuffer:getBuffer())
 	end
 
-	if shader:hasUniform("rat_ModelsBuffer") then
-		shader:send("rat_ModelsBuffer", self.meshesBuffer:getBuffer())
+	if shader:hasUniform("rat_MeshesBuffer") then
+		shader:send("rat_MeshesBuffer", self.meshesBuffer:getBuffer())
 	end
 
 	if shader:hasUniform("rat_MeshletsBuffer") then

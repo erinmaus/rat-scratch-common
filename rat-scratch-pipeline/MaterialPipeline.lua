@@ -34,6 +34,8 @@ local json = require("lib.json")
 --- @class RatScratch.Pipeline.MaterialPipeline : RatScratch.Pipeline.impl.Pipeline
 --- @field private shaders table<string, table<RatScratch.Pipeline.MaterialPipeline.ShaderPass, table<RatScratch.Pipeline.MaterialPipeline.ShaderType, love.Shader>> table<RatScratch.Pipeline.MaterialPipeline.ShaderPass, table<RatScratch.Pipeline.MaterialPipeline.ShaderType, love.Shader>>>
 --- @field private stagingMaterialData love.ByteData
+--- @field private maxMaterialIntegerComponents integer
+--- @field private maxMaterialFloatComponents integer
 --- @field private maxMaterialComponents integer
 --- @field private materials table<RatScratch.Pipeline.Graphics3D.PipelineMaterial, true>
 --- @field private materialsByName table<string, RatScratch.Pipeline.Graphics3D.PipelineMaterial>
@@ -76,7 +78,7 @@ MaterialPipeline.MATERIAL_INSTANCES_FORMAT = {
 	{ location = 0, name = "materialDefinitionIndex", format = "uint32" },
 }
 
-MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT_INTEGER_BUFFER = 2
+MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT_INTEGER_BUFFER = 1
 MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT_FLOAT_BUFFER = 2
 
 MaterialPipeline.MAX_TEXTURE_SIZE = 8192
@@ -90,6 +92,8 @@ function MaterialPipeline:new(pipelineRuntime)
 
 	self.shaders = {}
 
+	self.maxMaterialIntegerComponents = 1
+	self.maxMaterialFloatComponents = 1
 	self.maxMaterialComponents = 1
 
 	local limits = love.graphics.getSystemLimits()
@@ -142,14 +146,18 @@ function MaterialPipeline:bind(shader, qualityPreset)
 	if shader:hasUniform("rat_FloatMaterialPropertiesBuffer") then
 		shader:send(
 			"rat_FloatMaterialPropertiesBuffer",
-			self.materialInstanceValuesBuffer:getBuffer(1)
+			self.materialInstanceValuesBuffer:getBuffer(
+				MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT_FLOAT_BUFFER
+			)
 		)
 	end
 
 	if shader:hasUniform("rat_IntMaterialPropertiesBuffer") then
 		shader:send(
 			"rat_IntMaterialPropertiesBuffer",
-			self.materialInstanceValuesBuffer:getBuffer(1)
+			self.materialInstanceValuesBuffer:getBuffer(
+				MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT_INTEGER_BUFFER
+			)
 		)
 	end
 
@@ -557,38 +565,49 @@ function MaterialPipeline:_getMaterialVariables()
 			local shaderType = formatInstance:getShaderType(attributeLocation)
 			local scalarFormat = formatInstance:getScalarType(attributeLocation)
 
-			local count, offset =
-				formatInstance:getCountOffset(attributeLocation)
-
 			local propertyInfo = {
 				RAT_SCRATCH_TYPE = shaderType,
 				RAT_SCRATCH_MATERIAL_PROPERTY = attributeName,
 				RAT_SCRATCH_COMPONENTS = {},
 			}
 
-			for j = 1, count do
-				local componentInfo = {
-					RAT_SCRATCH_SCALAR_TYPE = BufferFormat.getFormatShaderType(
-						scalarFormat
-					),
-					RAT_SCRATCH_BUFFER_OFFSET = (offset - 1) + (j - 1),
-				}
-
-				table.insert(propertyInfo.RAT_SCRATCH_COMPONENTS, componentInfo)
-			end
-
+			local count, offset
 			if BufferFormat.isFormatScalarFloat(scalarFormat) then
-				table.insert(
-					materialInfo.RAT_SCRATCH_FLOAT_PROPERTIES,
-					propertyInfo
-				)
+				count, offset =
+					material:getFloatFormat():getCountOffset(attributeLocation)
 			elseif BufferFormat.isFormatScalarInteger(scalarFormat) then
-				table.insert(
-					materialInfo.RAT_SCRATCH_INT_PROPERTIES,
-					propertyInfo
-				)
+				count, offset = material
+					:getIntegerFormat()
+					:getCountOffset(attributeLocation)
 			end
 
+			if count and offset then
+				for j = 1, count do
+					local componentInfo = {
+						RAT_SCRATCH_SCALAR_TYPE = BufferFormat.getFormatShaderType(
+							scalarFormat
+						),
+						RAT_SCRATCH_BUFFER_OFFSET = (offset - 1) + (j - 1),
+					}
+
+					table.insert(
+						propertyInfo.RAT_SCRATCH_COMPONENTS,
+						componentInfo
+					)
+				end
+
+				if BufferFormat.isFormatScalarFloat(scalarFormat) then
+					table.insert(
+						materialInfo.RAT_SCRATCH_FLOAT_PROPERTIES,
+						propertyInfo
+					)
+				elseif BufferFormat.isFormatScalarInteger(scalarFormat) then
+					table.insert(
+						materialInfo.RAT_SCRATCH_INT_PROPERTIES,
+						propertyInfo
+					)
+				end
+			end
 			table.insert(materialInfo.RAT_SCRATCH_PROPERTIES, propertyInfo)
 		end
 
@@ -892,12 +911,13 @@ function MaterialPipeline:_rebuildMaterials()
 		self.materialToIndex[material] = i
 	end
 
-	local maxComponents = 1
+	local maxIntegerComponents = 1
+	local maxFloatComponents = 1
 	for _, material in ipairs(self.materialsByIndex) do
 		local integerCount = material:getIntegerFormat():getComponentCount()
 		local floatCount = material:getFloatFormat():getComponentCount()
 
-		local current = self.materialsByName[material:getName()]
+		local current = self.materialsByName[material:getParentName()]
 		while current do
 			integerCount = integerCount
 				+ current:getIntegerFormat():getComponentCount()
@@ -907,10 +927,14 @@ function MaterialPipeline:_rebuildMaterials()
 			current = self.materialsByName[material:getParentName()]
 		end
 
-		maxComponents = math.max(maxComponents, integerCount, floatCount)
+		maxIntegerComponents = math.max(maxIntegerComponents, integerCount)
+		maxFloatComponents = math.max(maxFloatComponents, floatCount)
 	end
 
-	self.maxMaterialComponents = maxComponents
+	self.maxMaterialIntegerComponents = maxIntegerComponents
+	self.maxMaterialFloatComponents = maxFloatComponents
+	self.maxMaterialComponents =
+		math.max(maxIntegerComponents, maxFloatComponents)
 
 	self.materialInstanceValuesBuffer = PipelineMultiBuffer(
 		MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT,
@@ -922,12 +946,13 @@ function MaterialPipeline:_rebuildMaterials()
 		) * self.maxMaterialComponents
 	)
 
-	self.stagingMaterialData = love.data.newByteData(maxComponents * 4)
+	self.stagingMaterialData =
+		love.data.newByteData(self.maxMaterialComponents * 4)
 
 	for _, materialInstance in ipairs(self.materialInstancesByIndex) do
 		self.materialInstanceValuesBuffer:register(
 			materialInstance,
-			self.maxMaterialComponents
+			self.maxMaterialIntegerComponents
 		)
 		self:_rebuildMaterialInstanceUniforms(materialInstance)
 	end
@@ -1029,8 +1054,8 @@ function MaterialPipeline:flush()
 	end
 
 	if self.materialsDirty then
-		self:_rebuildMaterialShaders()
 		self:_rebuildMaterials()
+		self:_rebuildMaterialShaders()
 		self:_flushMaterials()
 		self.materialsDirty = false
 	end

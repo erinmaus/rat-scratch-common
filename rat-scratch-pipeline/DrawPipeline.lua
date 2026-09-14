@@ -159,4 +159,14 @@ function DrawPipeline:flush()
 	self.drawsBuffer:flush()
 end
 
+function DrawPipeline:draw()
+	local _, count = self.drawsBuffer:getIndexCount()
+
+	love.graphics.drawFromShader(
+		"triangles",
+		self:getPipelineConfig():getMeshletFormat():getTriangleCount() * 3,
+		count
+	)
+end
+
 return DrawPipeline

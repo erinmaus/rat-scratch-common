@@ -62,51 +62,48 @@ do
 end
 
 do
-	local normalXY = Vector3()
-	local lPlusD = Vector3()
-	local square = Vector3()
-	local result = Vector3()
-
-	--- @param x number
-	--- @param y number
-	--- @param z number
-	--- @return number, number
+	local scaledNormal = Vector3()
 	function Pack.encodeNormal(x, y, z)
-		local xy = normalXY:from(x, y, 0)
-		local l = xy:getLength()
-		local d = Common.step(l, 0.0)
-		local s = l + d
-		local sq = math.sqrt(Common.clamp((-z + 1.0) / 2.0, 0, 1))
-		local r = xy:divide(lPlusD:from(s, s, 0), result)
-			:product(square:from(sq, sq, 0), result)
-		local nx, ny = r:get()
+		local n = scaledNormal
+			:from(x, y, z)
+			:scale(1 / (math.abs(x) + math.abs(y) + math.abs(z)))
+
+		local nx, ny = n.x, n.y
+		if n.z < 0 then
+			local sx, sy = Common.sign(nx), Common.sign(ny)
+			nx, ny = (1 - math.abs(ny)) * sx, (1 - math.abs(nx)) * sy
+		end
+
+		nx = nx * 0.5 + 0.5
+		ny = ny * 0.5 + 0.5
+
 		return nx, ny
 	end
 end
 
 do
-	local normal = Vector3()
-	local encodedNormal1 = Vector3()
-	local encodedNormal2 = Vector3()
-	local TWO = Vector3(2)
-	local ZERO_ZERO_ONE = Vector3(0, 0, 1)
-	local scale = Vector3()
-	local result = Vector3()
+	local packedNormal = Vector3()
+	function Pack.decodeNormal(x, y)
+		local fx = x * 2 - 1
+		local fy = y * 2 - 1
 
-	--- @param nx number
-	--- @param ny number
-	--- @return number, number, number
-	function Pack.decodeNormal(nx, ny)
-		local n = normal:from(nx, ny)
-		local e1 = encodedNormal1:from(nx, ny, 1)
-		local e2 = encodedNormal2:from(-nx, -ny, 1)
-		local l = e1:dot(e2)
-		local s = n:scale(math.sqrt(l), scale)
-		local r = result
-			:from(s.x, s.y, l)
-			:product(TWO, result)
-			:subtract(ZERO_ZERO_ONE)
-		return r:get()
+		local n = packedNormal:from(fx, fy, 1 - math.abs(fx) - math.abs(fy))
+
+		local t = Common.saturate(-n.z)
+
+		local tx, ty = t, t
+		if fx >= 0 then
+			tx = -t
+		end
+
+		if fy >= 0 then
+			ty = -t
+		end
+
+		n.x = n.x + tx
+		n.y = n.y + ty
+
+		return n:normalize(n):get()
 	end
 end
 

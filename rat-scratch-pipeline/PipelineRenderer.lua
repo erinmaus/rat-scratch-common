@@ -23,6 +23,10 @@ function PipelineRenderer:new(pipelineRuntime)
 	self.world = World(pipelineRuntime)
 end
 
+function PipelineRenderer:getWorld()
+	return self.world
+end
+
 function PipelineRenderer:update()
 	self.world:flush()
 end
@@ -68,6 +72,11 @@ function PipelineRenderer:_drawForward(scene)
 	)
 	self:_bindWorldUniforms(drawShader)
 	self:_bindSceneUniforms(drawShader, scene)
+
+	love.graphics.push("all")
+	love.graphics.setShader(drawShader)
+	scene:getPipeline(DrawPipeline):draw()
+	love.graphics.pop()
 end
 
 --- @param scene RatScratch.Pipeline.Scene

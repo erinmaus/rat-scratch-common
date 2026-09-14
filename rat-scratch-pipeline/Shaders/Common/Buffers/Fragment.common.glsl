@@ -9,7 +9,7 @@ varying vec4 frag_Position;
 varying vec3 frag_LocalNormal;
 varying vec3 frag_Normal;
 varying vec3 frag_Tangent;
-varying vec3 frag_Bitanget;
+varying vec3 frag_Bitangent;
 varying vec2 frag_TextureCoordinate;
 varying vec4 frag_Color;
 flat varying uint frag_MaterialInstance;
@@ -44,7 +44,7 @@ void ratGetFragmentInput(out RatScratchPipelineFragmentInput fragmentInput)
 	fragmentInput.localNormal = frag_LocalNormal;
 	fragmentInput.normal = frag_Normal;
 	fragmentInput.tangent = frag_Tangent;
-	fragmentInput.bitangent = frag_Bitanget;
+	fragmentInput.bitangent = frag_Bitangent;
 	fragmentInput.textureCoordinate = frag_TextureCoordinate;
 	fragmentInput.color = frag_Color;
 	fragmentInput.materialInstance = frag_MaterialInstance;
@@ -64,7 +64,7 @@ void ratSetVertexOutputs(in RatScratchPipelineFragmentInput fragmentInput)
 	frag_LocalNormal = fragmentInput.localNormal;
 	frag_Normal = fragmentInput.normal;
 	frag_Tangent = fragmentInput.tangent;
-	frag_Bitanget = fragmentInput.bitangent;
+	frag_Bitangent = fragmentInput.bitangent;
 	frag_TextureCoordinate = fragmentInput.textureCoordinate;
 	frag_Color = fragmentInput.color;
 	frag_MaterialInstance = fragmentInput.materialInstance;
@@ -80,8 +80,11 @@ void ratClearFragmentOutput(out RatScratchPipelineFragmentOutput fragmentOutput)
 	fragmentOutput.albedo = vec4(0.0);
 	fragmentOutput.emissive = vec3(0.0);
 	fragmentOutput.normal = vec3(0.0);
+	fragmentOutput.fluorescence = vec3(0.0);
 	fragmentOutput.metal = 1;
 	fragmentOutput.roughness = 1;
 	fragmentOutput.occlusion = 1;
 	fragmentOutput.materialDefinitionIndex = 0;
+	fragmentOutput.cameraIndex = 0;
+	fragmentOutput.discardFragment = 0;
 }

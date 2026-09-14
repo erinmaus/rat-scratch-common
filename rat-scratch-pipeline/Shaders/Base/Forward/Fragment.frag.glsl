@@ -25,6 +25,8 @@ void pixelmain()
 
 	RatScratchPipelineFragmentOutput fragmentOutput;
 	ratClearFragmentOutput(fragmentOutput);
+	fragmentOutput.position = fragmentInput.position.xyz;
+	fragmentOutput.screenPosition = fragmentInput.screenPosition;
 	fragmentOutput.cameraIndex = fragmentInput.cameraIndex;
 
 	ratFragmentApplyMaterial(fragmentInput, fragmentOutput);

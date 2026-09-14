@@ -94,13 +94,13 @@ void ratVertexStaticDraw(in RatScratchPipelineDraw draw, out RatScratchPipelineF
 	fragment.localPosition = localPosition.xyz;
 	fragment.worldPosition = worldPosition.xyz;
 	fragment.position = camera.projectionViewTransform * worldPosition;
-	fragment.localNormal = normalize(mat3(localTransform) * fragment.normal);
-	fragment.normal = normalize(normalTransform * vertex.position);
+	fragment.localNormal = normalize(mat3(localTransform) * vertex.normal);
+	fragment.normal = normalize(normalTransform * vertex.normal);
 	fragment.tangent = normalize(normalTransform * vertex.tangent.xyz);
 	fragment.bitangent = normalize(vec3(vertex.tangent.w) * cross(fragment.normal, fragment.tangent));
 	fragment.screenPosition = fragment.position.xyz / fragment.position.w;
-	fragment.screenPosition.xy += vec2(1.0);
-	fragment.screenPosition.xy *= vec2(0.5);
+	fragment.screenPosition += vec3(1.0);
+	fragment.screenPosition *= vec3(0.5);
 	fragment.textureCoordinate = vertex.textureCoordinate;
 	fragment.color = vertex.color;
 	fragment.materialInstance = rat_MeshInstances[draw.meshInstanceIndex].materialInstanceIndex;
