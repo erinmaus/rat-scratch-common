@@ -1,6 +1,6 @@
-name = rat-scratch-resources
+name = rat-scratch-resource
 version = 1.0.0
-source = rat-scratch-resources
+source = rat-scratch-resource
 
 [rat-scratch-common]
 version = *

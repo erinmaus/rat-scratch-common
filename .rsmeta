@@ -7,19 +7,16 @@ directory.build = ./build/rat-scratch-main
 version = *
 source = rat-scratch-common
 url = rat-scratch-common.rsmeta
-root = staging/module/rat%-scratch
 
 [rat-scratch-graphics]
 version = *
 source = rat-scratch-graphics
 url = rat-scratch-graphics.rsmeta
-root = staging/module/rat%-scratch
 
 [rat-scratch-math]
 version = *
 source = rat-scratch-math
 url = rat-scratch-math.rsmeta
-root = staging/module/rat%-scratch
 
 [json]
 version = 0.1.2
@@ -32,7 +29,6 @@ root = ^json%.lua%-v?0%.1%.2$
 version = *
 source = rat-scratch-gltf
 url = rat-scratch-gltf.rsmeta
-root = staging/module/rat%-scratch
 
 [meshoptimizer]
 version = 1.2.0
@@ -42,13 +38,11 @@ hash = sha512:82364e1c78dce46a28c81cf5736cd42a32ad229b43b22debb6d2797fd90866b630
 root = ^meshoptimizer%-v?1%.2$
 
 [rat-scratch-pipeline-tools]
-version = 1.0.0
+version = *
 source = rat-scratch-pipeline-tools
 url = rat-scratch-pipeline-tools.rsmeta
-root = staging/module/rat%-scratch
 
 [rat-scratch-resource]
-version = 1.0.0
+version = *
 source = rat-scratch-resource
 url = rat-scratch-resource.rsmeta
-root = staging/module/rat%-scratch
