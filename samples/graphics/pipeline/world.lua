@@ -65,7 +65,9 @@ function demo.load()
 	directionalLight:setDirection(Vector3(1, 4, 1))
 
 	local camera = ArcballCamera()
-	camera:setDistance(10)
+	camera:setDistance(2.5)
+	camera:setSize(love.graphics.getDimensions())
+
 	scene:setCamera(camera)
 	scene:getPipeline(LightPipeline):loadDefaultShaders()
 
@@ -85,7 +87,10 @@ function demo.update()
 end
 
 function demo.draw()
+	love.graphics.push("all")
+	love.graphics.setDepthMode("lequal", true)
 	demo.renderer:draw(demo.scene)
+	love.graphics.pop()
 end
 
 return demo
