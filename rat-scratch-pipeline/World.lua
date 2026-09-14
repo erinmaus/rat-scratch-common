@@ -654,7 +654,16 @@ function World:_updateObjectHandleDraw(objectHandle)
 					skinnedBaseVertexPointer
 				)
 				draw:setPointer("boneOffsetCount", bonesPointer)
-				draw:setPointer("indexOffset", baseIndexPointer)
+				draw:setPointer(
+					"indexOffset",
+					baseIndexPointer,
+					(k - 1)
+						* self.pipelineRuntime
+							:getConfig()
+							:getMeshletFormat()
+							:getTriangleCount()
+						* 3
+				)
 
 				currentDraw = currentDraw + 1
 			end

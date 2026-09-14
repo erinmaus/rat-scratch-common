@@ -1,12 +1,12 @@
 
-void ratApplyNoneVertexMaterial(in RatScratchPipelineDraw draw, out RatScratchPipelineFragmentInput fragmentInput)
+void ratApplyNoneVertexMaterial(in RatScratchPipelineDraw draw, inout RatScratchPipelineFragmentInput fragmentInput)
 {
 	// Nothing
 }
 
 /*** $("@Pipeline/Base/Material/VertexApplyMaterialImpl.template.glsl", $RAT_SCRATCH_VERTEX_MATERIALS$) ***/
 
-void ratVertexApplyMaterial(in RatScratchPipelineDraw draw, out RatScratchPipelineFragmentInput fragmentInput)
+void ratVertexApplyMaterial(in RatScratchPipelineDraw draw, inout RatScratchPipelineFragmentInput fragmentInput)
 {
 	uint materialDefinitionIndex = rat_MaterialInstances[fragmentInput.materialInstance].materialDefinitionIndex;
 	switch (materialDefinitionIndex)
