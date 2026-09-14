@@ -375,7 +375,7 @@ function ModelPipeline:_updateModelBuffer(model)
 		local mesh = model:getMesh(i)
 		for j = 1, self:getPipelineConfig():getVertexFormatCountByRole("static") do
 			local vertexBufferInfo = self:getPipelineConfig()
-				:getVertexFormatByRole("static", i)
+				:getVertexFormatByRole("static", j)
 			local vertexData =
 				mesh:getVertexData(vertexBufferInfo:getBufferName())
 			if vertexData then

@@ -316,7 +316,7 @@ function PipelineMultiBuffer:flush()
 			for k = 1, self.bufferCount do
 				local format = self.formats[k]
 				if format:getIsPacked() then
-					i = i * format:getComponentCount()
+					i = (i - 1) * format:getComponentCount() + 1
 					c = c * format:getComponentCount()
 				end
 
