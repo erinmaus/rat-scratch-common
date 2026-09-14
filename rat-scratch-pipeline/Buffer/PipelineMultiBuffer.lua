@@ -50,11 +50,7 @@ function PipelineMultiBuffer:new(formats, flags, count)
 
 		table.insert(
 			self.buffers,
-			love.graphics.newBuffer(
-				formatInstance:getFormat(),
-				self.context:getReservedCount(),
-				self.flags
-			)
+			self:_newBuffer(formatInstance, self.context:getReservedCount())
 		)
 	end
 
@@ -85,6 +81,33 @@ function PipelineMultiBuffer:getCount()
 	return self.context:getCount()
 end
 
+do
+	local _cachedScalarFormat = { { location = 0, name = "value" } }
+
+	--- @private
+	--- @param formatInstance RatScratch.Graphics.Graphics3D.BufferFormat
+	--- @param count integer
+	--- @param flags table
+	function PipelineMultiBuffer:_newBuffer(formatInstance, count)
+		if formatInstance:getIsPacked() then
+			local scalarType =
+				formatInstance:getScalarType(formatInstance:getAttribute(1))
+			_cachedScalarFormat[1].format = scalarType
+			return love.graphics.newBuffer(
+				_cachedScalarFormat,
+				count * formatInstance:getComponentCount(),
+				self.flags
+			)
+		end
+
+		return love.graphics.newBuffer(
+			formatInstance:getFormat(),
+			count,
+			self.flags
+		)
+	end
+end
+
 --- @generic T
 --- @param self RatScratch.Pipeline.Buffer.PipelineMultiBuffer<T>
 --- @param instance T
@@ -100,11 +123,7 @@ function PipelineMultiBuffer:_resize(event)
 
 	for i = 1, self.bufferCount do
 		self.data[i]:resize(newCount)
-		self.buffers[i] = love.graphics.newBuffer(
-			self.formats[i]:getFormat(),
-			newCount,
-			self.flags
-		)
+		self.buffers[i] = self:_newBuffer(self.formats[i], newCount)
 	end
 
 	self.dirtyContext:dirty(1, self:getCount())

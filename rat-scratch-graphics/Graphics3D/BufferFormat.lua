@@ -1136,6 +1136,10 @@ function BufferFormat:new(format, packed)
 	FORMAT_POOL[self.format] = self
 end
 
+function BufferFormat:getIsPacked()
+	return self.packed
+end
+
 function BufferFormat:getAttributeCount()
 	return #self.format
 end
