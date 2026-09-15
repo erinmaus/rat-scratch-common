@@ -46,7 +46,5 @@ void pixelmain()
 						 fragmentOutput.albedo.a);
 	}
 
-	rat_Color = vec4((fragmentOutput.normal + vec3(1.0)) / vec3(2.0), 1.0);
-
 	// TODO: OIT
 }

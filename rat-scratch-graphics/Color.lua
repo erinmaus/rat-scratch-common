@@ -51,6 +51,8 @@ function Color.convert(from, to)
 	elseif from:isDerived(GammaColor) and to:isDerived(LinearColor) then
 		--- @cast to RatScratch.Graphics.GammaColor
 		return to:from(from:toLinear())
+	else
+		to:from(from:get())
 	end
 
 	return to

@@ -66,11 +66,10 @@ function demo.load()
 
 	local directionalLight = scene:newLight(DirectionalLight)
 	directionalLight:setDirection(Vector3(1, -4, 1))
-	directionalLight:setColor(GammaColor(0.4, 0.4, 0.4))
+	directionalLight:setColor(LinearColor(1, 0.5, 1))
 
 	local pointLight = scene:newLight(PointLight)
-	pointLight:setColor(LinearColor(1, 1, 1))
-	pointLight:setAttenuation(10)
+	pointLight:setAttenuation(2)
 
 	local camera = ArcballCamera()
 	camera:setDistance(1.25)
@@ -99,7 +98,11 @@ function demo.update()
 	)
 
 	demo.directionalLight:setDirection(
-		demo.camera:getRotation():transformVector(Vector3(0, 0, -1))
+		Vector3(
+			math.cos(love.timer.getTime()),
+			4,
+			math.sin(love.timer.getTime())
+		)
 	)
 
 	demo.pointLight:setPosition(
@@ -107,7 +110,7 @@ function demo.update()
 			math.cos(love.timer.getTime() * (math.pi / 3) / 3)
 				* math.cos(love.timer.getTime() * (math.pi / 5) / 4)
 				* 0.5,
-			-0.25,
+			-0.5,
 			math.cos(love.timer.getTime() * (math.pi / 2.5) / 3)
 				* math.cos(love.timer.getTime() * (math.pi / 2.75) / 4)
 				* 0.5
