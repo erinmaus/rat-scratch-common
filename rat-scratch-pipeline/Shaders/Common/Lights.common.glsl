@@ -17,7 +17,7 @@ uint ratGetLightType(in RatScratchPipelineLight baseLight)
 	{
 		return RAT_SCRATCH_LIGHT_TYPE_DIRECTIONAL;
 	}
-	else if (baseLight.attenuation.y >= 0.0)
+	else if (baseLight.attenuation.y > 0.0)
 	{
 		return RAT_SCRATCH_LIGHT_TYPE_SPOT;
 	}

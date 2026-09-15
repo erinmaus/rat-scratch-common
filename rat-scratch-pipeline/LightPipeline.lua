@@ -160,6 +160,8 @@ function LightPipeline:_flushLight(light)
 	if self.shadowCastingLights[light] then
 		self:_flushShadowCastingLight(light)
 	end
+
+	light:update()
 end
 
 --- @private

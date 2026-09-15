@@ -11,6 +11,8 @@ local LightPipeline = require("rat-scratch-pipeline").LightPipeline
 local GLTF = require("rat-scratch-gltf")
 local ExtendedScene = require("rat-scratch-pipeline-tools").Model.ExtendedScene
 local PipelineConfig = require("rat-scratch-pipeline").PipelineConfig
+local LinearColor = require("rat-scratch-graphics.LinearColor")
+local PointLight = require("rat-scratch-pipeline.PointLight")
 local PipelineSceneResourceType =
 	require("rat-scratch-pipeline").Resources.PipelineSceneResourceType
 local PipelineScenePointer =
@@ -64,9 +66,14 @@ function demo.load()
 	local directionalLight = scene:newLight(DirectionalLight)
 	directionalLight:setDirection(Vector3(1, -4, 1))
 
+	local pointLight = scene:newLight(PointLight)
+	pointLight:setColor(LinearColor(0.75, 0.25, 0.75))
+	pointLight:setAttenuation(5)
+
 	local camera = ArcballCamera()
-	camera:setDistance(2.5)
+	camera:setDistance(2)
 	camera:setSize(love.graphics.getDimensions())
+	camera:setFOV(math.pi / 2)
 
 	scene:setCamera(camera)
 	scene:getPipeline(LightPipeline):loadDefaultShaders()
@@ -74,11 +81,22 @@ function demo.load()
 	demo.renderer = renderer
 	demo.scene = scene
 	demo.camera = camera
+	demo.light = pointLight
 end
 
 function demo.update()
 	demo.camera:setRotation(
 		Quaternion.fromAxisAngle(Vector3.UNIT_Y, love.timer.getTime() / math.pi)
+	)
+
+	demo.light:setPosition(
+		Vector3(
+			math.cos(love.timer.getTime() * math.pi) * 3,
+			math.cos(love.timer.getTime() * math.pi / 3)
+				* math.cos(love.timer.getTime() * math.pi / 4)
+				* 2,
+			math.sin(love.timer.getTime() * math.pi) * 3
+		)
 	)
 
 	ResourceLoader.update()

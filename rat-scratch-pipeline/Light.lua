@@ -60,7 +60,7 @@ function Light:toData(data, offset)
 	)
 end
 
-function Light:update(deltaTime)
+function Light:update()
 	self.isDirty = false
 end
 
