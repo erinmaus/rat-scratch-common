@@ -258,15 +258,15 @@ function PipelineMultiBuffer:copyTable(
 )
 	local i, maxCount = self.context:getIndexCount(instance)
 
-	index = i + math.min(index or 1, maxCount) - 1
+	index = math.min(index or 1, maxCount)
 	count = count
 		or math.floor((#table / self.formats[buffer]:getComponentCount()))
 	count = Common.clamp(count, 0, maxCount - index + 1)
 	tableIndex = tableIndex or 1
 
-	self.data[buffer]:copyFromTable(index, count, table, tableIndex)
+	self.data[buffer]:copyFromTable(i + index - 1, count, table, tableIndex)
 
-	self.dirtyContext:dirty(index, count)
+	self.dirtyContext:dirty(i + index - 1, count)
 end
 
 --- @generic T
@@ -287,15 +287,15 @@ function PipelineMultiBuffer:copyData(
 )
 	local i, maxCount = self.context:getIndexCount(instance)
 
-	index = i + math.min(index or 1, maxCount) - 1
+	index = math.min(index or 1, maxCount)
 	count = count
 		or math.floor(data:getSize() / self.formats[buffer]:getStride())
 	count = Common.clamp(count, 0, maxCount - index + 1)
 	offset = offset or 0
 
-	self.data[buffer]:copyFromData(index, count, data, offset)
+	self.data[buffer]:copyFromData(i + index - 1, count, data, offset)
 
-	self.dirtyContext:dirty(index, count)
+	self.dirtyContext:dirty(i + index - 1, count)
 end
 
 --- @generic T

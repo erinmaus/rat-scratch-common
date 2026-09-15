@@ -93,6 +93,7 @@ function ExtendedModelSerializer:new(modelDefinition, extendedModel)
 		skeleton = skeletonDefinition,
 		animations = animationDefinitions,
 		meshes = modelDefinition.meshes,
+		transform = modelDefinition.transform,
 		extras = {
 			RAT_extras_serialize = {
 				userdata = self,
