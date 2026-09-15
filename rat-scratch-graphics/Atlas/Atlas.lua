@@ -134,7 +134,7 @@ end
 --- @param height integer
 --- @return integer, RatScratch.Graphics.Atlas.AtlasPackingNode
 function Atlas:_newLayer(width, height)
-	self:_allocateLayer()
+	self:_allocateLayer(self.layers + 1)
 
 	local root = self.roots[#self.roots]
 	local node = root:insert(width, height)
