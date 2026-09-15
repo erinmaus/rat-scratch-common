@@ -157,4 +157,55 @@ do
 	end
 end
 
+do
+	local _projection = love.math.newTransform()
+	local _view = love.math.newTransform()
+
+	--- @param position RatScratch.Math.Vector3
+	--- @param result? RatScratch.Math.Vector3
+	--- @return RatScratch.Math.Vector3
+	function ArcballCamera:project(position, result)
+		local p = self:getProjection(_projection)
+		local v = self:getView(_view)
+
+		p:apply(v)
+
+		return Transform.project(
+			p,
+			position,
+			0,
+			0,
+			self.width,
+			self.height,
+			result
+		)
+	end
+end
+
+do
+	local _projection = love.math.newTransform()
+	local _view = love.math.newTransform()
+
+	--- @param position RatScratch.Math.Vector3
+	--- @param result? RatScratch.Math.Vector3
+	--- @return RatScratch.Math.Vector3
+	function ArcballCamera:unproject(position, result)
+		local p = self:getProjection(_projection)
+		local v = self:getView(_view)
+
+		p:apply(v)
+		p:inverseOf(p)
+
+		return Transform.unproject(
+			p,
+			position,
+			0,
+			0,
+			self.width,
+			self.height,
+			result
+		)
+	end
+end
+
 return ArcballCamera

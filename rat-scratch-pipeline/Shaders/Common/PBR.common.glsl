@@ -21,8 +21,8 @@ float ratPBRImplGeometrySchlickGGX(float nDotV, float roughness)
 	float r = (roughness + 1.0);
 	float k = (r * r) / 8.0;
 
-	float numerator = 1.0;
-	float denominator = 1.0 - k + k * nDotV;
+	float numerator = nDotV;
+	float denominator = nDotV * (1.0 - k) + k;
 
 	return numerator / denominator;
 }

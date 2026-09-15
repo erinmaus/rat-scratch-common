@@ -25,7 +25,7 @@ void pixelmain()
 
 	RatScratchPipelineFragmentOutput fragmentOutput;
 	ratClearFragmentOutput(fragmentOutput);
-	fragmentOutput.position = fragmentInput.position.xyz;
+	fragmentOutput.position = fragmentInput.worldPosition;
 	fragmentOutput.screenPosition = fragmentInput.screenPosition;
 	fragmentOutput.cameraIndex = fragmentInput.cameraIndex;
 
@@ -45,6 +45,8 @@ void pixelmain()
 							 fragmentOutput.emissive,
 						 fragmentOutput.albedo.a);
 	}
+
+	rat_Color = vec4((fragmentOutput.normal + vec3(1.0)) / vec3(2.0), 1.0);
 
 	// TODO: OIT
 }

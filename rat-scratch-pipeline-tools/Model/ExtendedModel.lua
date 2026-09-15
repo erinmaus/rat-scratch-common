@@ -281,7 +281,7 @@ function ExtendedModel:_transformVertexData(
 			tangentData
 		)
 
-		local vi, vc = ExtendedModel.TANGENT_FORMAT_INSTANCE:getCountOffset(
+		local vc, vi = ExtendedModel.TANGENT_FORMAT_INSTANCE:getCountOffset(
 			"VertexTangent"
 		)
 		local vj = vi + vc - 1
@@ -305,7 +305,7 @@ function ExtendedModel:_transformVertexData(
 					"VertexTangent",
 					ExtendedModel.TANGENT_FORMAT_INSTANCE:getExpandedValues(
 						"VertexTangent",
-						Table.unpack(tangentData, vi + o2, vj + 02)
+						Table.unpack(tangentData, vi + o2, vj + o2)
 					)
 				)
 			)

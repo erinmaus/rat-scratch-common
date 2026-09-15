@@ -188,7 +188,7 @@ function ModelPipeline:bind(shader, qualityPreset)
 		if shader:hasUniform(vertexBuffer:getBufferShaderName()) then
 			shader:send(
 				vertexBuffer:getBufferShaderName(),
-				self.staticVertexBuffer:getBuffer(i)
+				self.skinnedVertexBuffer:getBuffer(i)
 			)
 		end
 	end
