@@ -14,6 +14,7 @@ local PipelineConfig = require("rat-scratch-pipeline").PipelineConfig
 local GammaColor = require("rat-scratch-graphics.GammaColor")
 local LinearColor = require("rat-scratch-graphics.LinearColor")
 local PointLight = require("rat-scratch-pipeline.PointLight")
+local ResourceEvent = require("rat-scratch-resource.ResourceEvent")
 local PipelineSceneResourceType =
 	require("rat-scratch-pipeline").Resources.PipelineSceneResourceType
 local PipelineScenePointer =
@@ -25,7 +26,9 @@ local demo = {}
 local function makeGLB()
 	local pipelineConfig = PipelineConfig.loadDefault()
 
-	local parser = GLTF.loadFromFilesystem("samples/assets/gltf/shoe.glb")
+	local parser = GLTF.loadFromFilesystem(
+		"samples/assets/gltf/thejunkshopsplashscreen.glb"
+	)
 	local scene = parser:loadScene(1, {
 		attributes = {
 			static = {
@@ -38,11 +41,16 @@ local function makeGLB()
 
 	local builder = GLTF.Builder()
 	extendedScene:serialize(builder)
-	GLTF.saveGLB("shoe_pipeline.glb", builder:build("shoe_pipeline.glb"))
+	GLTF.saveGLB(
+		"shoe_pipeline.glb",
+		builder:build("thejunkshopsplashscreen.glb")
+	)
 end
 
 function demo.load()
-	makeGLB()
+	if not love.filesystem.getInfo("shoe_pipeline.glb") then
+		makeGLB()
+	end
 
 	ResourceLoader.toggleDebug(true)
 
@@ -56,8 +64,16 @@ function demo.load()
 
 	local sceneResource =
 		ResourceLoader.load(PipelineSceneResourceType, "shoe_pipeline.glb")
-	local modelResource = PipelineScenePointer.newModelPointer(sceneResource, 1)
-	object:attachModel(modelResource)
+	sceneResource:listen(ResourceEvent.MODIFY, function(event, resource)
+		--- @type RatScratch.Pipeline.Graphics3D.PipelineScene
+		local scene = resource:get()
+
+		for i = 1, scene:getModelCount() do
+			local modelResource =
+				PipelineScenePointer.newModelPointer(sceneResource, i)
+			object:attachModel(modelResource)
+		end
+	end)
 
 	world:getPipeline(AnimationPipeline):loadDefaultShaders()
 
@@ -72,7 +88,7 @@ function demo.load()
 	pointLight:setAttenuation(2)
 
 	local camera = ArcballCamera()
-	camera:setDistance(1.25)
+	camera:setDistance(20)
 	camera:setSize(love.graphics.getDimensions())
 	camera:setFOV(math.pi / 2)
 
@@ -84,6 +100,10 @@ function demo.load()
 	demo.camera = camera
 	demo.pointLight = pointLight
 	demo.directionalLight = directionalLight
+end
+
+function demo.wheelmoved(x, y)
+	demo.camera:setDistance(math.max(demo.camera:getDistance() + y / 2), 1)
 end
 
 function demo.update()
