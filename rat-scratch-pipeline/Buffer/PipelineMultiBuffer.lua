@@ -122,8 +122,14 @@ function PipelineMultiBuffer:_resize(event)
 	local newCount = event:getNewCount()
 
 	for i = 1, self.bufferCount do
-		self.data[i]:resize(newCount)
-		self.buffers[i] = self:_newBuffer(self.formats[i], newCount)
+		local c = newCount
+		local format = self.formats[i]
+		if format:getIsPacked() then
+			c = c * format:getComponentCount()
+		end
+
+		self.data[i]:resize(c)
+		self.buffers[i] = self:_newBuffer(self.formats[i], c)
 	end
 
 	self.dirtyContext:dirty(1, self:getCount())
@@ -314,13 +320,15 @@ function PipelineMultiBuffer:flush()
 		local i, c = self.dirtyContext:getDirtyRangeIndexCount(j)
 		if c > 0 then
 			for k = 1, self.bufferCount do
+				local ni = i
+				local nc = c
 				local format = self.formats[k]
 				if format:getIsPacked() then
-					i = (i - 1) * format:getComponentCount() + 1
-					c = c * format:getComponentCount()
+					ni = (i - 1) * format:getComponentCount() + 1
+					nc = nc * format:getComponentCount()
 				end
 
-				self.data[k]:toBuffer(self.buffers[k], i, c)
+				self.data[k]:toBuffer(self.buffers[k], ni, nc)
 			end
 		end
 	end
