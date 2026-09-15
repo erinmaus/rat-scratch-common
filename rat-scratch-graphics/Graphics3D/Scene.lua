@@ -223,7 +223,7 @@ function Scene.fromDefinition(sceneDefinition, yield)
 					materialDefinition.emissiveTexture
 					and materialDefinition.emissiveTexture.emissiveFactor
 				then
-					material:setColor(
+					material:setEmissive(
 						Table.unpack(
 							materialDefinition.emissiveTexture.emissiveFactor,
 							1,
