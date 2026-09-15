@@ -542,6 +542,11 @@ end
 function World:_onAddMaterial(event, objectHandle)
 	self.dirtyObjectHandles[objectHandle] = true
 	self.dirtyMaterialObjectHandles[objectHandle] = true
+
+	self:getPipeline(ModelPipeline)
+		:updateModelInstances(
+			self.objectHandleToModelInstancesHandle[objectHandle]
+		)
 end
 
 --- @private
@@ -643,7 +648,7 @@ function World:_updateObjectHandleDraw(objectHandle)
 				draw:setPointer("objectInstanceIndex", objectInstancePointer)
 				draw:setPointer("modelInstanceIndex", modelInstancePointer, i)
 				draw:setPointer("meshInstanceIndex", meshInstancesPointer, j)
-				draw:setPointer("modelIndex", modelPointer, i)
+				draw:setPointer("modelIndex", modelPointer)
 				draw:setPointer("meshIndex", meshInstancesPointer, j)
 				draw:setPointer("meshletIndex", meshletPointer, k)
 				draw:setPointer(

@@ -529,10 +529,15 @@ end
 --- @private
 --- @param instances RatScratch.Pipeline.ModelPipeline.ModelInstancesHandle
 function ModelPipeline:_updateModelInstancesHandle(instances)
-	self.modelInstancesBuffer:resize(instances, instances:getHandleCount())
+	self.modelInstancesBuffer:registerOrResize(
+		instances,
+		instances:getHandleCount()
+	)
 
 	for i = 1, instances:getHandleCount() do
 		local handle = instances:getHandle(i)
+
+		self.meshInstancesBuffer:registerOrResize(handle, #handle.meshes)
 
 		local meshIndex, meshCount =
 			self.meshInstancesBuffer:getIndexCount(handle)
@@ -547,8 +552,8 @@ function ModelPipeline:_updateModelInstancesHandle(instances)
 		)
 
 		for j = 1, #handle.meshes do
-			self.modelsBuffer:set(
-				instances,
+			self.meshInstancesBuffer:set(
+				handle,
 				j,
 				1,
 				math.max(handle.meshes[j] - 1, 0)
@@ -593,6 +598,9 @@ function ModelPipeline:flush()
 	if next(self.dirtyModelBuffers) then
 		self:_updateModelBuffers()
 	end
+
+	self.meshInstancesBuffer:flush()
+	self.modelInstancesBuffer:flush()
 end
 
 function ModelPipeline:update()
