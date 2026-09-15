@@ -213,6 +213,7 @@ end
 --- @param event RatScratch.Pipeline.impl.ResourceTrackerEvent<RatScratch.Pipeline.Graphics3D.PipelineModel>
 function World:_onAddModel(event)
 	self:_tryAddModel(event:getResource())
+	self:_onUpdateModel(event)
 end
 
 --- @private
