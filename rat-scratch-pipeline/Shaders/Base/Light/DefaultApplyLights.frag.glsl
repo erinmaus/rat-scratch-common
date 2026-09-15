@@ -10,8 +10,9 @@ void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOu
 {
 	float occlusion = 1.0; // TODO: Implement actual occlusion sampling
 	vec3 ambient = ambientLight.color.rgb * ambientLight.ambience;
-	result.diffuse += vec4(ambient * occlusion, 1.0);
-	result.fluorescence += vec4(fragmentOutput.fluorescence * vec3(ambientLight.ambience * occlusion), 1.0);
+	result.diffuse += ambient * vec3(occlusion);
+	result.fluorescence +=
+		fragmentOutput.fluorescence * vec3(ambientLight.ambience * ambientLight.ultraviolet * occlusion);
 }
 
 void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOutput,
@@ -23,9 +24,8 @@ void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOu
 	ratApplyPBR(fragmentOutput, normalize(-directionalLight.direction), directionalLight.color.rgb * shadow,
 				cameraPosition, result);
 	result.fluorescence +=
-		vec4(fragmentOutput.fluorescence *
-				 vec3(max(dot(fragmentOutput.normal, -directionalLight.direction), 0.0) * directionalLight.ultraviolet),
-			 1.0);
+		fragmentOutput.fluorescence *
+		vec3(max(dot(fragmentOutput.normal, -directionalLight.direction), 0.0) * directionalLight.ultraviolet);
 }
 
 void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOutput,
@@ -39,7 +39,7 @@ void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOu
 	float shadow = 1.0; // TODO: Implement actual shadow sampling
 	vec3 cameraPosition = rat_Cameras[fragmentOutput.cameraIndex].inverseViewTransform[3].xyz;
 	ratApplyPBR(fragmentOutput, L, pointLight.color.rgb * attenuation * shadow, cameraPosition, result);
-	result.fluorescence += vec4(fragmentOutput.fluorescence * vec3(attenuation * shadow * pointLight.ultraviolet), 1.0);
+	result.fluorescence += fragmentOutput.fluorescence * vec3(attenuation * shadow * pointLight.ultraviolet);
 }
 
 void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOutput,
@@ -56,6 +56,5 @@ void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOu
 	float shadow = 1.0; // TODO: Implement actual shadow sampling
 	vec3 cameraPosition = rat_Cameras[fragmentOutput.cameraIndex].inverseViewTransform[3].xyz;
 	ratApplyPBR(fragmentOutput, L, spotLight.color.rgb * attenuation * intensity * shadow, cameraPosition, result);
-	result.fluorescence +=
-		vec4(fragmentOutput.fluorescence * vec3(attenuation * intensity * shadow * spotLight.ultraviolet), 1.0);
+	result.fluorescence += fragmentOutput.fluorescence * vec3(attenuation * intensity * shadow * spotLight.ultraviolet);
 }

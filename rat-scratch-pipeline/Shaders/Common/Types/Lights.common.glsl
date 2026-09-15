@@ -52,7 +52,7 @@ struct RatScratchPipelineSpotLight
 
 struct RatScratchPipelineLightResult
 {
-	vec4 diffuse;
-	vec4 specular;
-	vec4 fluorescence;
+	vec3 diffuse;
+	vec3 specular;
+	vec3 fluorescence;
 };

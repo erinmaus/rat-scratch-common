@@ -41,9 +41,12 @@ void pixelmain()
 		ratClearLightResult(result);
 
 		ratApplyLights(fragmentOutput, result);
-		rat_Color = fragmentOutput.albedo * result.diffuse + result.specular + result.fluorescence +
-					vec4(fragmentOutput.emissive, 0.0);
+		rat_Color = vec4(fragmentOutput.albedo.rgb * result.diffuse + result.specular + result.fluorescence +
+							 fragmentOutput.emissive,
+						 fragmentOutput.albedo.a);
 	}
+
+	rat_Color = fragmentOutput.albedo;
 
 	// TODO: OIT
 }

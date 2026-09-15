@@ -46,7 +46,7 @@ void pixelmain()
 	ratClearLightResult(result);
 
 	ratApplyLights(fragmentOutput, result);
-	rat_Result = albedo * result.diffuse + result.specular + result.fluorescence + vec4(emissive, 0.0);
+	rat_Result = vec4(albedo.rgb * result.diffuse + result.specular + result.fluorescence + emissive, albedo.a);
 }
 
 #pragma option RAT_SCRATCH_FRAGMENT_SKIP_VARYINGS

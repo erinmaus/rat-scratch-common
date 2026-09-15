@@ -63,6 +63,7 @@ void ratGetLight(in RatScratchPipelineLight inputLight, out RatScratchPipelineSp
 
 void ratClearLightResult(out RatScratchPipelineLightResult result)
 {
-	result.diffuse = vec4(0.0);
-	result.specular = vec4(0.0);
+	result.diffuse = vec3(0.0);
+	result.specular = vec3(0.0);
+	result.fluorescence = vec3(0.0);
 }
