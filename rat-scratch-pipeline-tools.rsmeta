@@ -1,0 +1,47 @@
+name = rat-scratch-pipeline-tools
+version = 1.0.0
+source = rat-scratch-pipeline-tools
+
+[rat-scratch-common]
+version = *
+source = rat-scratch-common
+url = rat-scratch-common.rsmeta
+root = staging/module/rat%-scratch
+
+[rat-scratch-math]
+version = *
+source = rat-scratch-math
+url = rat-scratch-math.rsmeta
+root = staging/module/rat%-scratch
+
+[rat-scratch-graphics]
+version = *
+source = rat-scratch-graphics
+url = rat-scratch-graphics.rsmeta
+root = staging/module/rat%-scratch
+
+[json]
+version = 0.1.2
+source = json.lua
+url = https://github.com/rxi/json.lua/archive/refs/tags/v0.1.2.zip
+hash = sha512:2d3e56fadd5e41086e6a8e4d63a5a547aea87edaaa384f6a2e47edd47cf2055b8a8bbd31d678ae980e3e5cc112012ba928814d728ddcfe1f89158e6fbfdc4eb9
+root = ^json%.lua%-v?0%.1%.2$
+
+[rat-scratch-gltf]
+version = *
+source = rat-scratch-gltf
+url = rat-scratch-gltf.rsmeta
+root = staging/module/rat%-scratch
+
+[meshoptimizer]
+version = 1.2.0
+source = .
+url = https://github.com/zeux/meshoptimizer/archive/refs/tags/v1.2.zip
+hash = sha512:82364e1c78dce46a28c81cf5736cd42a32ad229b43b22debb6d2797fd90866b630268e072443504659f9d8868514614b4ca96a1047f76d00cefadefa8f8a760d
+root = ^meshoptimizer%-v?1%.2$
+
+[rat-scratch-pipeline]
+version = *
+source = rat-scratch-pipeline
+url = rat-scratch-pipeline.rsmeta
+root = staging/module/rat%-scratch

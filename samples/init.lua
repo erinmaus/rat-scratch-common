@@ -14,10 +14,20 @@ end
 
 local samples = loadSamples()
 local currentSample
+local isProfiling = false
 
 function love.keypressed(key, scan, ...)
 	if scan == "escape" then
 		currentSample = nil
+	end
+
+	if scan == "f1" then
+		isProfiling = not isProfiling
+		if isProfiling then
+			require("jit.p").start("f2i1v")
+		else
+			require("jit.p").stop()
+		end
 	end
 
 	if currentSample and currentSample.keypressed then
@@ -28,6 +38,12 @@ end
 function love.keyreleased(...)
 	if currentSample and currentSample.keyreleased then
 		currentSample.keyreleased(...)
+	end
+end
+
+function love.wheelmoved(x, y)
+	if currentSample and currentSample.wheelmoved then
+		currentSample.wheelmoved(x, y)
 	end
 end
 
@@ -45,7 +61,7 @@ function love.mousereleased(x, y, button, ...)
 
 		if index and samples[index] then
 			currentSample = love.filesystem.load(samples[index])()
-			
+
 			if currentSample and currentSample.load then
 				currentSample.load(arg)
 			end
@@ -74,5 +90,11 @@ function love.draw()
 		love.graphics.push("all")
 		list.draw(samples)
 		love.graphics.pop()
+	end
+end
+
+function love.quit()
+	if isProfiling then
+		require("jit.p").stop()
 	end
 end

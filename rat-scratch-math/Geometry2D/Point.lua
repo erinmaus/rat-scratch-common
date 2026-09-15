@@ -1,3 +1,4 @@
+local Common = require("rat-scratch-math.Common")
 local Point = {}
 
 --- @param x1 number
@@ -37,6 +38,14 @@ function Point.normal(x, y)
 	return x * d, y * d
 end
 
+function Point.direction(fromX, fromY, toX, toY)
+	return toX - fromX, toY - fromY
+end
+
+function Point.directionNormal(fromX, fromY, toX, toY)
+	return Point.normal(Point.direction(fromX, fromY, toX, toY))
+end
+
 --- @param x1 number
 --- @param y1 number
 --- @param x2 number
@@ -58,15 +67,39 @@ end
 --- @param x number
 --- @param y number
 --- @return number, number
-function Point.left(x, y)
+function Point.right(x, y)
 	return y, -x
 end
 
 --- @param x number
 --- @param y number
 --- @return number, number
-function Point.right(x, y)
+function Point.left(x, y)
 	return -y, x
+end
+
+--- @param x1 number
+--- @param y1 number
+--- @param x2 number
+--- @param y2 number
+--- @param E number?
+--- @return -1 | 0 | 1
+function Point.compare(x1, y1, x2, y2, E)
+	local y = Common.zerosign(y1 - y2, E)
+	if y == 0 then
+		return Common.zerosign(x1 - x2, E)
+	end
+
+	return y
+end
+
+--- @param x1 number
+--- @param y1 number
+--- @param x2 number
+--- @param y2 number
+--- @return boolean
+function Point.less(x1, y1, x2, y2)
+	return Point.compare(x1, y1, x2, y2) < 0
 end
 
 return Point

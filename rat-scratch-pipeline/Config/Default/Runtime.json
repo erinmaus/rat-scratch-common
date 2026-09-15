@@ -1,0 +1,87 @@
+{
+  "runtime": {
+    "qualityPresets": ["main", "secondary"],
+    "defaultQualityPreset": "main",
+    "properties": [
+      {
+        "key": "pipeline.properties.lighting.cells",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS",
+        "format": "uint32vec3",
+        "default": [16, 16, 16]
+      },
+      {
+        "key": "pipeline.properties.lighting.maxLightsPerCell",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL",
+        "format": "uint32",
+        "default": [32]
+      },
+      {
+        "key": "pipeline.properties.lighting.maxLightsPerThread",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_THREAD",
+        "format": "uint32",
+        "default": [16]
+      }
+    ],
+    "settings": [
+      {
+        "key": "pipeline.settings.lighting.quality",
+        "properties": [
+          "pipeline.properties.lighting.cells",
+          "pipeline.properties.lighting.maxLightsPerCell"
+        ],
+        "presets": {
+          "potato": {
+            "main": {
+              "pipeline.properties.lighting.cells": [8, 8, 8],
+              "pipeline.properties.lighting.maxLightsPerCell": [8]
+            },
+            "secondary": {
+              "pipeline.properties.lighting.cells": [8, 8, 8],
+              "pipeline.properties.lighting.maxLightsPerCell": [4]
+            }
+          },
+          "low": {
+            "main": {
+              "pipeline.properties.lighting.cells": [8, 8, 8],
+              "pipeline.properties.lighting.maxLightsPerCell": [8]
+            },
+            "secondary": {
+              "pipeline.properties.lighting.cells": [8, 8, 8],
+              "pipeline.properties.lighting.maxLightsPerCell": [8]
+            }
+          },
+          "medium": {
+            "main": {
+              "pipeline.properties.lighting.cells": [16, 16, 16],
+              "pipeline.properties.lighting.maxLightsPerCell": [16]
+            },
+            "secondary": {
+              "pipeline.properties.lighting.cells": [8, 8, 8],
+              "pipeline.properties.lighting.maxLightsPerCell": [8]
+            }
+          },
+          "high": {
+            "main": {
+              "pipeline.properties.lighting.cells": [16, 16, 16],
+              "pipeline.properties.lighting.maxLightsPerCell": [32]
+            },
+            "secondary": {
+              "pipeline.properties.lighting.cells": [8, 8, 8],
+              "pipeline.properties.lighting.maxLightsPerCell": [16]
+            }
+          },
+          "placebo": {
+            "main": {
+              "pipeline.properties.lighting.cells": [24, 24, 24],
+              "pipeline.properties.lighting.maxLightsPerCell": [32]
+            },
+            "secondary": {
+              "pipeline.properties.lighting.cells": [16, 16, 16],
+              "pipeline.properties.lighting.maxLightsPerCell": [32]
+            }
+          }
+        }
+      }
+    ]
+  }
+}

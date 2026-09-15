@@ -1,0 +1,74 @@
+struct RatScratchPipelineObjectInstance
+{
+	mat4 worldTransform;
+	uvec2 modelInstanceIndexCount;
+	uvec2 boneTransformIndexCount;
+};
+
+struct RatScratchPipelineModelInstance
+{
+	uint objectInstanceIndex;
+	uint modelIndex;
+};
+
+struct RatScratchPipelineMeshInstance
+{
+	uint materialInstanceIndex;
+};
+
+struct RatScratchPipelineModel
+{
+	mat4 localTransform;
+	uvec2 meshIndexCount;
+};
+
+struct RatScratchPipelineMesh
+{
+	uvec2 meshletCountIndex;
+	uint staticBaseVertexOffset;
+	uint skinnedBaseVertexOffset;
+};
+
+struct RatScratchPipelineMeshlet
+{
+	vec4 staticCenterRadius;
+	uvec2 skinnedMeshletBoundsIndexCount;
+};
+
+struct RatScratchPipelineSkinnedMeshletBounds
+{
+	vec4 centerRadius;
+	uint animationIndex;
+	uint bone;
+};
+
+struct RatScratchPipelineCamera
+{
+	mat4 viewTransform;
+	mat4 inverseViewTransform;
+	mat4 previousViewTransform;
+	mat4 inversePreviousViewTransform;
+	mat4 projectionTransform;
+	mat4 inverseProjectionTransform;
+	mat4 previousProjectionTransform;
+	mat4 inversePreviousProjectionTransform;
+	mat4 projectionViewTransform;
+	mat4 inverseProjectionViewTransform;
+	mat4 inversePreviousProjectionViewTransform;
+};
+
+struct RatScratchPipelineDraw
+{
+	uint objectInstanceIndex;
+	uint modelInstanceIndex;
+	uint meshInstanceIndex;
+	uint modelIndex;
+	uint meshIndex;
+	uint meshletIndex;
+	uint staticBaseVertexOffset;
+	uint skinnedBaseVertexOffset;
+	uvec2 boneOffsetCount;
+	uint indexOffset;
+	uint cameraIndex;
+	uint layerIndex;
+};

@@ -1,4 +1,4 @@
-local Module = require "lib.rat-scratch-module"
+local Module = require("lib.rat-scratch-module")
 
 --- @class RatScratch.Common.Object
 local Object = {}
@@ -34,7 +34,8 @@ function Object.getType(value)
 	local valueType = metatable and metatable.__type or false
 	local metatableMetatable = valueType and getmetatable(valueType)
 
-	return metatableMetatable and metatableMetatable.__c == Object and valueType or nil
+	return metatableMetatable and metatableMetatable.__c == Object and valueType
+		or nil
 end
 
 --- @generic A
@@ -59,7 +60,9 @@ end
 --- @return ... any
 function Object.ABSTRACT(obj)
 	if obj then
-		local message = ("method is abstract in class %s"):format(obj:getDebugInfo().shortName)
+		local message = ("method is abstract in class %s"):format(
+			obj:getDebugInfo().shortName
+		)
 		error(message)
 	else
 		error("method is abstract")
@@ -70,17 +73,20 @@ end
 --- @field public _METATABLE metatable
 --- @field public _PARENT RatScratch.Common.BaseObject | false
 --- @field public _DEBUG RatScratch.Common.ObjectDebugInfo
+--- @field public extend fun(): table, metatable
 local Common = {}
 
 --- @param ... any
 function Common:new(...) end
 
---- @param otherType RatScratch.Common.BaseObject
+--- @generic T : RatScratch.Common.BaseObject
+--- @param otherType T | unknown
 function Common:isType(otherType)
 	return self:getType() == otherType
 end
 
---- @param otherType RatScratch.Common.BaseObject
+--- @generic T : RatScratch.Common.BaseObject
+--- @param otherType T | unknown
 function Common:isDerived(otherType)
 	return Object.isDerived(Object.getType(self), otherType)
 end
@@ -112,25 +118,32 @@ end
 --- @return T, metatable
 local function __call(self, parent, stack)
 	local Type = { __index = parent or Common, __parent = parent, __c = Object }
-	local Object = setmetatable({}, Type)
-	local Metatable = { __index = Object, __type = Object }
-	Object._METATABLE = Metatable
-	Object._PARENT = parent or false
-	Object._DEBUG = {}
+	local ResultObject = setmetatable({}, Type)
+	local Metatable = { __index = ResultObject, __type = ResultObject }
+	ResultObject._METATABLE = Metatable
+	ResultObject._PARENT = parent or false
+	ResultObject._DEBUG = {}
+
+	ResultObject.extend = function()
+		return __call(self, ResultObject)
+	end
 
 	do
 		local debug = require("debug")
 
 		local info = debug.getinfo(2 + (stack or 0), "Sl")
 		if info then
-			local shortObjectName = (info.source:match("^@(.-)%.[^.]*") or info.source):gsub("/", ".")
+			local shortObjectName = (
+				info.source:match("^@(.-)%.[^.]*") or info.source
+			):gsub("/", ".")
 			local lineNumber = info.currentline
 
-			Object._DEBUG.lineNumber = lineNumber
-			Object._DEBUG.filename = info.source
-			Object._DEBUG.shortName = string.format("%s@%d", shortObjectName, lineNumber)
-			Object._DEBUG.requireName = shortObjectName
-			Object._DEBUG.module = Module.getSelfRequire(shortObjectName)
+			ResultObject._DEBUG.lineNumber = lineNumber
+			ResultObject._DEBUG.filename = info.source
+			ResultObject._DEBUG.shortName =
+				string.format("%s@%d", shortObjectName, lineNumber)
+			ResultObject._DEBUG.requireName = shortObjectName
+			ResultObject._DEBUG.module = Module.getSelfRequire(shortObjectName)
 		end
 	end
 
@@ -141,14 +154,14 @@ local function __call(self, parent, stack)
 	function Type.__call(_self, ...)
 		local result = setmetatable({}, Metatable)
 
-		if Object.new then
-			Object.new(result, ...)
+		if ResultObject.new then
+			ResultObject.new(result, ...)
 		end
 
 		return result
 	end
 
-	return Object, Metatable
+	return ResultObject, Metatable
 end
 
 --- @type RatScratch.Common.Object

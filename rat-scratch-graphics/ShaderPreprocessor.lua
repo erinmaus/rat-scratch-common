@@ -7,6 +7,9 @@ local Path = require("rat-scratch-common").Path
 ---   safe?: boolean,
 ---   dependencies?: boolean,
 ---   rootPath?: string | false,
+---   rootPaths?: table<string, string> | false,
+---   virtualPaths?: table<string, string> | false,
+---   variables?: table,
 --- }
 
 local DEFAULT_OPTIONS = {
@@ -14,7 +17,10 @@ local DEFAULT_OPTIONS = {
 	errors = true,
 	safe = true,
 	dependencies = false,
-	rootPath = false
+	rootPath = false,
+	rootPaths = false,
+	virtualPaths = false,
+	variables = {},
 }
 
 --- @alias RatScratch.Graphics.ShaderPreprocessResult {
@@ -46,16 +52,17 @@ local DEFAULT_OPTIONS = {
 ---   hoistedOptions: RatScratch.Graphics.impl.ShaderHoistedOptions,
 ---   result: RatScratch.Graphics.ShaderPreprocessResult,
 ---   dependencies: table<string, boolean>,
+---   include: table<string, boolean>,
 --- }
 
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
---- @param? parent RatScratch.Graphics.impl.ShaderProcessFile
+--- @param parent? RatScratch.Graphics.impl.ShaderProcessFile
 --- @param filename string
---- @return? RatScratch.Graphics.impl.ShaderProcessFile
+--- @return RatScratch.Graphics.impl.ShaderProcessFile
 local function beginVisit(state, parent, filename)
 	if state.visited[filename] then
 		local errorMessage = string.format(
-			"%s:0: recursive import for `%s`",
+			"%s:%d: recursive import for `%s`",
 			parent and parent.filename or "<root>",
 			parent and parent.currentLineNumber or 1,
 			filename
@@ -82,26 +89,36 @@ end
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
 --- @param currentFile RatScratch.Graphics.impl.ShaderProcessFile
 local function endVisit(state, currentFile)
-	assert(state.visited[currentFile.filename] ~= nil, "ending visit, but current file not in visit table")
+	Debug.assert(
+		state.visited[currentFile.filename] ~= nil,
+		"ending visit, but current file not in visit table"
+	)
 	state.visited[currentFile.filename] = nil
 end
 
-local LINE_PATTERN = "([^\r\n]*[\r\n]?)"
+local LINE_PATTERN = "([^\r\n]*)[\r\n]?"
 local TRIMMED_LINE_PATTERN = "^%s*(.-)%s*$"
 local INCLUDE_PATTERN = '^#include "([^"]+)"'
 local PRAGMA_OPTION_PATTERN = "^#pragma option%s+([%w_]+)%s*(.*)"
 local FUNCTION_OPTION_VALUE_PATTERN = "%((.-)%)"
-local PRAGMA_LANGUAGE_PATTERN = "^#pragma language%s+([^\n\r]+)"
+local PRAGMA_LANGUAGE_PATTERN = "#pragma language%s+([^\n\r]+)"
+local TEMPLATE_INCLUDE_CAPTURE_PATTERN = '%$%("([^"]+)", %$([%w_]+)%$%)'
+local TEMPLATE_INCLUDE_PATTERN = '^.*(%$%("[^"]+", %$[%w_]+%$%))'
+local TEMPLATE_VARIABLE = "%$([%w_]+)%$"
 
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
 --- @param currentFile RatScratch.Graphics.impl.ShaderProcessFile
 local function readContent(state, currentFile)
-	local content = love.filesystem.read(currentFile.filename)
+	local content = (
+		state.options.virtualPaths
+		and state.options.virtualPaths[currentFile.filename]
+	) or love.filesystem.read(currentFile.filename)
 	if content then
 		return content
 	end
 
-	local errorMessage = string.format("%s:0: failed to read file", currentFile.filename)
+	local errorMessage =
+		string.format("%s:0: failed to read file", currentFile.filename)
 	if state.options.safe then
 		table.insert(state.result.errors, errorMessage)
 		return string.format('// file "%s" not found', currentFile.filename)
@@ -110,63 +127,176 @@ local function readContent(state, currentFile)
 	end
 end
 
+--- @param content string
+--- @param filename string
+--- @return string
+local function wrapIncludeContent(content, filename)
+	local includeGuardIdentifier =
+		filename:gsub("[^%w_]", "_"):gsub("(__+)", "_")
+	local defineGuardBegin = ("#ifndef rat_include_%s\n#define rat_include_%s 1\n"):format(
+		includeGuardIdentifier,
+		includeGuardIdentifier
+	)
+	local defineGuardEnd = "#endif"
+
+	return ("%s\n%s\n%s\n"):format(defineGuardBegin, content, defineGuardEnd)
+end
+
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
 --- @param parent? RatScratch.Graphics.impl.ShaderProcessFile
 --- @param filename string
---- @param rootPath? string
+--- @param variables? table<string, table | string | number>
 --- @return string
-local function process(state, parent, filename, rootPath)
+local function process(state, parent, filename, variables)
 	local currentFile = beginVisit(state, parent, filename)
 	if not currentFile then
 		return string.format('// file "%s" is recursively included', filename)
+	elseif state.include[filename] then
+		endVisit(state, currentFile)
+		return string.format('// file "%s" is included previously', filename)
 	end
 
 	local content = readContent(state, currentFile)
 	local lines = {}
 	for line in content:gmatch(LINE_PATTERN) do
-		currentFile.currentLineNumber = currentFile.currentLineNumber + 1
-
 		local trimmedLine = line:gsub(TRIMMED_LINE_PATTERN, "%1")
 
-		local includeFilename = trimmedLine:match(INCLUDE_PATTERN)
-		local optionName, optionValue = trimmedLine:match(PRAGMA_OPTION_PATTERN)
+		if
+			trimmedLine:match(TEMPLATE_INCLUDE_CAPTURE_PATTERN)
+			or trimmedLine:match(TEMPLATE_VARIABLE)
+		then
+			for templateFilename, key in
+				trimmedLine:gmatch(TEMPLATE_INCLUDE_CAPTURE_PATTERN)
+			do
+				local resolvedPath = Path.resolve(
+					filename,
+					templateFilename,
+					state.options.rootPath,
+					state.options.rootPaths
+				)
 
-		if includeFilename then
-			local resolvedPath = Path.resolve(filename, includeFilename, rootPath)
+				local templateVariables = variables and variables[key]
 
-			table.insert(lines, string.format("// %s", line))
-			local includedContent = process(state, currentFile, resolvedPath, rootPath)
-
-			table.insert(lines, "#line 1")
-			table.insert(lines, includedContent)
-			table.insert(lines, string.format('// end "%s"', includeFilename))
-			table.insert(lines, string.format("#line %d\n", currentFile.currentLineNumber + 1))
-		elseif optionName and optionValue then
-			if state.hoistedOptions.keys[optionName] then
-				if state.options.warnings then
-					table.insert(
-						state.result.warnings,
-						string.format(
-							"%s:%d: duplicate option '%s'; ignoring",
-							filename,
-							currentFile.currentLineNumber,
-							optionName
-						)
-					)
+				--- @cast templateVariables table
+				if type(templateVariables) ~= "table" then
+					local message = ("no variable with key %s"):format(key)
+					if state.options.safe then
+						table.insert(state.result.errors, message)
+						templateVariables = {}
+					else
+						error(message)
+					end
 				end
-			else
-				table.insert(state.hoistedOptions.order, optionName)
+
+				local variables
+				if #templateVariables == 0 and next(templateVariables) then
+					variables = { templateVariables }
+				else
+					variables = templateVariables
+				end
+
+				local content = {}
+				for i = 1, #variables do
+					local v = {}
+					for key, value in pairs(variables[i]) do
+						v[key] = value
+					end
+
+					v["COMMA"] = i < #variables and "," or ""
+					v["I"] = 1
+
+					local c = process(state, currentFile, resolvedPath, v)
+
+					table.insert(content, c)
+				end
+
+				trimmedLine = trimmedLine:gsub("^(/%*).*(/%*)$", "")
+				trimmedLine = trimmedLine:gsub(
+					TEMPLATE_INCLUDE_PATTERN,
+					table.concat(content, "")
+				)
 			end
 
-			state.hoistedOptions.keys[optionName] = {
-				value = optionValue,
-				filename = filename,
-				currentLine = currentFile.currentLineNumber,
-			}
+			if variables then
+				trimmedLine = trimmedLine:gsub(TEMPLATE_VARIABLE, function(key)
+					if
+						not variables[key]
+						or type(variables[key]) == "table"
+					then
+						local message = ("no variable with key %s"):format(key)
+						if state.options.safe then
+							table.insert(state.result.errors, message)
+							return ""
+						else
+							error(message)
+						end
+					end
 
-			table.insert(lines, string.format("// %s", line))
-		else
-			table.insert(lines, line)
+					return variables[key]
+				end)
+			end
+
+			trimmedLine = ("%s\n"):format(trimmedLine)
+			trimmedLine =
+				trimmedLine:gsub("^%s*(/%*%*%*)", ""):gsub("%*%*%*/%s*$", "")
+		end
+
+		for line in trimmedLine:gmatch(LINE_PATTERN) do
+			local trimmedLine = line:gsub(TRIMMED_LINE_PATTERN, "%1")
+			currentFile.currentLineNumber = currentFile.currentLineNumber + 1
+
+			local includeFilename = trimmedLine:match(INCLUDE_PATTERN)
+			local optionName, optionValue =
+				trimmedLine:match(PRAGMA_OPTION_PATTERN)
+
+			if includeFilename then
+				local resolvedPath = Path.resolve(
+					filename,
+					includeFilename,
+					state.options.rootPath,
+					state.options.rootPaths
+				)
+
+				table.insert(lines, string.format("// %s", line))
+				local includedContent =
+					process(state, currentFile, resolvedPath, variables)
+				local wrappedIncludeContent =
+					wrapIncludeContent(includedContent, resolvedPath)
+
+				table.insert(lines, wrappedIncludeContent)
+				table.insert(
+					lines,
+					string.format('// end "%s"', includeFilename)
+				)
+
+				state.include[resolvedPath] = true
+			elseif optionName and optionValue then
+				if state.hoistedOptions.keys[optionName] then
+					if state.options.warnings then
+						table.insert(
+							state.result.warnings,
+							string.format(
+								"%s:%d: duplicate option '%s'; ignoring",
+								filename,
+								currentFile.currentLineNumber,
+								optionName
+							)
+						)
+					end
+				else
+					table.insert(state.hoistedOptions.order, optionName)
+				end
+
+				state.hoistedOptions.keys[optionName] = {
+					value = optionValue,
+					filename = filename,
+					currentLine = currentFile.currentLineNumber,
+				}
+
+				table.insert(lines, string.format("// %s", line))
+			else
+				table.insert(lines, line)
+			end
 		end
 	end
 
@@ -188,9 +318,15 @@ local function tryHoistOptions(state, lines)
 		if trimmedValue == "" then
 			table.insert(lines, string.format("#define %s", name))
 		elseif trimmedValue:match(FUNCTION_OPTION_VALUE_PATTERN) then
-			table.insert(lines, string.format("#define %s%s", name, trimmedValue))
+			table.insert(
+				lines,
+				string.format("#define %s%s", name, trimmedValue)
+			)
 		else
-			table.insert(lines, string.format("#define %s %s", name, trimmedValue))
+			table.insert(
+				lines,
+				string.format("#define %s %s", name, trimmedValue)
+			)
 		end
 	end
 end
@@ -214,7 +350,7 @@ local ShaderPreprocessor = {}
 --- @param filename string
 --- @param options? RatScratch.Graphics.ShaderPreprocessOptions
 --- @return string
---- @return RatScratch.Graphics.ShaderPreprocessResult
+--- @return RatScratch.Graphics.ShaderPreprocessResult?
 function ShaderPreprocessor.preprocess(filename, options)
 	options = options or {}
 
@@ -228,7 +364,9 @@ function ShaderPreprocessor.preprocess(filename, options)
 		end
 	end
 
-	local hasResult = mergedOptions.safe or mergedOptions.warnings or mergedOptions.dependencies
+	local hasResult = mergedOptions.safe
+		or mergedOptions.warnings
+		or mergedOptions.dependencies
 	local result = hasResult
 			and {
 				warnings = mergedOptions.warnings and {} or nil,
@@ -247,14 +385,22 @@ function ShaderPreprocessor.preprocess(filename, options)
 		options = mergedOptions,
 		result = result,
 		dependencies = dependencies,
+		include = {},
 	}
 
-	local absoluteFilename = Path.resolve("", filename, mergedOptions.rootPath)
-	local processedContent = process(processedState, nil, absoluteFilename, mergedOptions.rootPath)
+	local absoluteFilename = Path.resolve(
+		"",
+		filename,
+		mergedOptions.rootPath,
+		mergedOptions.rootPaths
+	)
+	local processedContent =
+		process(processedState, nil, absoluteFilename, mergedOptions.variables)
 
 	local finalOutput = {}
 	tryHoistOptions(processedState, finalOutput)
-	processedContent = tryHoistLanguagePragma(processedState, processedContent, finalOutput)
+	processedContent =
+		tryHoistLanguagePragma(processedState, processedContent, finalOutput)
 	table.insert(finalOutput, processedContent)
 
 	if result and mergedOptions.dependencies then
@@ -268,13 +414,17 @@ function ShaderPreprocessor.preprocess(filename, options)
 	return table.concat(finalOutput, "\n"), result
 end
 
---- @param result RatScratch.Graphics.ShaderPreprocessResult
+--- @param result? RatScratch.Graphics.ShaderPreprocessResult
 --- @param shader? string
 --- @param strict? boolean
 --- @return string?
 function ShaderPreprocessor.validateResult(shader, result, strict)
 	if strict == nil then
 		strict = true
+	end
+
+	if not result then
+		return nil
 	end
 
 	if not (#result.warnings > 0 and strict) and #result.errors == 0 then
@@ -295,12 +445,27 @@ function ShaderPreprocessor.validateResult(shader, result, strict)
 	end
 
 	if shader and shader ~= "" then
-		table.insert(combinedMessage, string.format("shader source: %s", shader))
+		table.insert(
+			combinedMessage,
+			string.format("shader source: %s", shader)
+		)
 	else
 		table.insert(combinedMessage, "no shader source")
 	end
 
 	return table.concat(combinedMessage, "\n")
+end
+
+local function _prependLineNumber(source)
+	local line = 0
+	return source:gsub("([^\r\n]*)\r?\n?", function(value)
+		local lineNumber = value:match("^%s*#line%s+(%d+)")
+		line = lineNumber and tonumber(lineNumber) or line
+
+		local result = ("/* line %d */ %s\n"):format(line, value)
+		line = (lineNumber and tonumber(lineNumber) or line) + 1
+		return result
+	end)
 end
 
 --- @param filename string
@@ -314,17 +479,22 @@ function ShaderPreprocessor.newComputeShader(filename, options)
 	end
 
 	local success, shader = pcall(love.graphics.newComputeShader, source)
-	Debug.assert(success, "%s\n%s", shader, source)
+	if not success then
+		Debug.assert(false, "%s\n%s", shader, _prependLineNumber(source))
+	end
 
 	return shader
 end
 
 --- @param pixelFilename string
---- @param vertexFilename string
+--- @param vertexFilename? string
 --- @param options? RatScratch.Graphics.ShaderPreprocessOptions
 --- @return love.Shader
 function ShaderPreprocessor.newShader(pixelFilename, vertexFilename, options)
-	Debug.assert(pixelFilename, "expected shader filename or vertex/pixel shader filenames")
+	Debug.assert(
+		pixelFilename,
+		"expected shader filename or vertex/pixel shader filenames"
+	)
 
 	local pixelSource
 	do
@@ -348,11 +518,39 @@ function ShaderPreprocessor.newShader(pixelFilename, vertexFilename, options)
 		vertexSource = s
 	end
 
+	local success, result
 	if vertexSource and pixelSource then
-		return love.graphics.newShader(pixelSource, vertexSource)
+		success, result = pcall(
+			love.graphics.newShader,
+			pixelSource,
+			vertexSource,
+			{ write = true }
+		)
 	else
-		return love.graphics.newShader(pixelSource)
+		success, result =
+			pcall(love.graphics.newShader, pixelSource, { write = true })
 	end
+
+	if not success then
+		if pixelSource and vertexSource then
+			error(
+				("could not compile shader: %s\npixel shader source:\n%s\nfragment shader source:\n%s"):format(
+					result,
+					pixelSource,
+					vertexSource
+				)
+			)
+		else
+			error(
+				("could not compile shader: %s\nshader source:\n%s"):format(
+					result,
+					pixelSource
+				)
+			)
+		end
+	end
+
+	return result
 end
 
 return ShaderPreprocessor

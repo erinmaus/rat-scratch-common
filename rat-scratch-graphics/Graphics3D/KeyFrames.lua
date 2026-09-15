@@ -72,7 +72,8 @@ function KeyFrames.marshalFrames(frames)
 			not frame.outTangent or Object.getType(frame.outTangent) == baseType,
 			"key frame out-tangent type mismatch; expected %s, got %s",
 			baseType._DEBUG.shortName,
-			frame.outTangent and Object.getType(frame.outTangent)._DEBUG.shortName
+			frame.outTangent
+				and Object.getType(frame.outTangent)._DEBUG.shortName
 		)
 		assert(
 			not hasTangents or (frame.inTangent and frame.outTangent),
@@ -84,12 +85,16 @@ function KeyFrames.marshalFrames(frames)
 		local value, inTangent, outTangent
 		if baseType == Vector3 then
 			value = Vector3(frame.value:get())
-			inTangent = frame.inTangent and Vector3(frame.inTangent:get()) or value
-			outTangent = frame.outTangent and Vector3(frame.outTangent:get()) or value
+			inTangent = frame.inTangent and Vector3(frame.inTangent:get())
+				or value
+			outTangent = frame.outTangent and Vector3(frame.outTangent:get())
+				or value
 		elseif baseType == Quaternion then
 			value = Quaternion(frame.value:get())
-			inTangent = frame.inTangent and Quaternion(frame.inTangent:get()) or value
-			outTangent = frame.outTangent and Quaternion(frame.outTangent:get()) or value
+			inTangent = frame.inTangent and Quaternion(frame.inTangent:get())
+				or value
+			outTangent = frame.outTangent and Quaternion(frame.outTangent:get())
+				or value
 		end
 
 		table.insert(result, {
@@ -154,7 +159,8 @@ end
 --- @return RatScratch.Graphics.Graphics3D.KeyFrame, RatScratch.Graphics.Graphics3D.KeyFrame
 function KeyFrames:getFramesAtTime(time)
 	if time > self.duration then
-		return self.frames[#self.frames - 1] or self.frames[#self.frames], self.frames[#self.frames]
+		return self.frames[#self.frames - 1] or self.frames[#self.frames],
+			self.frames[#self.frames]
 	end
 
 	local index = Search.lessThanEqual(self.frames, time, _compare)

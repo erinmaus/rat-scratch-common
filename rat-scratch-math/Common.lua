@@ -1,3 +1,5 @@
+local bit = require("bit")
+
 local Common = {}
 
 Common.EPSILON = 0.0001
@@ -7,7 +9,7 @@ Common.EPSILON = 0.0001
 --- @param delta number
 --- @return number
 function Common.lerp(from, to, delta)
-    return from * (1 - delta) + to * delta
+	return from * (1 - delta) + to * delta
 end
 
 --- @param from number
@@ -44,6 +46,11 @@ function Common.subtractAngles(left, right)
 	return (difference + math.pi) % (math.pi * 2) - math.pi
 end
 
+--- @param value number
+function Common.wrapAngle(value)
+	return value % (math.pi * 2)
+end
+
 --- @param x number
 --- @param y number
 --- @param angle number
@@ -61,9 +68,12 @@ function Common.rotate(x, y, angle, ox, oy)
 end
 
 --- @param value number
+--- @param E number?
 --- @return 1 | -1
-function Common.sign(value)
-	if value < 0 then
+function Common.sign(value, E)
+	E = E or Common.EPSILON
+
+	if Common.lessThan(value, 0, E) then
 		return -1
 	end
 
@@ -71,15 +81,97 @@ function Common.sign(value)
 end
 
 --- @param value number
+--- @param E number?
 --- @return 1 | 0 | -1
-function Common.zerosign(value)
+function Common.zerosign(value, E)
+	E = E or Common.EPSILON
+	if Common.equal(value, 0, E) then
+		return 0
+	end
+
 	if value < 0 then
 		return -1
-	elseif value > 0 then
+	end
+
+	return 1
+end
+
+function Common.lessThan(a, b, E)
+	E = E or Common.EPSILON
+	return a + E < b
+end
+
+function Common.lessThanEqual(a, b, E)
+	E = E or Common.EPSILON
+	return Common.lessThan(a, b, E) or Common.equal(a, b, E)
+end
+
+function Common.greaterThan(a, b, E)
+	E = E or Common.EPSILON
+	return a - E > b
+end
+
+function Common.greaterThanEqual(a, b, E)
+	E = E or Common.EPSILON
+	return Common.greaterThan(a, b, E) or Common.equal(a, b, E)
+end
+
+--- @param a number
+--- @param b number
+--- @param E? number
+--- @return boolean
+function Common.equal(a, b, E)
+	E = E or Common.EPSILON
+	return math.abs(a - b) < E
+end
+
+--- @param value number
+--- @return integer
+function Common.round(value)
+	return math.floor(value + 0.5)
+end
+
+--- @param value integer
+--- @return integer
+function Common.nextPowerOfTwo(value)
+	value = math.floor(value)
+
+	if value <= 1 then
 		return 1
 	end
 
-	return 0
+	value = value - 1
+	value = bit.bor(value, bit.rshift(value, 1))
+	value = bit.bor(value, bit.rshift(value, 2))
+	value = bit.bor(value, bit.rshift(value, 4))
+	value = bit.bor(value, bit.rshift(value, 8))
+	value = bit.bor(value, bit.rshift(value, 16))
+
+	return value + 1
+end
+
+function Common.nextMultiple(value, base)
+	return value + (base - (value % base)) % base
+end
+
+function Common.isMultipleOf(value, base)
+	return value % base == 0
+end
+
+function Common.isOdd(value)
+	return value % 2 == 1
+end
+
+function Common.isEven(value)
+	return value % 2 == 0
+end
+
+function Common.step(threshold, value)
+	if value < threshold then
+		return 0
+	end
+
+	return 1
 end
 
 return Common

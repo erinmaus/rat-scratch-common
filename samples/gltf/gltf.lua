@@ -1,6 +1,8 @@
 local GLTF = require("rat-scratch-gltf")
 local Scene = require("rat-scratch-graphics").Graphics3D.Scene
 local Animator = require("rat-scratch-graphics").Graphics3D.Animator
+local SkinnedModelAnimatorProvider =
+	require("rat-scratch-graphics").Graphics3D.SkinnedModelAnimatorProvider
 local SkinnedModel = require("rat-scratch-graphics").Graphics3D.SkinnedModel
 local ModelProcessor = require("rat-scratch-graphics").Graphics3D.ModelProcessor
 local Transform = require("rat-scratch-math").Transform
@@ -8,7 +10,7 @@ local Vector3 = require("rat-scratch-math").Vector3
 local Common = require("rat-scratch-math").Common
 local Quaternion = require("rat-scratch-math").Quaternion
 local Object = require("rat-scratch-common").Object
-local Table  = require("rat-scratch-common").Table
+local Table = require("rat-scratch-common").Table
 
 local list = require("samples.common.list")
 local demo = {}
@@ -34,15 +36,19 @@ function demo.mousepressed(x, y, button)
 			local model = scene:getModel(1)
 
 			demo.gltf = { scene = scene, model = model }
-			if Object.isDerived(SkinnedModel, model:getType()) then 
+			if Object.isDerived(SkinnedModel, model:getType()) then
 				--- @cast model RatScratch.Graphics.Graphics3D.SkinnedModel
-				demo.gltf.animator = Animator(model)
+				demo.gltf.animator =
+					Animator(SkinnedModelAnimatorProvider(model))
 				demo.gltf.processor = ModelProcessor(model)
 
 				demo.gltf.animations = {}
 				for i = 1, model:getAnimationCount() do
 					local animation = model:getAnimation(i)
-					table.insert(demo.gltf.animations, animation:getName() ~= "" and animation:getName() or i)
+					table.insert(
+						demo.gltf.animations,
+						animation:getName() ~= "" and animation:getName() or i
+					)
 				end
 			end
 		elseif demo.gltf.animations then
@@ -54,8 +60,11 @@ function demo.mousepressed(x, y, button)
 					demo.gltf.animator:stop(demo.gltf.animationPlayback)
 				end
 
-				demo.gltf.animationPlayback =
-					demo.gltf.animator:play(animation, "main", { looping = true })
+				demo.gltf.animationPlayback = demo.gltf.animator:play(
+					animation,
+					"main",
+					{ looping = true }
+				)
 			end
 		end
 	end
@@ -69,56 +78,61 @@ function demo.update(deltaTime)
 end
 
 function demo.drawGLTF()
-	local model = demo.gltf.scene:getModel(1)
-	for i = 1, model:getMeshCount() do
-		local mesh = model:getMesh(i)
-		local material = mesh:getMaterial()
+	for j = 1, demo.gltf.scene:getModelCount() do
+		local model = demo.gltf.scene:getModel(j)
+		for i = 1, model:getMeshCount() do
+			local mesh = model:getMesh(i)
+			local material = mesh:getMaterial()
 
-		love.graphics.push("all")
+			love.graphics.push("all")
 
-		local camera
-		do
-			local mx = love.mouse.getPosition()
-			local delta = mx / love.graphics.getWidth()
-			local angle = Common.lerp(-math.pi, math.pi, delta)
+			local camera
+			do
+				local mx = love.mouse.getPosition()
+				local delta = mx / love.graphics.getWidth()
+				local angle = Common.lerp(-math.pi, math.pi, delta)
 
-			camera = Transform.makeRotationTransform(
-				Quaternion.fromAxisAngle(Vector3.UNIT_Y, angle)
-			)
-		end
+				camera = Transform.makeRotationTransform(
+					Quaternion.fromAxisAngle(Vector3.UNIT_Y, angle)
+				)
+			end
 
-		local scale
-		do
-			local _, my = love.mouse.getPosition()
-			local delta = Common.saturate((my - 32) / love.graphics.getHeight())
-			scale = Common.lerp(0.25, 400, delta ^ 2)
-		end
+			local scale
+			do
+				local _, my = love.mouse.getPosition()
+				local delta =
+					Common.saturate((my - 32) / love.graphics.getHeight())
+				scale = Common.lerp(0.25, 400, delta ^ 2)
+			end
 
-		local projection = Transform.makePerspectiveTransform(
+			local projection = Transform.makePerspectiveTransform(
 				math.rad(45),
 				love.graphics.getWidth() / love.graphics.getHeight(),
 				0.1,
 				1000
 			)
 
-		camera = Transform.makeTranslationTransform(Vector3(0, 0, -scale)) * camera
+			camera = Transform.makeTranslationTransform(Vector3(0, 0, -scale))
+				* camera
 
-		love.graphics.setDepthMode("lequal", true)
-		love.graphics.setProjection(projection)
-		love.graphics.applyTransform(camera)
+			love.graphics.setDepthMode("lequal", true)
+			love.graphics.setProjection(projection)
+			love.graphics.applyTransform(camera)
+			love.graphics.applyTransform(model:getTransform())
 
-		local loveMesh = mesh:getMesh()
-		if material and material:getTexture() then
-			loveMesh:setTexture(material:getTexture())
+			local loveMesh = mesh:getMesh()
+			if material and material:getTexture() then
+				loveMesh:setTexture(material:getTexture())
+			end
+
+			if material and material:getColor() then
+				love.graphics.setColor(material:getColor())
+			end
+
+			love.graphics.draw(loveMesh)
+
+			love.graphics.pop()
 		end
-
-		if material and material:getColor() then
-			love.graphics.setColor(material:getColor())
-		end
-
-		love.graphics.draw(loveMesh)
-
-		love.graphics.pop()
 	end
 end
 

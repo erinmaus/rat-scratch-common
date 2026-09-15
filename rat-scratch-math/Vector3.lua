@@ -12,20 +12,23 @@ local Vector3 = Object()
 --- @param y number?
 --- @param z number?
 function Vector3:new(x, y, z)
-	if not x and not y and not z then
-		x = 0
-		y = 0
-		z = 0
-	elseif x and not y and not z then
-		y = x
-		z = z
+	if x and y and z then
+		self.x = x
+		self.y = y
+		self.z = z
 	elseif x and y and not z then
-		z = 0
+		self.x = x
+		self.y = y
+		self.z = 0
+	elseif x then
+		self.x = x
+		self.y = x
+		self.z = x
+	else
+		self.x = 0
+		self.y = 0
+		self.z = 0
 	end
-
-	self.x = x
-	self.y = y
-	self.z = z
 end
 
 ---@param x number?
@@ -72,7 +75,11 @@ end
 --- @return RatScratch.Math.Vector3
 function Vector3:floor(result)
 	result = result or Vector3()
-	return result:from(math.floor(self.x), math.floor(self.y), math.floor(self.z))
+	return result:from(
+		math.floor(self.x),
+		math.floor(self.y),
+		math.floor(self.z)
+	)
 end
 
 --- @param result RatScratch.Math.Vector3??
@@ -99,7 +106,10 @@ do
 		result = result or Vector3()
 
 		dot:from(self:dot(normal))
-		return self:subtract(TWO:product(normal, result):product(dot, result), result)
+		return self:subtract(
+			TWO:product(normal, result):product(dot, result),
+			result
+		)
 	end
 end
 
@@ -127,7 +137,11 @@ end
 --- @return RatScratch.Math.Vector3
 function Vector3:min(other, result)
 	result = result or Vector3()
-	return result:from(math.min(self.x, other.x), math.min(self.y, other.y), math.min(self.z, other.z))
+	return result:from(
+		math.min(self.x, other.x),
+		math.min(self.y, other.y),
+		math.min(self.z, other.z)
+	)
 end
 
 --- @param other RatScratch.Math.Vector3
@@ -135,7 +149,11 @@ end
 --- @return RatScratch.Math.Vector3
 function Vector3:max(other, result)
 	result = result or Vector3()
-	return result:from(math.max(self.x, other.x), math.max(self.y, other.y), math.max(self.z, other.z))
+	return result:from(
+		math.max(self.x, other.x),
+		math.max(self.y, other.y),
+		math.max(self.z, other.z)
+	)
 end
 
 --- @param min RatScratch.Math.Vector3
@@ -145,6 +163,18 @@ end
 function Vector3:clamp(min, max, result)
 	result = result or Vector3()
 	return self:min(max, result):max(min, result)
+end
+
+--- @param threshold RatScratch.Math.Vector3
+--- @param result RatScratch.Math.Vector3?
+--- @return RatScratch.Math.Vector3
+function Vector3:step(threshold, result)
+	result = result or Vector3()
+	return result:from(
+		Common.step(threshold.x, self.x),
+		Common.step(threshold.y, self.y),
+		Common.step(threshold.z, self.z)
+	)
 end
 
 --- @param transform love.Transform
@@ -157,7 +187,8 @@ function Vector3:transform(transform, result)
 		return result:from(self.x, self.y, self.z)
 	end
 
-	local m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44 = transform:getMatrix()
+	local m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44 =
+		transform:getMatrix()
 
 	return result:from(
 		m11 * self.x + m12 * self.y + m13 * self.z,
@@ -178,12 +209,13 @@ function Vector3:perspectiveTransform(transform, w, result)
 		return result:from(self.x, self.y, self.z), w
 	end
 
-	local m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44 = transform:getMatrix()
+	local m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44 =
+		transform:getMatrix()
 
 	return result:from(
 		m11 * self.x + m12 * self.y + m13 * self.z + m14 * w,
 		m21 * self.x + m22 * self.y + m23 * self.z + m24 * w,
-		m31 * self.x + m32 * self.y + m33 * self.z + m24 * w
+		m31 * self.x + m32 * self.y + m33 * self.z + m34 * w
 	),
 		m41 * self.x + m42 * self.y + m43 * self.z + m44 * w
 end
@@ -363,7 +395,9 @@ end
 function Vector3:equal(other, e)
 	e = e or Common.EPSILON
 
-	return math.abs(self.x - other.x) < e and math.abs(self.y - other.z) < e and math.abs(self.y - other.z) < e
+	return math.abs(self.x - other.x) < e
+		and math.abs(self.y - other.y) < e
+		and math.abs(self.z - other.z) < e
 end
 
 Vector3.ZERO = Vector3(0, 0, 0)

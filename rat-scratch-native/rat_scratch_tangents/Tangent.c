@@ -22,7 +22,6 @@ void rs_getPosition(const SMikkTSpaceContext *context, float *result, const int 
 
 	const float *input = (const float *)((const uint8_t *)userdata->inputVertexInfo.position.value +
 										 userdata->inputVertexInfo.position.stride * i);
-	memcpy(result, input, sizeof(float) * 3);
 	result[0] = input[0];
 	result[1] = input[1];
 	result[2] = input[2];
@@ -35,7 +34,6 @@ void rs_getNormal(const SMikkTSpaceContext *context, float *result, const int fa
 
 	const float *input = (const float *)((const uint8_t *)userdata->inputVertexInfo.normal.value +
 										 userdata->inputVertexInfo.normal.stride * i);
-	memcpy(result, input, sizeof(float) * 3);
 	result[0] = input[0];
 	result[1] = input[1];
 	result[2] = input[2];
@@ -48,7 +46,6 @@ void rs_getTexCoord(const SMikkTSpaceContext *context, float *result, const int 
 
 	const float *input = (const float *)((const uint8_t *)userdata->inputVertexInfo.textureCoordinate.value +
 										 userdata->inputVertexInfo.textureCoordinate.stride * i);
-	memcpy(result, input, sizeof(float) * 2);
 	result[0] = input[0];
 	result[1] = input[1];
 }
@@ -84,7 +81,8 @@ RAT_SCRATCH_API int rat_generateTangents(uint32_t *indices, size_t indexCount, f
 	userdata.inputVertexInfo.normal.stride = normalStride ? normalStride : sizeof(float) * 3;
 
 	userdata.inputVertexInfo.textureCoordinate.value = textureCoordinate;
-	userdata.inputVertexInfo.textureCoordinate.stride = textureCoordinateStride ? textureCoordinateStride : sizeof(float);
+	userdata.inputVertexInfo.textureCoordinate.stride =
+		textureCoordinateStride ? textureCoordinateStride : sizeof(float) * 2;
 
 	userdata.outputVertexInfo.tangent.value = tangent;
 	userdata.outputVertexInfo.tangent.stride = tangentStride ? tangentStride : sizeof(float) * 4;

@@ -56,12 +56,13 @@ function list.click(values, mx, my)
 		if list.inside(mx, my, sx, sy, sw, sh) then
 			return i
 		end
-	end)
+	end) or 1
 end
 
 function list.draw(values)
 	local mx, my = love.mouse.getPosition()
 
+	love.graphics.push("all")
 	list.iterate(values, function(x, y, w, h, _, sample)
 		if list.inside(mx, my, x, y, w, h) then
 			love.graphics.setColor(0, 1, 1, 1)
@@ -71,6 +72,7 @@ function list.draw(values)
 
 		love.graphics.print(tostring(sample), x, y)
 	end)
+	love.graphics.pop()
 end
 
 return list

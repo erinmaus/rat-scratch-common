@@ -3,11 +3,26 @@ local Path = {}
 --- @param absolutePath string
 --- @param relativePath string
 --- @param rootPath? string
+--- @param rootPaths? table<string, string>
 --- @return string
-function Path.resolve(absolutePath, relativePath, rootPath)
-	if rootPath then
-		absolutePath = absolutePath:gsub("(@)", rootPath)
+function Path.resolve(absolutePath, relativePath, rootPath, rootPaths)
+	if rootPaths then
+		local r = {}
+		for key, value in pairs(rootPaths) do
+			r[key] = "/" .. value
+		end
+
+		absolutePath = absolutePath:gsub("^@([%w_%-]+)", r)
+		relativePath = relativePath:gsub("^@([%w_%-]+)", r)
 	end
+
+	if rootPath then
+		absolutePath = absolutePath:gsub("^(@)", "/" .. rootPath)
+		relativePath = relativePath:gsub("^(@)", "/" .. rootPath)
+	end
+
+	absolutePath = absolutePath:gsub("//+", "/")
+	relativePath = relativePath:gsub("//+", "/")
 
 	if relativePath:match("^/") then
 		local result = relativePath:gsub("^/", "")
@@ -47,6 +62,21 @@ function Path.resolve(absolutePath, relativePath, rootPath)
 	end
 
 	return table.concat(resultPathComponents, "/")
+end
+
+--- @param absolutePath string
+--- @param path string
+function Path.makeRelative(absolutePath, path)
+	absolutePath =
+		absolutePath:gsub("\\", "/"):gsub("//+", "/"):gsub("([^/])$", "%1/")
+	path = path:gsub("\\", "/"):gsub("//+", "/")
+
+	local i, j = path:find(absolutePath, 1, true)
+	if i and j and i == 1 then
+		return path:sub(j + 1)
+	end
+
+	return path
 end
 
 return Path

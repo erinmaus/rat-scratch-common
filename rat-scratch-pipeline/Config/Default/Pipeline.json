@@ -1,0 +1,113 @@
+{
+  "pipeline": {
+    "version": "1.0.0",
+    "meshletFormat": {
+      "triangleCount": 64
+    },
+    "vertexBuffers": [
+      {
+        "role": "static",
+        "buffer": "VertexPositions",
+        "format": [
+          {
+            "role": "VertexPosition",
+            "name": "position",
+            "inputFormat": "floatvec3",
+            "vertexFormat": "floatvec3"
+          }
+        ]
+      },
+      {
+        "role": "static",
+        "buffer": "VertexTextureCoordinates",
+        "format": [
+          {
+            "role": "VertexTexCoord",
+            "name": "textureCoordinate",
+            "inputFormat": "floatvec2",
+            "vertexFormat": "floatvec2"
+          }
+        ]
+      },
+      {
+        "role": "static",
+        "buffer": "VertexColors",
+        "format": [
+          {
+            "role": "VertexColor",
+            "name": "color",
+            "inputFormat": "uint32",
+            "vertexFormat": "floatvec4",
+            "transform": {
+              "to": "packUnorm4x8",
+              "from": "unpackUnorm4x8"
+            }
+          }
+        ]
+      },
+      {
+        "role": "static",
+        "buffer": "VertexNormals",
+        "format": [
+          {
+            "role": "VertexNormal",
+            "name": "normal",
+            "inputFormat": "floatvec2",
+            "vertexFormat": "floatvec3",
+            "transform": {
+              "to": "packNormal2",
+              "from": "unpackNormal2"
+            }
+          }
+        ]
+      },
+      {
+        "role": "static",
+        "buffer": "VertexTangents",
+        "format": [
+          {
+            "role": "VertexTangent",
+            "name": "tangent",
+            "inputFormat": "floatvec3",
+            "vertexFormat": "floatvec4",
+            "transform": {
+              "to": "packTangent3",
+              "from": "unpackTangent3"
+            }
+          }
+        ]
+      },
+      {
+        "role": "skinned",
+        "buffer": "VertexBoneIndicesWeights",
+        "format": [
+          {
+            "role": "VertexBoneIndex",
+            "name": "boneIndex",
+            "inputFormat": "uint32vec2",
+            "vertexFormat": "uint32vec4",
+            "transform": {
+              "to": "packBoneIndices2",
+              "from": "unpackBoneIndices2"
+            }
+          },
+          {
+            "role": "VertexBoneWeight",
+            "name": "boneWeight",
+            "inputFormat": "uint32",
+            "vertexFormat": "floatvec4",
+            "transform": {
+              "to": "packUnorm4x8",
+              "from": "unpackUnorm4x8"
+            }
+          }
+        ]
+      }
+    ],
+    "indexBuffer": {
+      "name": "index",
+      "buffer": "Indices",
+      "format": "uint32"
+    }
+  }
+}

@@ -1,9 +1,11 @@
 local assert = require("rat-scratch-common").Debug.assert
 local Object = require("rat-scratch-common").Object
-local AnimationInstance = require("rat-scratch-graphics.Graphics3D.AnimationInstance")
-local Quaternion        = require("rat-scratch-math").Quaternion
+local EventSource = require("rat-scratch-common").EventSource
+local AnimationInstance =
+	require("rat-scratch-graphics.Graphics3D.AnimationInstance")
+local AnimatorEvent = require("rat-scratch-graphics.Graphics3D.AnimatorEvent")
 
---- @class RatScratch.Graphics.Graphics3D.AnimationPlaybackOptions
+--- @class RatScratch.Graphics.Graphics3D.AnimatorPlaybackOptions
 --- @field weight? number
 --- @field speed? number
 --- @field looping? boolean
@@ -11,27 +13,33 @@ local Quaternion        = require("rat-scratch-math").Quaternion
 --- @field paused? boolean
 local AnimationOptions = {}
 
---- @class RatScratch.Graphics.Graphics3D.AnimationPlayback
---- @field package animation RatScratch.Graphics.Graphics3D.Animation
---- @field package animationInstance RatScratch.Graphics.Graphics3D.AnimationInstance
---- @field package groupKey string | number
---- @field package transforms love.Transform[]
---- @field package time number
---- @field package weight number
---- @field package speed number
---- @field package looping boolean
---- @field package paused boolean
---- @field package dirty boolean
---- @field package updated boolean
-local AnimationPlayback = {}
+--- @class RatScratch.Graphics.Graphics3D.AnimatorPlayback : RatScratch.Graphics.Graphics3D.AnimatorPlaybackOptions
+--- @field animation RatScratch.Graphics.Graphics3D.Animation
+--- @field animationInstance RatScratch.Graphics.Graphics3D.AnimationInstance
+--- @field groupKey string | number
+--- @field transforms love.Transform[]
+--- @field dirty boolean
+--- @field updated boolean
+local AnimatorPlayback = {}
 
 --- @param skeleton RatScratch.Graphics.Graphics3D.Skeleton
 --- @param animation RatScratch.Graphics.Graphics3D.Animation
+--- @param animationKey string | integer
 --- @param groupKey string | number
---- @param options? RatScratch.Graphics.Graphics3D.AnimationPlaybackOptions
---- @return RatScratch.Graphics.Graphics3D.AnimationPlayback
-function AnimationPlayback.new(skeleton, animation, groupKey, options)
-	assert(not (options and options.weight and options.weight <= 0), "weight must be >= 0; got %f", options and options.weight)
+--- @param options? RatScratch.Graphics.Graphics3D.AnimatorPlaybackOptions
+--- @return RatScratch.Graphics.Graphics3D.AnimatorPlayback
+function AnimatorPlayback.new(
+	skeleton,
+	animationKey,
+	animation,
+	groupKey,
+	options
+)
+	assert(
+		not (options and options.weight and options.weight <= 0),
+		"weight must be >= 0; got %f",
+		options and options.weight
+	)
 
 	local looping
 	if options and options.looping ~= nil then
@@ -53,6 +61,7 @@ function AnimationPlayback.new(skeleton, animation, groupKey, options)
 	end
 
 	return {
+		animationKey = animationKey,
 		animation = animation,
 		animationInstance = AnimationInstance(skeleton),
 		groupKey = groupKey,
@@ -68,31 +77,37 @@ function AnimationPlayback.new(skeleton, animation, groupKey, options)
 end
 
 --- @class RatScratch.Graphics.Graphics3D.AnimatorGroup
---- @field package totalWeight number
---- @field package playbacks RatScratch.Graphics.Graphics3D.AnimationPlayback[]
---- @field package bones table<RatScratch.Graphics.Graphics3D.Bone, true>
---- @field package animationInstance RatScratch.Graphics.Graphics3D.AnimationInstance
+--- @field totalWeight number
+--- @field playbacks RatScratch.Graphics.Graphics3D.AnimatorPlayback[]
+--- @field bones table<RatScratch.Graphics.Graphics3D.Bone, integer>
+--- @field boneCount integer
+--- @field animationInstance RatScratch.Graphics.Graphics3D.AnimationInstance
 local AnimatorGroup = {}
 
 --- @class RatScratch.Graphics.Graphics3D.Animator : RatScratch.Common.BaseObject
---- @overload fun(model: RatScratch.Graphics.Graphics3D.SkinnedModel): RatScratch.Graphics.Graphics3D.Animator
---- @field private model RatScratch.Graphics.Graphics3D.SkinnedModel
+--- @overload fun(animatorProvider: RatScratch.Graphics.Graphics3D.AnimatorProvider, animator?: RatScratch.Graphics.Graphics3D.Animator): RatScratch.Graphics.Graphics3D.Animator
+--- @field private animatorProvider RatScratch.Graphics.Graphics3D.AnimatorProvider
 --- @field private skeleton RatScratch.Graphics.Graphics3D.Skeleton
---- @field private playbacks RatScratch.Graphics.Graphics3D.AnimationPlayback[]
+--- @field private playbacks RatScratch.Graphics.Graphics3D.AnimatorPlayback[]
 --- @field private blendedTransforms love.Transform[]
 --- @field private finalTransforms love.Transform[]
 --- @field private animationInstance RatScratch.Graphics.Graphics3D.AnimationInstance
 --- @field private boneOverrides table<integer, love.Transform>
 --- @field private groupsByKey table<number | string, RatScratch.Graphics.Graphics3D.AnimatorGroup>
 --- @field private groups RatScratch.Graphics.Graphics3D.AnimatorGroup[]
+--- @field private eventSource RatScratch.Common.EventSource
 local Animator = Object()
 
 Animator.DEFAULT_GROUP = 1
 
---- @param model RatScratch.Graphics.Graphics3D.SkinnedModel
-function Animator:new(model)
-	local skeleton = model:getSkeleton()
-	assert(skeleton, 'model "%s" doesn\'t have a skeleton', model:getName())
+--- @param animatorProvider RatScratch.Graphics.Graphics3D.AnimatorProvider
+function Animator:new(animatorProvider)
+	local skeleton = animatorProvider:getSkeleton()
+	assert(
+		skeleton,
+		'animator provider "%s" doesn\'t have a skeleton',
+		animatorProvider:getName()
+	)
 
 	local blendedTransforms, finalTransforms = {}, {}
 	for i = 1, skeleton:getBoneCount() do
@@ -100,7 +115,7 @@ function Animator:new(model)
 		table.insert(finalTransforms, love.math.newTransform())
 	end
 
-	self.model = model
+	self.animatorProvider = animatorProvider
 	self.skeleton = skeleton
 	self.playbacks = {}
 	self.blendedTransforms = blendedTransforms
@@ -109,17 +124,81 @@ function Animator:new(model)
 	self.boneOverrides = {}
 	self.groups = {}
 	self.groupsByKey = {}
+	self.eventSource = EventSource(self)
+end
+
+--- @param animator RatScratch.Graphics.Graphics3D.Animator
+function Animator:copyFrom(animator)
+	for _, playback in ipairs(animator.playbacks) do
+		self:play(playback.animationKey, playback.groupKey, playback)
+	end
+end
+
+Animator.listen, Animator.silence = EventSource.mixin("eventSource")
+
+function Animator:getSkeleton()
+	return self.skeleton
+end
+
+--- @param oldAnimation RatScratch.Graphics.Graphics3D.Animation
+--- @param newAnimation RatScratch.Graphics.Graphics3D.Animation
+--- @return boolean
+function Animator:swapAnimation(oldAnimation, newAnimation)
+	local didMutate = false
+
+	for i = #self.playbacks, 1, -1 do
+		local playback = self.playbacks[i]
+		if playback.animation == oldAnimation then
+			didMutate = true
+
+			local stopAnimation = false
+
+			local group = self.groupsByKey[playback.groupKey]
+			for bone in pairs(group.bones) do
+				if not newAnimation:hasBone(bone) then
+					stopAnimation = true
+				end
+			end
+
+			for j = 1, newAnimation:getChannelCount() do
+				local bone = newAnimation:getChannel(j):getBone()
+				if not group.bones[bone] then
+					stopAnimation = true
+				end
+			end
+
+			if stopAnimation then
+				self:stop(playback)
+			else
+				playback.animation = newAnimation
+			end
+		end
+	end
+
+	if didMutate then
+		self:updateTime(0)
+	end
+
+	return didMutate
 end
 
 --- @param animationKey number | string
 --- @param groupKey string | number
---- @param options? RatScratch.Graphics.Graphics3D.AnimationPlaybackOptions
---- @return RatScratch.Graphics.Graphics3D.AnimationPlayback
+--- @param options? RatScratch.Graphics.Graphics3D.AnimatorPlaybackOptions
+--- @return RatScratch.Graphics.Graphics3D.AnimatorPlayback
 function Animator:play(animationKey, groupKey, options)
 	groupKey = groupKey or Animator.DEFAULT_GROUP
 
-	local animation = self.model:getAnimation(animationKey)
-	local playback = AnimationPlayback.new(self.skeleton, animation, groupKey, options)
+	local animation = self.animatorProvider:getAnimation(animationKey)
+	assert(animation, "animation %s not found", animationKey)
+
+	local playback = AnimatorPlayback.new(
+		self.skeleton,
+		animationKey,
+		animation,
+		groupKey,
+		options
+	)
 	table.insert(self.playbacks, playback)
 
 	local group = self.groupsByKey[groupKey]
@@ -128,6 +207,7 @@ function Animator:play(animationKey, groupKey, options)
 			totalWeight = playback.weight,
 			animationInstance = AnimationInstance(self.skeleton),
 			bones = {},
+			boneCount = 0,
 			playbacks = {},
 		}
 
@@ -137,6 +217,37 @@ function Animator:play(animationKey, groupKey, options)
 	end
 
 	table.insert(group.playbacks, playback)
+
+	group.boneCount = 0
+
+	for i = 1, self.skeleton:getBoneCount() do
+		local bone = self.skeleton:getBone(i)
+
+		local boneCount = 0
+		for i = 1, #group.playbacks do
+			if group.playbacks[i].animation:hasBone(bone) then
+				boneCount = boneCount + 1
+			end
+		end
+
+		for _, otherGroup in ipairs(self.groups) do
+			assert(
+				otherGroup == group or not otherGroup.bones[bone],
+				"bone '%s' cannot be in multiple animation groups",
+				bone:getName()
+			)
+		end
+
+		assert(
+			boneCount == 0 or boneCount == #group.playbacks,
+			"all animations in animation group %s must have all bones in common",
+			groupKey
+		)
+
+		if boneCount > 0 then
+			group.boneCount = group.boneCount + 1
+		end
+	end
 
 	for i = 1, self.skeleton:getBoneCount() do
 		local bone = self.skeleton:getBone(i)
@@ -154,11 +265,12 @@ function Animator:play(animationKey, groupKey, options)
 	end
 
 	table.insert(self.groups, group)
+	self.eventSource:process(AnimatorEvent.fromAnimatorGroupUpdated(group))
 
 	return playback
 end
 
---- @param playback RatScratch.Graphics.Graphics3D.AnimationPlayback
+--- @param playback RatScratch.Graphics.Graphics3D.AnimatorPlayback
 function Animator:stop(playback)
 	for i, p in ipairs(self.playbacks) do
 		if p == playback then
@@ -176,7 +288,6 @@ function Animator:stop(playback)
 			end
 		end
 
-
 		for i = 1, self.skeleton:getBoneCount() do
 			local bone = self.skeleton:getBone(i)
 			if playback.animation:hasBone(bone) then
@@ -184,6 +295,9 @@ function Animator:stop(playback)
 			end
 		end
 
+		self.eventSource:process(
+			AnimatorEvent.fromAnimatorGroupPlaybackCleared(group, playback)
+		)
 
 		if #group == 0 then
 			self.groupsByKey[playback.groupKey] = nil
@@ -194,11 +308,19 @@ function Animator:stop(playback)
 					break
 				end
 			end
+
+			self.eventSource:process(
+				AnimatorEvent.fromAnimatorGroupCleared(group)
+			)
+		else
+			self.eventSource:process(
+				AnimatorEvent.fromAnimatorGroupUpdated(group)
+			)
 		end
 	end
 end
 
---- @param playback RatScratch.Graphics.Graphics3D.AnimationPlayback
+--- @param playback RatScratch.Graphics.Graphics3D.AnimatorPlayback
 --- @param weight number
 function Animator:setWeight(playback, weight)
 	assert(weight >= 0, "weight must be >= 0; got %f", weight)
@@ -209,58 +331,78 @@ function Animator:setWeight(playback, weight)
 	end
 
 	playback.weight = weight
+	self.eventSource:process(
+		AnimatorEvent.fromAnimatorGroupPlaybackUpdated(group, playback)
+	)
 end
 
---- @param playback RatScratch.Graphics.Graphics3D.AnimationPlayback
+--- @param playback RatScratch.Graphics.Graphics3D.AnimatorPlayback
 --- @param time number
 function Animator:seek(playback, time)
-	playback.time = time
-
 	if playback.time ~= time then
+		playback.time = time
 		playback.dirty = true
+
+		self.eventSource:process(
+			AnimatorEvent.fromAnimatorGroupPlaybackUpdated(
+				self.groupsByKey[playback.groupKey],
+				playback
+			)
+		)
 	end
 end
 
---- @param playback RatScratch.Graphics.Graphics3D.AnimationPlayback
+--- @param playback RatScratch.Graphics.Graphics3D.AnimatorPlayback
 --- @param isLooping boolean
 function Animator:setIsLooping(playback, isLooping)
 	playback.looping = isLooping
 end
 
---- @param playback RatScratch.Graphics.Graphics3D.AnimationPlayback
+--- @param playback RatScratch.Graphics.Graphics3D.AnimatorPlayback
 --- @param isPaused boolean
 function Animator:setIsPaused(playback, isPaused)
 	playback.paused = isPaused
 end
 
---- @param playback RatScratch.Graphics.Graphics3D.AnimationPlayback
+--- @param playback RatScratch.Graphics.Graphics3D.AnimatorPlayback
 --- @return boolean
 function Animator:getIsPaused(playback)
 	return playback.paused
 end
 
---- @param playback RatScratch.Graphics.Graphics3D.AnimationPlayback
+--- @param playback RatScratch.Graphics.Graphics3D.AnimatorPlayback
 --- @return number
 function Animator:getTime(playback)
 	return playback.time
 end
 
---- @param playback RatScratch.Graphics.Graphics3D.AnimationPlayback
+--- @param playback RatScratch.Graphics.Graphics3D.AnimatorPlayback
 --- @return number
 function Animator:getWeight(playback)
 	return playback.weight
 end
 
---- @param playback RatScratch.Graphics.Graphics3D.AnimationPlayback
+--- @param playback RatScratch.Graphics.Graphics3D.AnimatorPlayback
 --- @return number
 function Animator:getSpeed(playback)
 	return playback.speed
 end
 
---- @param playback RatScratch.Graphics.Graphics3D.AnimationPlayback
+--- @param playback RatScratch.Graphics.Graphics3D.AnimatorPlayback
 --- @return boolean
 function Animator:getIsLooping(playback)
 	return playback.looping
+end
+
+--- @return integer
+function Animator:getGroupCount()
+	return #self.groups
+end
+
+--- @param index integer
+--- @return RatScratch.Graphics.Graphics3D.AnimatorGroup
+function Animator:getGroup(index)
+	return self.groups[index]
 end
 
 --- @alias RatScratch.Graphics.Graphics3D.AnimatorBoneKey number | string | RatScratch.Graphics.Graphics3D.Bone
@@ -281,7 +423,7 @@ do
 	local workingTransform = love.math.newTransform()
 
 	--- @private
-	--- @param playback RatScratch.Graphics.Graphics3D.AnimationPlayback
+	--- @param playback RatScratch.Graphics.Graphics3D.AnimatorPlayback
 	function Animator:_buildPlaybackTransforms(playback)
 		for i = 1, #playback.transforms do
 			local bone = self.skeleton:getBone(i)
@@ -294,7 +436,9 @@ do
 				playback.transforms[i]:apply(playback.transforms[parentIndex])
 			end
 
-			playback.animationInstance:getBoneInstance(bone):composeTransform(playback.transforms[i])
+			playback.animationInstance
+				:getBoneInstance(bone)
+				:composeTransform(playback.transforms[i])
 		end
 
 		for i = 1, #playback.transforms do
@@ -304,7 +448,7 @@ do
 	end
 end
 
---- @param playback RatScratch.Graphics.Graphics3D.AnimationPlayback
+--- @param playback RatScratch.Graphics.Graphics3D.AnimatorPlayback
 --- @param boneKey RatScratch.Graphics.Graphics3D.AnimatorBoneKey ID, name, or bone
 --- @param result? love.Transform
 --- @return love.Transform
@@ -331,12 +475,23 @@ function Animator:_updateTime(deltaTime)
 		local playback = self.playbacks[i]
 		if not playback.paused then
 			local time = playback.time + deltaTime * playback.speed
-			if time < 0 or time > playback.animation:getDuration() and not playback.looping then
+			if
+				time < 0
+				or time > playback.animation:getDuration()
+					and not playback.looping
+			then
 				self:stop(playback)
 			else
 				local newTime = time % playback.animation:getDuration()
 				playback.dirty = newTime ~= playback.time
 				playback.time = newTime
+
+				self.eventSource:process(
+					AnimatorEvent.fromAnimatorGroupPlaybackUpdated(
+						self.groupsByKey[playback.groupKey],
+						playback
+					)
+				)
 			end
 		end
 	end
@@ -346,7 +501,10 @@ end
 function Animator:_evaluateAnimations()
 	for _, playback in ipairs(self.playbacks) do
 		if playback.dirty then
-			playback.animation:evaluate(playback.animationInstance, playback.time)
+			playback.animation:evaluate(
+				playback.animationInstance,
+				playback.time
+			)
 			playback.dirty = false
 			playback.updated = true
 		end
@@ -362,7 +520,11 @@ function Animator:_blendAnimations()
 			for _, playback in ipairs(group.playbacks) do
 				local relativeWeight = playback.weight / group.totalWeight
 				if relativeWeight > 0 then
-					playback.animationInstance:blend(relativeWeight, group.animationInstance, playback.animation)
+					playback.animationInstance:blend(
+						relativeWeight,
+						group.animationInstance,
+						playback.animation
+					)
 				end
 			end
 		end
@@ -383,10 +545,14 @@ function Animator:_combineAnimations()
 		for i = 1, self.skeleton:getBoneCount() do
 			local bone = self.skeleton:getBone(i)
 			if group.bones[bone] and group.bones[bone] > 0 then
-				local inputBoneInstance = group.animationInstance:getBoneInstance(bone)
-				local outputBoneInstance = self.animationInstance:getBoneInstance(bone)
+				local inputBoneInstance =
+					group.animationInstance:getBoneInstance(bone)
+				local outputBoneInstance =
+					self.animationInstance:getBoneInstance(bone)
 
-				outputBoneInstance:setTranslation(inputBoneInstance:getTranslation())
+				outputBoneInstance:setTranslation(
+					inputBoneInstance:getTranslation()
+				)
 				outputBoneInstance:setRotation(inputBoneInstance:getRotation())
 				outputBoneInstance:setScale(inputBoneInstance:getScale())
 			end
@@ -407,7 +573,9 @@ function Animator:_composeTransforms()
 			self.blendedTransforms[i]:apply(self.blendedTransforms[parentIndex])
 
 			if self.boneOverrides[i] then
-				self.finalTransforms[i]:setMatrix(self.blendedTransforms[parentIndex]:getMatrix())
+				self.finalTransforms[i]:setMatrix(
+					self.blendedTransforms[parentIndex]:getMatrix()
+				)
 			end
 		end
 
@@ -417,7 +585,9 @@ function Animator:_composeTransforms()
 		if self.boneOverrides[i] then
 			self.finalTransforms[i]:apply(self.boneOverrides[i])
 		else
-			self.finalTransforms[i]:setMatrix(self.blendedTransforms[i]:getMatrix())
+			self.finalTransforms[i]:setMatrix(
+				self.blendedTransforms[i]:getMatrix()
+			)
 		end
 	end
 
@@ -429,12 +599,21 @@ function Animator:_composeTransforms()
 end
 
 --- @param deltaTime number
-function Animator:update(deltaTime)
+function Animator:updateTime(deltaTime)
 	self:_updateTime(deltaTime)
+end
+
+function Animator:updateAnimations()
 	self:_evaluateAnimations()
 	self:_blendAnimations()
 	self:_combineAnimations()
 	self:_composeTransforms()
+end
+
+--- @param deltaTime number
+function Animator:update(deltaTime)
+	self:updateTime(deltaTime)
+	self:updateAnimations()
 end
 
 --- @param boneKey RatScratch.Graphics.Graphics3D.AnimatorBoneKey ID, name, or bone

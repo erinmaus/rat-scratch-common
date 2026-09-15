@@ -1,0 +1,36 @@
+#include "@Pipeline/Common/Textures/Sample.common.glsl"
+
+void ratApplyFragmentMaterial(in RatScratchPipelineFragmentInput fragmentInput,
+							  out RatScratchPipelineFragmentOutput fragmentOutput)
+{
+	RatScratchBasicMaterialProperties materialProperties;
+	ratGetBasicMaterialProperties(fragmentInput.materialInstance, materialProperties);
+
+	vec4 albedo = ratSampleTexture(materialProperties.albedoTexture, fragmentInput.textureCoordinate);
+	fragmentOutput.albedo = albedo * materialProperties.albedoFactor;
+
+	float occlusion = ratSampleOcclusionTexture(materialProperties.occlusionTexture, fragmentInput.textureCoordinate);
+	fragmentOutput.occlusion = 1.0 + materialProperties.occlusionStrength * (occlusion - 1.0);
+
+	vec3 normalTextureSample =
+		ratSampleNormalTexture(materialProperties.normalTexture, fragmentInput.textureCoordinate);
+	normalTextureSample =
+		normalize(normalTextureSample * vec3(materialProperties.normalScale, materialProperties.normalScale, 1.0));
+
+	vec3 t = vec3(normalTextureSample.x) * fragmentInput.tangent;
+	vec3 b = vec3(normalTextureSample.y) * fragmentInput.bitangent;
+	vec3 n = vec3(normalTextureSample.z) * fragmentInput.normal;
+	fragmentOutput.normal = normalize(t + b + n);
+
+	vec2 metallicRoughness =
+		ratSampleLinearTexture(materialProperties.metallicRoughnessTexture, fragmentInput.textureCoordinate).gb;
+
+	fragmentOutput.metal = metallicRoughness.x * materialProperties.metallicFactor;
+	fragmentOutput.roughness = metallicRoughness.y * materialProperties.roughnessFactor;
+
+	vec3 emissive = ratSampleTexture(materialProperties.emissiveTexture, fragmentInput.textureCoordinate).rgb;
+	fragmentOutput.emissive = emissive * materialProperties.emissiveFactor;
+
+	vec3 fluorescence = ratSampleTexture(materialProperties.fluorescenceTexture, fragmentInput.textureCoordinate).rgb;
+	fragmentOutput.fluorescence = fluorescence * materialProperties.fluorescenceFactor;
+}
