@@ -11,10 +11,9 @@ local LightPipeline = require("rat-scratch-pipeline").LightPipeline
 local GLTF = require("rat-scratch-gltf")
 local ExtendedScene = require("rat-scratch-pipeline-tools").Model.ExtendedScene
 local PipelineConfig = require("rat-scratch-pipeline").PipelineConfig
-local GammaColor = require("rat-scratch-graphics.GammaColor")
-local LinearColor = require("rat-scratch-graphics.LinearColor")
-local PointLight = require("rat-scratch-pipeline.PointLight")
-local ResourceEvent = require("rat-scratch-resource.ResourceEvent")
+local GammaColor = require("rat-scratch-graphics").GammaColor
+local PointLight = require("rat-scratch-pipeline").PointLight
+local ResourceEvent = require("rat-scratch-resource").ResourceEvent
 local PipelineSceneResourceType =
 	require("rat-scratch-pipeline").Resources.PipelineSceneResourceType
 local PipelineScenePointer =
@@ -79,18 +78,41 @@ function demo.load()
 
 	local ambientLight = scene:newLight(AmbientLight)
 	ambientLight:setAmbience(0.3)
+	ambientLight:setColor(GammaColor(0.85098, 0.713725, 0.556863, 1))
 
 	local directionalLight = scene:newLight(DirectionalLight)
-	directionalLight:setDirection(Vector3(1, -4, 1))
-	directionalLight:setColor(LinearColor(1, 0.5, 1))
+	directionalLight:setColor(GammaColor(0.85098, 0.326, 0.556863, 1))
+
+	local pointLights = {}
+	for i = 1, 10 do
+		local pointLightInfo = {
+			offsets = {
+				x = {},
+				y = {},
+				z = {},
+			},
+		}
+
+		for key in pairs(pointLightInfo.offsets) do
+			for i = 1, love.math.random(2, 5) do
+				pointLightInfo.offsets[key][i] = love.math.random()
+			end
+		end
+
+		local pointLight = scene:newLight(PointLight)
+		pointLight:setAttenuation(love.math.random(1, 3))
+
+		pointLightInfo.light = pointLight
+		table.insert(pointLights, pointLightInfo)
+	end
 
 	local pointLight = scene:newLight(PointLight)
-	pointLight:setAttenuation(2)
+	pointLight:setAttenuation(50)
+	pointLight:setPosition(Vector3(-2.3, -2.4, 2))
 
 	local camera = ArcballCamera()
-	camera:setDistance(20)
 	camera:setSize(love.graphics.getDimensions())
-	camera:setFOV(math.pi / 2)
+	camera:setFOV(math.rad(65.3))
 
 	scene:setCamera(camera)
 	scene:getPipeline(LightPipeline):loadDefaultShaders()
@@ -98,44 +120,80 @@ function demo.load()
 	demo.renderer = renderer
 	demo.scene = scene
 	demo.camera = camera
-	demo.pointLight = pointLight
 	demo.directionalLight = directionalLight
+	demo.pointLights = pointLights
 end
 
-function demo.wheelmoved(x, y)
-	demo.camera:setDistance(math.max(demo.camera:getDistance() + y / 2), 1)
+demo.isPanning = false
+demo.isRotating = false
+demo.isElevating = false
+
+function demo.mousepressed(x, y, button)
+	if button == 1 then
+		demo.isPanning = true
+	elseif button == 2 then
+		demo.isRotating = true
+	elseif button == 3 then
+		demo.isElevating = true
+	end
+end
+
+function demo.mousemoved(_, _, dx, dy)
+	if demo.isPanning then
+		local position = demo.camera:getTranslation()
+		local newPosition = position:add(Vector3(dx / 64, 0, dy / 64))
+		demo.camera:setTranslation(newPosition)
+	end
+
+	if demo.isRotating then
+		local rotation = demo.camera:getRotation()
+		local xRotation =
+			Quaternion.fromAxisAngle(Vector3.UNIT_X, dy / 256 * math.pi)
+		local yRotation =
+			Quaternion.fromAxisAngle(Vector3.UNIT_Y, -dx / 256 * math.pi)
+		demo.camera:setRotation(yRotation:product(rotation):product(xRotation))
+	end
+
+	if demo.isElevating then
+		local position = demo.camera:getTranslation()
+		local newPosition = position:add(Vector3(0, dy / 64, 0))
+		demo.camera:setTranslation(newPosition)
+	end
+end
+
+function demo.mousereleased(x, y, button)
+	if button == 1 then
+		demo.isPanning = false
+	elseif button == 2 then
+		demo.isRotating = false
+	elseif button == 3 then
+		demo.isElevating = false
+	end
 end
 
 function demo.update()
-	local mx, my = love.mouse.getPosition()
-	local w, h = love.graphics.getDimensions()
-	local hw, hh = w / 2, h / 2
-	local x, y = (mx - hw) / hw, (my - hh) / hh
-
-	demo.camera:setRotation(
-		Quaternion.fromAxisAngle(Vector3.UNIT_Y, x * math.pi)
-			:product(Quaternion.fromAxisAngle(Vector3.UNIT_X, y * math.pi))
-	)
-
 	demo.directionalLight:setDirection(
 		Vector3(
 			math.cos(love.timer.getTime()),
-			4,
+			-4,
 			math.sin(love.timer.getTime())
 		)
 	)
 
-	demo.pointLight:setPosition(
-		Vector3(
-			math.cos(love.timer.getTime() * (math.pi / 3) / 3)
-				* math.cos(love.timer.getTime() * (math.pi / 5) / 4)
-				* 0.5,
-			-0.5,
-			math.cos(love.timer.getTime() * (math.pi / 2.5) / 3)
-				* math.cos(love.timer.getTime() * (math.pi / 2.75) / 4)
-				* 0.5
-		)
-	)
+	for _, pointLightInfo in ipairs(demo.pointLights) do
+		local position = Vector3(1, 1, 1)
+
+		for key, value in pairs(pointLightInfo.offsets) do
+			for i = 1, #value do
+				position[key] = position[key]
+					* math.sin(
+						love.timer.getTime() * (math.pi * value[i]) * (1 / 16)
+					)
+			end
+		end
+
+		pointLightInfo.light:setPosition(position:scale(10))
+	end
 
 	ResourceLoader.update()
 	demo.renderer:update()
@@ -149,17 +207,21 @@ function demo.draw()
 	demo.renderer:draw(demo.scene)
 	love.graphics.pop()
 
-	local position =
-		demo.camera:project(demo.pointLight:getPosition(), _position)
-	if
-		position.x >= 0
-		and position.x < love.graphics.getWidth()
-		and position.y >= 0
-		and position.y < love.graphics.getHeight()
-		and position.z >= 0
-		and position.z <= 1
-	then
-		love.graphics.circle("fill", position.x, position.y, 8)
+	for i = 1, #demo.pointLights do
+		local position = demo.camera:project(
+			demo.pointLights[i].light:getPosition(),
+			_position
+		)
+		if
+			position.x >= 0
+			and position.x < love.graphics.getWidth()
+			and position.y >= 0
+			and position.y < love.graphics.getHeight()
+			and position.z >= 0
+			and position.z <= 1
+		then
+			love.graphics.circle("fill", position.x, position.y, 8)
+		end
 	end
 end
 

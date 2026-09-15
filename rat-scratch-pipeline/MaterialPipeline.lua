@@ -351,8 +351,7 @@ function MaterialPipeline:getMaterialInstanceIndex(materialInstance)
 		"material instance is not in material pipeline"
 	)
 
-	local index =
-		self.materialInstanceValuesBuffer:getIndexCount(materialInstance)
+	local index = self.materialInstancesBuffer:getIndexCount(materialInstance)
 	return index
 end
 
