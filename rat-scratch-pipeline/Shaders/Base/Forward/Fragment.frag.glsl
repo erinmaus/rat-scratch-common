@@ -46,7 +46,5 @@ void pixelmain()
 						 fragmentOutput.albedo.a);
 	}
 
-	rat_Color = fragmentOutput.albedo;
-
 	// TODO: OIT
 }

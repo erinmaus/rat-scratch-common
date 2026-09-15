@@ -59,7 +59,12 @@ void ratApplyPBR(in RatScratchPipelineFragmentOutput fragmentOutput, vec3 L, vec
 	float G = ratPBRImplGeometrySmith(N, V, L, roughness);
 
 	float nDotV = max(dot(N, V), 0.0);
-	vec3 specularTerm = (NDF * G * F * radiance) / (4.0 * nDotV + RAT_SCRATCH_EPSILON);
+
+	vec3 specularTerm = vec3(0.0);
+	if (nDotV > 0.0)
+	{
+		specularTerm = (NDF * G * F * radiance) / (4.0 * nDotV);
+	}
 
 	float nDotL = max(dot(N, L), 0.0);
 	vec3 diffuseTerm = radiance * nDotL;

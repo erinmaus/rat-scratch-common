@@ -107,7 +107,8 @@ void ratVertexStaticDraw(in RatScratchPipelineDraw draw, inout RatScratchPipelin
 	fragment.materialInstance = rat_MeshInstances[draw.meshInstanceIndex].materialInstanceIndex;
 }
 
-void ratVertexDraw(in RatScratchPipelineDraw draw, out RatScratchPipelineFragmentInput fragmentInput, uint vertexIndex)
+void ratVertexDraw(in RatScratchPipelineDraw draw, inout RatScratchPipelineFragmentInput fragmentInput,
+				   uint vertexIndex)
 {
 	if (draw.boneOffsetCount.y > 0)
 	{

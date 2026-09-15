@@ -157,14 +157,13 @@ end
 function PipelineBuffer:copyTable(instance, table, index, count, tableIndex)
 	local i, maxCount = self.context:getIndexCount(instance)
 
-	index = i + math.min(index or 1, maxCount) - 1
+	index = math.min(index or 1, maxCount) - 1
 	count = count or math.floor((#table / self.format:getComponentCount()))
 	count = Common.clamp(count, 0, maxCount - index + 1)
 	tableIndex = tableIndex or 1
 
-	self.data:copyFromTable(index, count, table, tableIndex)
-
-	self.dirtyContext:dirty(index, self:getCount())
+	self.data:copyFromTable(i + index, count, table, tableIndex)
+	self.dirtyContext:dirty(i + index, count)
 end
 
 --- @generic T
@@ -177,14 +176,13 @@ end
 function PipelineBuffer:copyData(instance, data, index, count, offset)
 	local i, maxCount = self.context:getIndexCount(instance)
 
-	index = i + math.min(index or 1, maxCount) - 1
+	index = math.min(index or 1, maxCount) - 1
 	count = count or math.floor(data:getSize() / self.format:getStride())
 	Common.clamp(count, 0, maxCount - index + 1)
 	offset = offset or 0
 
-	self.data:copyFromData(index, count, data, offset)
-
-	self.dirtyContext:dirty(index, self:getCount())
+	self.data:copyFromData(i + index, count, data, offset)
+	self.dirtyContext:dirty(i + index, count)
 end
 
 --- @generic T

@@ -62,7 +62,7 @@ function demo.load()
 	ambientLight:setAmbience(0.5)
 
 	local directionalLight = scene:newLight(DirectionalLight)
-	directionalLight:setDirection(Vector3(1, 4, 1))
+	directionalLight:setDirection(Vector3(1, -4, 1))
 
 	local camera = ArcballCamera()
 	camera:setDistance(2.5)
