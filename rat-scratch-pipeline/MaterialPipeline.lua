@@ -988,8 +988,8 @@ function MaterialPipeline:_rebuildMaterialInstanceUniformsImpl(materialInstance)
 	end
 
 	local offset = math.max(
-		materialInstance:getMaterial():getIntegerFormat():getAttributeCount(),
-		materialInstance:getMaterial():getFloatFormat():getAttributeCount()
+		materialInstance:getMaterial():getIntegerFormat():getComponentCount(),
+		materialInstance:getMaterial():getFloatFormat():getComponentCount()
 	)
 
 	ffi.copy(
