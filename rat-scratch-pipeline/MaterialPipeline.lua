@@ -250,6 +250,11 @@ function MaterialPipeline:getTextureByIndex(index)
 end
 
 --- @param texture love.ImageData
+function MaterialPipeline:hasTexture(texture)
+	return self.textures[texture] ~= nil
+end
+
+--- @param texture love.ImageData
 function MaterialPipeline:addTexture(texture)
 	assert(
 		not self.textures[texture],

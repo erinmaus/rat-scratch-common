@@ -310,7 +310,9 @@ function World:_tryAddTexture(resource)
 
 	local imageData = resource:get()
 	local materialPipeline = self.pipelines:get(MaterialPipeline)
-	materialPipeline:addTexture(imageData)
+	if not materialPipeline:hasTexture(imageData) then
+		materialPipeline:addTexture(imageData)
+	end
 end
 
 --- @private
@@ -321,7 +323,9 @@ function World:_tryRemoveTexture(imageData)
 	end
 
 	local materialPipeline = self.pipelines:get(MaterialPipeline)
-	materialPipeline:removeTexture(imageData)
+	if materialPipeline:hasTexture(imageData) then
+		materialPipeline:removeTexture(imageData)
+	end
 end
 
 --- @private
@@ -680,7 +684,10 @@ end
 
 --- @private
 function World:_updateObjectHandleDraws()
+	local c = 0
 	for objectHandle in pairs(self.dirtyObjectHandleDraws) do
+		c = c + 1
+		print("update...", c)
 		self:_updateObjectHandleDraw(objectHandle)
 		self.dirtyObjectHandleDraws[objectHandle] = nil
 	end
