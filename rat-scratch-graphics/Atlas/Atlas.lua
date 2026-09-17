@@ -74,6 +74,13 @@ function Atlas:_allocateLayer(newCount)
 		self.layers
 	)
 
+	for i = self.layers + 1, newCount do
+		table.insert(
+			self.roots,
+			AtlasPackingNode(0, 0, self.width, self.height)
+		)
+	end
+
 	self.layers = newCount
 
 	local newCanvas =
@@ -108,8 +115,6 @@ function Atlas:_allocateLayer(newCount)
 	end
 
 	self.canvas = newCanvas
-
-	table.insert(self.roots, AtlasPackingNode(0, 0, self.width, self.height))
 end
 
 --- @private
