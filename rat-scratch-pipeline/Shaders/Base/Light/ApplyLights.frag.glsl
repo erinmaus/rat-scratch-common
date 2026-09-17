@@ -12,7 +12,8 @@
 uint ratApplyLightsImplGetIndex(vec3 position, uint i, uint layer)
 {
 	vec3 clampedPosition = clamp(position, vec3(0.0), vec3(1.0));
-	uvec3 coordinate = uvec3(floor(clampedPosition * vec3(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS - vec3(1.0))));
+	uvec3 coordinate = uvec3(floor(clampedPosition * vec3(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS)));
+	coordinate = min(coordinate, RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS - uvec3(1));
 
 	uvec4 dimensions =
 		uvec4(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS, RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL + 1);
