@@ -14,6 +14,10 @@ local PipelineConfig = require("rat-scratch-pipeline").PipelineConfig
 local GammaColor = require("rat-scratch-graphics").GammaColor
 local PointLight = require("rat-scratch-pipeline").PointLight
 local ResourceEvent = require("rat-scratch-resource").ResourceEvent
+local Camera = require("rat-scratch-pipeline").Camera
+local ArcballCameraView = require("rat-scratch-pipeline.ArcballCameraView")
+local PerspectiveFOVCameraProjection =
+	require("rat-scratch-pipeline.PerspectiveFOVCameraProjection")
 local PipelineSceneResourceType =
 	require("rat-scratch-pipeline").Resources.PipelineSceneResourceType
 local PipelineScenePointer =
@@ -110,16 +114,20 @@ function demo.load()
 	pointLight:setAttenuation(50)
 	pointLight:setPosition(Vector3(-2.3, -2.4, 2))
 
-	local camera = ArcballCamera()
-	camera:setSize(love.graphics.getDimensions())
-	camera:setFOV(math.rad(65.3))
+	demo.projection = PerspectiveFOVCameraProjection()
+	demo.projection:setSize(love.graphics.getDimensions())
+	demo.projection:setFOV(math.rad(65.3))
+
+	demo.view = ArcballCameraView()
+
+	local camera = Camera(demo.projection, demo.view)
+	demo.camera = camera
 
 	scene:setCamera(camera)
 	scene:getPipeline(LightPipeline):loadDefaultShaders()
 
 	demo.renderer = renderer
 	demo.scene = scene
-	demo.camera = camera
 	demo.directionalLight = directionalLight
 	demo.pointLights = pointLights
 end
@@ -140,24 +148,26 @@ end
 
 function demo.mousemoved(_, _, dx, dy)
 	if demo.isPanning then
-		local position = demo.camera:getTranslation()
+		local position = demo.camera:getView():getTranslation()
 		local newPosition = position:add(Vector3(dx / 64, 0, dy / 64))
-		demo.camera:setTranslation(newPosition)
+		demo.camera:getView():setTranslation(newPosition)
 	end
 
 	if demo.isRotating then
-		local rotation = demo.camera:getRotation()
+		local rotation = demo.camera:getView():getRotation()
 		local xRotation =
 			Quaternion.fromAxisAngle(Vector3.UNIT_X, dy / 256 * math.pi)
 		local yRotation =
 			Quaternion.fromAxisAngle(Vector3.UNIT_Y, -dx / 256 * math.pi)
-		demo.camera:setRotation(yRotation:product(rotation):product(xRotation))
+		demo.camera
+			:getView()
+			:setRotation(yRotation:product(rotation):product(xRotation))
 	end
 
 	if demo.isElevating then
-		local position = demo.camera:getTranslation()
+		local position = demo.camera:getView():getTranslation()
 		local newPosition = position:add(Vector3(0, dy / 64, 0))
-		demo.camera:setTranslation(newPosition)
+		demo.camera:getView():setTranslation(newPosition)
 	end
 end
 
@@ -210,6 +220,8 @@ function demo.draw()
 	for i = 1, #demo.pointLights do
 		local position = demo.camera:project(
 			demo.pointLights[i].light:getPosition(),
+			love.graphics.getWidth(),
+			love.graphics.getHeight(),
 			_position
 		)
 		if
