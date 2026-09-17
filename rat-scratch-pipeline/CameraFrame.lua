@@ -115,8 +115,8 @@ function CameraFrame:update()
 		self.currentInverseProjectionView:getMatrix()
 	)
 
-	self.camera:getProjection(self.currentProjection)
-	self.camera:getView(self.currentView)
+	self.camera:getProjectionTransform(self.currentProjection)
+	self.camera:getViewTransform(self.currentView)
 
 	self.currentProjectionView:reset()
 	self.currentProjectionView:apply(self.currentProjection)

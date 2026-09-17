@@ -1,10 +1,13 @@
 return {
 	AmbientLight = require("rat-scratch-pipeline.AmbientLight"),
 	AnimationPipeline = require("rat-scratch-pipeline.AnimationPipeline"),
-	ArcballCamera = require("rat-scratch-pipeline.ArcballCamera"),
+	ArcballCameraView = require("rat-scratch-pipeline.ArcballCameraView"),
 	Buffer = require("rat-scratch-pipeline.Buffer"),
 	Camera = require("rat-scratch-pipeline.Camera"),
+	CameraEvent = require("rat-scratch-pipeline.CameraEvent"),
 	CameraFrame = require("rat-scratch-pipeline.CameraFrame"),
+	CameraProjection = require("rat-scratch-pipeline.CameraProjection"),
+	CameraView = require("rat-scratch-pipeline.CameraView"),
 	DirectionalLight = require("rat-scratch-pipeline.DirectionalLight"),
 	Draw = require("rat-scratch-pipeline.Draw"),
 	DrawPipeline = require("rat-scratch-pipeline.DrawPipeline"),
@@ -25,6 +28,9 @@ return {
 	),
 	ObjectHandleEvent = require("rat-scratch-pipeline.ObjectHandleEvent"),
 	ObjectPipeline = require("rat-scratch-pipeline.ObjectPipeline"),
+	PerspectiveFOVCameraProjection = require(
+		"rat-scratch-pipeline.PerspectiveFOVCameraProjection"
+	),
 	Pipelines = require("rat-scratch-pipeline.Pipelines"),
 	PipelineConfig = require("rat-scratch-pipeline.PipelineConfig"),
 	PipelineRuntime = require("rat-scratch-pipeline.PipelineRuntime"),
