@@ -76,15 +76,15 @@ function demo.load()
 
 	world:getPipeline(AnimationPipeline):loadDefaultShaders()
 
-	local ambientLight = scene:newLight(AmbientLight)
-	ambientLight:setAmbience(0.3)
-	ambientLight:setColor(GammaColor(0.85098, 0.713725, 0.556863, 1))
+	-- local ambientLight = scene:newLight(AmbientLight)
+	-- ambientLight:setAmbience(0.3)
+	-- ambientLight:setColor(GammaColor(0.85098, 0.713725, 0.556863, 1))
 
-	local directionalLight = scene:newLight(DirectionalLight)
-	directionalLight:setColor(GammaColor(0.85098, 0.326, 0.556863, 1))
+	-- local directionalLight = scene:newLight(DirectionalLight)
+	-- directionalLight:setColor(GammaColor(0.85098, 0.326, 0.556863, 1))
 
 	local pointLights = {}
-	for i = 1, 10 do
+	for i = 1, 1 do
 		local pointLightInfo = {
 			offsets = {
 				x = {},
@@ -139,10 +139,16 @@ function demo.mousepressed(x, y, button)
 end
 
 function demo.mousemoved(_, _, dx, dy)
-	if demo.isPanning then
-		local position = demo.camera:getTranslation()
-		local newPosition = position:add(Vector3(dx / 64, 0, dy / 64))
-		demo.camera:setTranslation(newPosition)
+	if demo.isPanning and not love.keyboard.isDown("lshift") then
+		if love.keyboard.isDown("q") then
+			local position = demo.camera:getTranslation()
+			local newPosition = position:add(Vector3(dx / 64, 0, dy / 64))
+			demo.camera:setTranslation(newPosition)
+		else
+			local position = demo.pointLights[1].light:getPosition()
+			local newPosition = position:add(Vector3(dx / 64, 0, dy / 64))
+			demo.pointLights[1].light:setPosition(newPosition)
+		end
 	end
 
 	if demo.isRotating then
@@ -154,7 +160,7 @@ function demo.mousemoved(_, _, dx, dy)
 		demo.camera:setRotation(yRotation:product(rotation):product(xRotation))
 	end
 
-	if demo.isElevating then
+	if demo.isElevating or love.keyboard.isDown("lshift") then
 		local position = demo.camera:getTranslation()
 		local newPosition = position:add(Vector3(0, dy / 64, 0))
 		demo.camera:setTranslation(newPosition)
@@ -172,13 +178,13 @@ function demo.mousereleased(x, y, button)
 end
 
 function demo.update()
-	demo.directionalLight:setDirection(
-		Vector3(
-			math.cos(love.timer.getTime()),
-			-4,
-			math.sin(love.timer.getTime())
-		)
-	)
+	-- demo.directionalLight:setDirection(
+	-- 	Vector3(
+	-- 		math.cos(love.timer.getTime()),
+	-- 		-4,
+	-- 		math.sin(love.timer.getTime())
+	-- 	)
+	-- )
 
 	for _, pointLightInfo in ipairs(demo.pointLights) do
 		local position = Vector3(1, 1, 1)
@@ -192,7 +198,7 @@ function demo.update()
 			end
 		end
 
-		pointLightInfo.light:setPosition(position:scale(10))
+		--pointLightInfo.light:setPosition(position:scale(10))
 	end
 
 	ResourceLoader.update()
