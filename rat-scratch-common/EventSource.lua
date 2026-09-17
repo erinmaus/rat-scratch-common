@@ -6,7 +6,7 @@ local Object = require("rat-scratch-common.Object")
 --- @alias RatScratch.Common.impl.EventSourceCallbackMeta {
 ---   callback: RatScratch.Common.EventSourceCallback,
 ---   id: integer,
----   self: any,
+---   weakSelf: { self: any },
 --- }
 
 --- @alias RatScratch.Common.impl.EventSourceCallbacks table<RatScratch.Common.EventScope, RatScratch.Common.impl.EventSourceCallbackMeta[]>
@@ -26,6 +26,7 @@ function EventSource:new(source)
 	self.currentID = 0
 	self.listeners = {}
 	self.idToCallback = {}
+	self.listenerInstances = setmetatable({}, { __mode = "k" })
 end
 
 --- @param event RatScratch.Common.Event
@@ -34,8 +35,12 @@ function EventSource:process(event)
 	if callbacks then
 		for i = #callbacks, 1, -1 do
 			local callback = callbacks[i]
-			if callback.self ~= nil then
-				callback.callback(callback.self, event, self.source or self)
+			if callback.weakSelf.self ~= nil then
+				callback.callback(
+					callback.weakSelf.self,
+					event,
+					self.source or self
+				)
 			else
 				callback.callback(event, self.source or self)
 			end
@@ -43,6 +48,11 @@ function EventSource:process(event)
 	end
 
 	Event.free(event)
+end
+
+local function _gc(self)
+	local m = getmetatable(self)
+	m.eventSource:silence(m.id)
 end
 
 --- @generic T
@@ -56,7 +66,7 @@ function EventSource:listen(scope, callback, otherSelf)
 	local c = {
 		id = self.currentID,
 		callback = callback,
-		self = otherSelf or nil,
+		weakSelf = setmetatable({ self = otherSelf or nil }, { __mode = "v" }),
 	}
 
 	local callbacks = self.listeners[scope]
@@ -67,6 +77,24 @@ function EventSource:listen(scope, callback, otherSelf)
 
 	table.insert(callbacks, 1, c)
 	self.idToCallback[self.currentID] = scope
+
+	if otherSelf then
+		local instances = self.listenerInstances[otherSelf]
+		if not instances then
+			instances = {}
+			self.listenerInstances[otherSelf] = instances
+		end
+
+		local proxy = newproxy(true)
+		do
+			local m = getmetatable(proxy)
+			m.__gc = _gc
+			m.id = self.currentID
+			m.eventSource = self
+		end
+
+		table.insert(self.listenerInstances, proxy)
+	end
 
 	return self.currentID
 end
