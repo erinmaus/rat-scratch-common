@@ -76,6 +76,7 @@ MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT = {
 
 MaterialPipeline.MATERIAL_INSTANCES_FORMAT = {
 	{ location = 0, name = "materialDefinitionIndex", format = "uint32" },
+	{ location = 1, name = "hasAlphaDiscard", format = "uint32" },
 }
 
 MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT_INTEGER_BUFFER = 1
@@ -973,8 +974,15 @@ function MaterialPipeline:_rebuildMaterialInstanceUniforms(materialInstance)
 		0
 	)
 
-	local index = self.materialToIndex[materialInstance:getMaterial()]
-	self.materialInstancesBuffer:set(materialInstance, 1, 1, index - 1)
+	local material = materialInstance:getMaterial()
+	local index = self.materialToIndex[material]
+	self.materialInstancesBuffer:set(
+		materialInstance,
+		1,
+		1,
+		index - 1,
+		material:hasFeature("discard") and 1 or 0
+	)
 
 	return self:_rebuildMaterialInstanceUniformsImpl(materialInstance)
 end
