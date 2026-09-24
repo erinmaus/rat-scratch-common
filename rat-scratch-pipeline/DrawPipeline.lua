@@ -16,24 +16,9 @@ local Transform = require("rat-scratch-math").Transform
 --- @field private compactDraws boolean
 --- @field private indirectDrawBuffer love.GraphicsBuffer
 --- @field private camerasBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>
---- @field private drawsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.ObjectHandle>
+--- @field private inputDrawsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.ObjectHandle>
 --- @overload fun(pipelineRuntime: RatScratch.Pipeline.PipelineRuntime): RatScratch.Pipeline.DrawPipeline
 local DrawPipeline = Object(Pipeline)
-
-DrawPipeline.DRAW_FORMAT = {
-	{ location = 0, name = "objectInstanceIndex", format = "uint32" },
-	{ location = 1, name = "modelInstanceIndex", format = "uint32" },
-	{ location = 2, name = "meshInstanceIndex", format = "uint32" },
-	{ location = 3, name = "modelIndex", format = "uint32" },
-	{ location = 4, name = "meshIndex", format = "uint32" },
-	{ location = 5, name = "meshletIndex", format = "uint32" },
-	{ location = 6, name = "staticBaseVertexOffset", format = "uint32" },
-	{ location = 7, name = "skinnedBaseVertexOffset", format = "uint32" },
-	{ location = 8, name = "boneOffsetCount", format = "uint32vec2" },
-	{ location = 9, name = "indexOffset", format = "uint32" },
-	{ location = 10, name = "cameraIndex", format = "uint32" },
-	{ location = 11, name = "layerIndex", format = "uint32" },
-}
 
 DrawPipeline.INDIRECT_DRAW_FORMAT = {
 	{ location = 0, name = "vertexCount", format = "uint32" },
@@ -44,6 +29,8 @@ DrawPipeline.INDIRECT_DRAW_FORMAT = {
 
 DrawPipeline.DEFAULT_CAMERA_COUNT = 64
 DrawPipeline.DEFAULT_DRAW_COUNT = 1024 * 16 * DrawPipeline.DEFAULT_CAMERA_COUNT
+DrawPipeline.DEFAULT_DRAW_OUTPUTS = DrawPipeline.DEFAULT_CAMERA_COUNT
+	* DrawPipeline.DEFAULT_CAMERA_COUNT
 
 --- @param pipelineRuntime RatScratch.Pipeline.PipelineRuntime
 function DrawPipeline:new(pipelineRuntime)
@@ -60,16 +47,34 @@ function DrawPipeline:new(pipelineRuntime)
 		{ shaderstorage = true, indirectarguments = true }
 	)
 
-	self.drawsBuffer = PipelineBuffer(
-		DrawPipeline.DRAW_FORMAT,
+	self.inputDrawsBuffer = PipelineBuffer(
+		Draw.DRAW_FORMAT,
 		{ shaderstorage = true },
 		DrawPipeline.DEFAULT_DRAW_COUNT
+	)
+
+	self.deferredDepthDrawsBuffer = love.graphics.newBuffer(
+		Draw.DRAW_FORMAT,
+		DrawPipeline.DEFAULT_DRAW_COUNT * 8,
+		{ shaderstorage = true }
+	)
+
+	self.deferredDepthDiscardDrawsBuffer = love.graphics.newBuffer(
+		Draw.DRAW_FORMAT,
+		DrawPipeline.DEFAULT_DRAW_COUNT * 8,
+		{ shaderstorage = true }
+	)
+
+	self.forwardDrawsBuffer = love.graphics.newBuffer(
+		Draw.DRAW_FORMAT,
+		DrawPipeline.DEFAULT_DRAW_COUNT * 8,
+		{ shaderstorage = true }
 	)
 end
 
 function DrawPipeline:bind(shader, qualityPreset)
 	if shader:hasUniform("rat_DrawsBuffer") then
-		shader:send("rat_DrawsBuffer", self.drawsBuffer:getBuffer())
+		shader:send("rat_DrawsBuffer", self.inputDrawsBuffer:getBuffer())
 	end
 end
 
@@ -85,7 +90,7 @@ function DrawPipeline:removeDrawable(object)
 	assert(self.drawables[object], "object is in not drawables list")
 
 	self.drawables[object] = nil
-	self.drawsBuffer:unregister(object)
+	self.inputDrawsBuffer:unregister(object)
 end
 
 --- @param object RatScratch.Pipeline.ObjectHandle
@@ -106,7 +111,7 @@ function DrawPipeline:resizeDrawable(object, meshletCount)
 		return
 	end
 
-	self.drawsBuffer:registerOrResize(object, meshletCount)
+	self.inputDrawsBuffer:registerOrResize(object, meshletCount)
 
 	local draws = self.drawableToDraws[object]
 	local data = draws and draws[1] and draws[1]:getData()
@@ -135,7 +140,7 @@ function DrawPipeline:_flushDrawable(object)
 
 	local data = draws[1]:getData()
 
-	self.drawsBuffer:copyTable(object, data, 1, #draws, 1)
+	self.inputDrawsBuffer:copyTable(object, data, 1, #draws, 1)
 end
 
 --- @private
@@ -148,7 +153,7 @@ end
 
 function DrawPipeline:flush()
 	if self.compactDrawables then
-		self.drawsBuffer:compact()
+		self.inputDrawsBuffer:compact()
 		self.compactDrawables = false
 	end
 
@@ -156,11 +161,11 @@ function DrawPipeline:flush()
 		self:_flushDrawables()
 	end
 
-	self.drawsBuffer:flush()
+	self.inputDrawsBuffer:flush()
 end
 
 function DrawPipeline:draw()
-	local _, count = self.drawsBuffer:getIndexCount()
+	local _, count = self.inputDrawsBuffer:getIndexCount()
 
 	love.graphics.drawFromShader(
 		"triangles",

@@ -1,14 +1,10 @@
 local Object = require("rat-scratch-common").Object
-local Table = require("rat-scratch-common").Table
 local AnimationPipeline = require("rat-scratch-pipeline.AnimationPipeline")
 local DrawPipeline = require("rat-scratch-pipeline.DrawPipeline")
-local LightClusterResult = require("rat-scratch-pipeline.LightClusterResult")
 local LightPipeline = require("rat-scratch-pipeline.LightPipeline")
 local MaterialPipeline = require("rat-scratch-pipeline.MaterialPipeline")
 local ModelPipeline = require("rat-scratch-pipeline.ModelPipeline")
-local ObjectHandleEvent = require("rat-scratch-pipeline.ObjectHandleEvent")
 local ObjectPipeline = require("rat-scratch-pipeline.ObjectPipeline")
-local Pipelines = require("rat-scratch-pipeline.Pipelines")
 local World = require("rat-scratch-pipeline.World")
 
 --- @class RatScratch.Pipeline.PipelineRenderer : RatScratch.Common.BaseObject
