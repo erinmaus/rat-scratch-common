@@ -42,6 +42,8 @@ struct RatScratchPipelineSkinnedMeshletBounds
 	uint bone;
 };
 
+const uint RAT_SCRATCH_PIPELINE_CAMERA_PLANE_COUNT = 6;
+
 struct RatScratchPipelineCamera
 {
 	mat4 viewTransform;
@@ -55,6 +57,7 @@ struct RatScratchPipelineCamera
 	mat4 projectionViewTransform;
 	mat4 inverseProjectionViewTransform;
 	mat4 inversePreviousProjectionViewTransform;
+	vec4 planes[RAT_SCRATCH_PIPELINE_CAMERA_PLANE_COUNT];
 };
 
 struct RatScratchPipelineDraw

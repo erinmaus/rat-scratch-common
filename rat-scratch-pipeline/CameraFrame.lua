@@ -57,6 +57,12 @@ CameraFrame.CAMERA_FORMAT = {
 		name = "inversePreviousProjectionViewTransform",
 		format = "floatmat4x4",
 	},
+	{ location = 11, name = "left", format = "floatvec4" },
+	{ location = 12, name = "right", format = "floatvec4" },
+	{ location = 13, name = "top", format = "floatvec4" },
+	{ location = 14, name = "bottom", format = "floatvec4" },
+	{ location = 15, name = "near", format = "floatvec4" },
+	{ location = 16, name = "far", format = "floatvec4" },
 }
 
 CameraFrame.CAMERA_FORMAT_INSTANCE = BufferFormat.get(CameraFrame.CAMERA_FORMAT)
@@ -101,7 +107,8 @@ function CameraFrame:_setMatrix(name, transform)
 	)
 end
 
-function CameraFrame:update()
+--- @private
+function CameraFrame:_updatePreviousCameraTransforms()
 	self.previousView:setMatrix(self.currentView:getMatrix())
 	self.previousInverseView:setMatrix(self.currentInverseView:getMatrix())
 	self.previousProjection:setMatrix(self.currentProjection:getMatrix())
@@ -114,7 +121,10 @@ function CameraFrame:update()
 	self.previousInverseProjectionView:setMatrix(
 		self.currentInverseProjectionView:getMatrix()
 	)
+end
 
+--- @private
+function CameraFrame:_updateCurrentCameraTransforms()
 	self.camera:getProjectionTransform(self.currentProjection)
 	self.camera:getViewTransform(self.currentView)
 
@@ -125,7 +135,10 @@ function CameraFrame:update()
 	self.currentInverseView:inverseOf(self.currentView)
 	self.currentInverseProjection:inverseOf(self.currentProjection)
 	self.currentInverseProjectionView:inverseOf(self.currentProjectionView)
+end
 
+--- @private
+function CameraFrame:_updateCameraData()
 	self:_setMatrix("viewTransform", self.currentView)
 	self:_setMatrix("inverseViewTransform", self.currentInverseView)
 	self:_setMatrix("previousViewTransform", self.previousView)
@@ -146,6 +159,47 @@ function CameraFrame:update()
 		"inversePreviousProjectionViewTransform",
 		self.previousInverseProjectionView
 	)
+end
+
+--- @private
+--- @param name string
+--- @param x number
+--- @param y number
+--- @param z number
+--- @param d number
+function CameraFrame:_updatePlane(name, x, y, z, d)
+	local inverseLength = 1 / math.sqrt(x ^ 2 + y ^ 2 + z ^ 2)
+	BufferFormat.setValue(
+		CameraFrame.CAMERA_FORMAT_INSTANCE,
+		self.data,
+		name,
+		0,
+		x * inverseLength,
+		y * inverseLength,
+		z * inverseLength,
+		d * inverseLength
+	)
+end
+
+--- @private
+function CameraFrame:_updatePlanesData()
+	local m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44 =
+		self.currentProjectionView:getMatrix()
+
+	self:_updatePlane("left", m41 + m11, m42 + m12, m43 + m13, m44 + m14)
+	self:_updatePlane("right", m41 - m11, m42 - m12, m43 - m13, m44 - m14)
+	self:_updatePlane("top", m41 - m21, m42 - m22, m43 - m23, m44 - m24)
+	self:_updatePlane("bottom", m41 + m21, m42 + m22, m43 + m23, m44 + m24)
+	self:_updatePlane("near", m41 + m31, m42 + m32, m43 + m33, m44 + m34)
+	self:_updatePlane("far", m41 - m31, m42 - m32, m43 - m33, m44 - m34)
+end
+
+function CameraFrame:update()
+	self:_updatePreviousCameraTransforms()
+	self:_updateCurrentCameraTransforms()
+
+	self:_updateCameraData()
+	self:_updatePlanesData()
 end
 
 function CameraFrame:getData()
