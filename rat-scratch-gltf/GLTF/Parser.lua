@@ -715,6 +715,7 @@ function GLTFParser:_tryLoadNode(
 				not not skinData or options.forceSkinning,
 				options
 			)
+		model.name = model.name or node.name
 
 		local skeleton = node.skin and skeletonDefinitions[node.skin]
 			or (skinData and self:_loadSkin(skinData))
@@ -881,7 +882,7 @@ end
 --- @return RatScratch.Graphics.Graphics3D.ModelDefinition
 function GLTFParser:_loadMesh(meshData, isSkinned, options)
 	--- @type RatScratch.Graphics.Graphics3D.ModelDefinition
-	local modelDefinition = { meshes = {} }
+	local modelDefinition = { name = meshData.name, meshes = {} }
 	local value = {}
 
 	for _, primitiveData in ipairs(meshData.primitives) do
