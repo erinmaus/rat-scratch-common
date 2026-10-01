@@ -1,8 +1,9 @@
-FILES = Main.c
+CXXFILES = CLOD.cpp
+CFILES = Main.c
 
 include ../Makefile
 
-CPPFLAGS += -I$(shell pwd)/../../lib/meshoptimizer/src -DMESHOPTIMIZER_API=RAT_SCRATCH_CALLING_CONVENTION
+CPPFLAGS += -I$(shell pwd)/../../lib/meshoptimizer/src -I$(shell pwd)/../../lib/meshoptimizer/demo -DMESHOPTIMIZER_API=RAT_SCRATCH_CALLING_CONVENTION
 LDFLAGS += $(shell pwd)/../../lib/meshoptimizer/shared/libmeshoptimizer.$(RAT_SCRATCH_SHARED_LIB_EXT)
 
 $(shell pwd)/../../lib: $(shell pwd)/../../.rsmeta
