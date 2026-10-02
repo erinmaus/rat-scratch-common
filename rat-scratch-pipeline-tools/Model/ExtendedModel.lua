@@ -375,7 +375,7 @@ function ExtendedModel:_transformIndexData(
 		vertexFormat,
 		textureData,
 		textureFormat,
-		triangleCount * 3,
+		triangleCount,
 		8
 	)
 
