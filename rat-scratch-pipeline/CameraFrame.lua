@@ -57,12 +57,7 @@ CameraFrame.CAMERA_FORMAT = {
 		name = "inversePreviousProjectionViewTransform",
 		format = "floatmat4x4",
 	},
-	{ location = 11, name = "left", format = "floatvec4" },
-	{ location = 12, name = "right", format = "floatvec4" },
-	{ location = 13, name = "top", format = "floatvec4" },
-	{ location = 14, name = "bottom", format = "floatvec4" },
-	{ location = 15, name = "near", format = "floatvec4" },
-	{ location = 16, name = "far", format = "floatvec4" },
+	{ location = 11, name = "planes", format = "floatvec4", arraylength = 6 },
 }
 
 CameraFrame.CAMERA_FORMAT_INSTANCE = BufferFormat.get(CameraFrame.CAMERA_FORMAT)

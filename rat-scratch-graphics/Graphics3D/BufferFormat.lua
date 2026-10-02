@@ -48,12 +48,14 @@ local Common = require("rat-scratch-math").Common
 --- @field public location integer
 --- @field public name RatScratch.Graphics.Graphics3D.BufferAttributeName | string
 --- @field public format RatScratch.Graphics.Graphics3D.BufferAttributeFormat | string
+--- @field public arraylength integer
 local BufferFormatAttribute = {}
 
 --- @class RatScratch.Graphics.Graphics3D.InputBufferFormatAttribute
 --- @field public location? integer
 --- @field public name RatScratch.Graphics.Graphics3D.BufferAttributeName | string
 --- @field public format RatScratch.Graphics.Graphics3D.BufferAttributeFormat | string
+--- @field public arraylength? integer
 local InputBufferFormatAttribute = {}
 
 --- @class RatScratch.Graphics.Graphics3D.BufferFormat : RatScratch.Common.BaseObject
@@ -334,7 +336,7 @@ function BufferFormat.getFormatComponentCount(format)
 			attribute.format
 		)
 
-		count = count + componentCount
+		count = count + componentCount * (attribute.arraylength or 1)
 	end
 
 	return count
@@ -350,7 +352,9 @@ function BufferFormat.getFormatStride(format, packed)
 
 	for i, attribute in ipairs(format) do
 		local componentCount = ATTRIBUTE_COMPONENTS[attribute.format]
-		totalComponentCount = totalComponentCount + componentCount
+		local arrayLength = attribute.arraylength or 1
+		local effectiveCount = componentCount * arrayLength
+		totalComponentCount = totalComponentCount + effectiveCount
 
 		local componentSize = BufferFormat.getScalarSize(
 			BufferFormat.getFormatScalar(attribute.format)
@@ -367,13 +371,13 @@ function BufferFormat.getFormatStride(format, packed)
 		if not packed then
 			local adjustedComponentCount
 			if
-				not Common.isMultipleOf(componentCount, 4)
-				and not Common.isMultipleOf(componentCount, 2)
-				and componentCount ~= 1
+				not Common.isMultipleOf(effectiveCount, 4)
+				and not Common.isMultipleOf(effectiveCount, 2)
+				and effectiveCount ~= 1
 			then
 				adjustedComponentCount = 4
 			else
-				adjustedComponentCount = math.min(componentCount, 4)
+				adjustedComponentCount = math.min(effectiveCount, 4)
 			end
 
 			local alignmentBytes = adjustedComponentCount * componentSize
@@ -389,7 +393,7 @@ function BufferFormat.getFormatStride(format, packed)
 			largestAlignment = math.max(largestAlignment, alignmentBytes)
 		end
 
-		stride = stride + componentCount * componentSize
+		stride = stride + effectiveCount * componentSize
 	end
 
 	if
@@ -418,6 +422,9 @@ function BufferFormat.getFormatByteOffset(format, attributeName, packed)
 			attribute.format
 		)
 
+		local arrayLength = attribute.arraylength or 1
+		local effectiveCount = componentCount * arrayLength
+
 		local componentSize = BufferFormat.getScalarSize(
 			BufferFormat.getFormatScalar(attribute.format)
 		)
@@ -425,13 +432,13 @@ function BufferFormat.getFormatByteOffset(format, attributeName, packed)
 		if not packed then
 			local adjustedComponentCount
 			if
-				not Common.isMultipleOf(componentCount, 4)
-				and not Common.isMultipleOf(componentCount, 2)
-				and componentCount ~= 1
+				not Common.isMultipleOf(effectiveCount, 4)
+				and not Common.isMultipleOf(effectiveCount, 2)
+				and effectiveCount ~= 1
 			then
 				adjustedComponentCount = 4
 			else
-				adjustedComponentCount = math.min(componentCount, 4)
+				adjustedComponentCount = math.min(effectiveCount, 4)
 			end
 
 			local alignmentBytes = adjustedComponentCount * componentSize
@@ -449,7 +456,7 @@ function BufferFormat.getFormatByteOffset(format, attributeName, packed)
 			return byteIndex
 		end
 
-		byteIndex = byteIndex + componentCount * componentSize
+		byteIndex = byteIndex + effectiveCount * componentSize
 	end
 
 	return nil
@@ -461,13 +468,15 @@ end
 function BufferFormat.getFormatAttributeCountOffset(format, attributeName)
 	local index = 0
 	for _, attribute in ipairs(format) do
-		local count = ATTRIBUTE_COMPONENTS[attribute.format]
+		local componentCount = ATTRIBUTE_COMPONENTS[attribute.format]
 		assert(
-			count,
+			componentCount,
 			"attribute format not valid for %s: %s",
 			attribute.name,
 			attribute.format
 		)
+
+		local count = componentCount * (attribute.arraylength or 1)
 
 		if attribute.name == attributeName then
 			return count, index + 1
@@ -487,11 +496,19 @@ function BufferFormat.getFormatVertexAttributeValues(
 )
 	local defaultValues = ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES[attributeName]
 		or DEFAULT_MISSING_COMPONENT_VALUES
-	local dx, dy, dz, dw = Table.unpack(defaultValues)
+	local baseCount = #defaultValues
 
-	local x, y, z, w = Table.unpack(vertex, offset, offset + count)
-
-	return x or dx, y or dy, z or dz, w or dw
+	-- todo: fix this later, just a hack to get it working
+	local result = Table.new(count, 0)
+	for i = 1, count do
+		local value = vertex[offset + i - 1]
+		if value then
+			result[i] = value
+		else
+			result[i] = defaultValues[((i - 1) % baseCount) + 1] or 0
+		end
+	end
+	return Table.unpack(result)
 end
 
 local FORMAT_POOL = setmetatable({}, { __mode = "k" })
@@ -835,6 +852,7 @@ local function _preprocessAttributeFormat(formatInstance)
 		local f = {}
 
 		f[1], f[2] = formatInstance:getCountOffset(attribute.location)
+		f[1] = f[1] * formatInstance:getAttributeArrayLength(attribute.location)
 		f[3] = formatInstance:getByteOffset(attribute.location)
 		f[4] = GET_FUNCS[formatInstance:getScalarType(attribute.location)]
 		f[5] = SET_FUNCS[formatInstance:getScalarType(attribute.location)]
@@ -882,7 +900,6 @@ function BufferFormat.copyFromFlatTableToByteData(
 			local set = info[5]
 
 			local i = k + (attributeOffset - 1)
-
 			set(
 				pointer,
 				(offset - 1) * stride + byteOffset + destinationOffset,
@@ -1060,6 +1077,7 @@ function BufferFormat:new(format, packed)
 				),
 			name = attribute.name,
 			format = attribute.format,
+			arraylength = attribute.arraylength or 1,
 		}
 
 		assert(
@@ -1106,7 +1124,17 @@ function BufferFormat:new(format, packed)
 
 		local defaultValues =
 			ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES[remappedAttribute.name]
-		if not defaultValues then
+		if defaultValues and remappedAttribute.arraylength > 1 then
+			local baseCount = #defaultValues
+			local repeated =
+				Table.new(baseCount * remappedAttribute.arraylength, 0)
+			for i = 1, remappedAttribute.arraylength do
+				for j = 1, baseCount do
+					repeated[(i - 1) * baseCount + j] = defaultValues[j]
+				end
+			end
+			defaultValues = repeated
+		elseif not defaultValues then
 			defaultValues = Table.new(count, 0)
 			for i = 1, count do
 				defaultValues[i] = 0
@@ -1121,6 +1149,7 @@ function BufferFormat:new(format, packed)
 			shaderType = BufferFormat.getFormatShaderType(
 				remappedAttribute.format
 			),
+			arraylength = remappedAttribute.arraylength,
 			count = count,
 			offset = offset,
 			byteOffset = byteOffset,
@@ -1145,12 +1174,13 @@ function BufferFormat:getAttributeCount()
 end
 
 --- @param index integer
---- @return integer, string | RatScratch.Graphics.Graphics3D.MeshVertexAttributeName, string | RatScratch.Graphics.Graphics3D.MeshVertexAttributeFormat
+--- @return integer, string | RatScratch.Graphics.Graphics3D.MeshVertexAttributeName, string | RatScratch.Graphics.Graphics3D.MeshVertexAttributeFormat, integer
 function BufferFormat:getAttribute(index)
 	local attribute = self.format[index]
 	return attribute and attribute.location,
 		attribute and attribute.name,
-		attribute and attribute.format
+		attribute and attribute.format,
+		attribute and attribute.arraylength
 end
 
 function BufferFormat:getFormat()
@@ -1209,6 +1239,19 @@ function BufferFormat:getAttributeFormat(key)
 	)
 
 	return attributeInfo.format
+end
+
+--- @param key string | integer
+--- @return integer
+function BufferFormat:getAttributeArrayLength(key)
+	local attributeInfo = self.attributeInfo[self.index[key]]
+	assert(
+		attributeInfo,
+		"attribute location/name '%s' not valid for format",
+		key
+	)
+
+	return attributeInfo.arraylength
 end
 
 --- @param key string | integer
@@ -1335,15 +1378,19 @@ function BufferFormat:extend(other)
 	local result = {}
 
 	for _, attribute in ipairs(self.format) do
-		local format
+		local format = attribute.format
+		local arraylength = attribute.arraylength
+
 		if other:hasAttribute(attribute.location, attribute.name) then
 			local selfComponentCount = self:getCountOffset(attribute.location)
 			local otherComponentCount = other:getCountOffset(attribute.location)
 
 			if selfComponentCount > otherComponentCount then
 				format = attribute.format
+				arraylength = attribute.arraylength
 			else
 				format = other:getAttributeFormat(attribute.location)
+				arraylength = other:getAttributeArrayLength(attribute.location)
 			end
 		end
 
@@ -1351,6 +1398,7 @@ function BufferFormat:extend(other)
 			location = attribute.location,
 			name = attribute.name,
 			format = format,
+			arraylength = arraylength,
 		})
 	end
 
@@ -1360,6 +1408,7 @@ function BufferFormat:extend(other)
 				location = attribute.location,
 				name = attribute.name,
 				format = attribute.format,
+				arraylength = attribute.arraylength,
 			})
 		end
 	end
@@ -1387,6 +1436,7 @@ function BufferFormat:isMatch(other)
 				selfAttribute.location == otherAttribute.location
 				and selfAttribute.name == otherAttribute.name
 				and selfAttribute.format == otherAttribute.format
+				and selfAttribute.arraylength == otherAttribute.arraylength
 			)
 		then
 			return false
