@@ -25,9 +25,9 @@ restrict readonly buffer rat_MeshesBuffer
 	RatScratchPipelineMesh rat_Meshes[];
 };
 
-restrict readonly buffer rat_MeshClusterGroupsBuffer
+restrict readonly buffer rat_MeshClustersBuffer
 {
-	RatScratchPipelineMeshClusterGroup rat_MeshClusterGroups[];
+	RatScratchPipelineMeshCluster rat_MeshClusters[];
 };
 
 restrict readonly buffer rat_MeshClusterGroupsBuffer
