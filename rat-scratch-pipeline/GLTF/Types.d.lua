@@ -14,8 +14,8 @@ local RATPipelineExtra = {}
 local RATMeshMeshletPrimitive = {}
 
 --- @class RatScratch.Pipeline.GLTF.RAT_mesh_primitive_cluster
---- @field public meshlets integer
---- @field public meshletCount integer
+--- @field public clusters integer
+--- @field public clusterCount integer
 --- @field public groups integer
 --- @field public groupCount integer
 --- @field public nodes integer

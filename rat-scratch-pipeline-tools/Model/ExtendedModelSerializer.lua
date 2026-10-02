@@ -337,7 +337,7 @@ function ExtendedModelSerializer:_buildClusterMeshletData(
 		clusterMeshletsData
 	)
 
-	clusterExtra.meshlets = builder:addWorkingBufferView({
+	clusterExtra.clusters = builder:addWorkingBufferView({
 		data = clusterMeshletsData,
 	})
 end
@@ -386,12 +386,21 @@ function ExtendedModelSerializer:_buildClusterGroupData(
 		BufferFormat.setValue(
 			clusterGroupFormatInstance,
 			clusterGroups,
+			"lodDepth",
+			offset,
+			group.depth
+		)
+
+		BufferFormat.setValue(
+			clusterGroupFormatInstance,
+			clusterGroups,
 			"clusterIndexCount",
 			offset,
 			group.clusterIndex,
 			group.clusterCount
 		)
 	end
+
 	local clusterGroupsData = love.data.newByteData(
 		extendedMesh:getClusterGroupCount()
 			* clusterGroupFormatInstance:getStride()
@@ -404,6 +413,7 @@ function ExtendedModelSerializer:_buildClusterGroupData(
 		clusterGroups,
 		clusterGroupsData
 	)
+
 	clusterExtra.groups = builder:addWorkingBufferView({
 		data = clusterGroupsData,
 	})
@@ -462,6 +472,7 @@ function ExtendedModelSerializer:_buildClusterNodeData(
 			node.childCount
 		)
 	end
+
 	local clusterNodesData = love.data.newByteData(
 		extendedMesh:getClusterNodeCount()
 			* clusterNodeFormatInstance:getStride()
@@ -474,6 +485,7 @@ function ExtendedModelSerializer:_buildClusterNodeData(
 		clusterNodes,
 		clusterNodesData
 	)
+
 	clusterExtra.nodes = builder:addWorkingBufferView({
 		data = clusterNodesData,
 	})
@@ -515,8 +527,8 @@ function ExtendedModelSerializer:_serializeModel(builder, node)
 				data = extendedMesh:getIndexBufferData(),
 			}),
 			cluster = {
-				meshlets = -1,
-				meshletCount = tonumber(extendedMesh:getMeshletCount()) or 0,
+				clusters = -1,
+				clusterCount = tonumber(extendedMesh:getMeshletCount()) or 0,
 				groups = -1,
 				groupCount = tonumber(extendedMesh:getClusterGroupCount()) or 0,
 				nodes = -1,
