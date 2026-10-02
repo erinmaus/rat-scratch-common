@@ -684,10 +684,7 @@ end
 
 --- @private
 function World:_updateObjectHandleDraws()
-	local c = 0
 	for objectHandle in pairs(self.dirtyObjectHandleDraws) do
-		c = c + 1
-		print("update...", c)
 		self:_updateObjectHandleDraw(objectHandle)
 		self.dirtyObjectHandleDraws[objectHandle] = nil
 	end
