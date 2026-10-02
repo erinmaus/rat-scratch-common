@@ -1075,6 +1075,8 @@ function BufferFormat:new(format, packed)
 	self.attributeInfo = Table.new(#format, 0)
 
 	for i, attribute in ipairs(format) do
+		-- We don't include 'arraylength' right now since LOVE 12
+		-- doesn't allow creating SSBOs with that set.
 		local remappedAttribute = {
 			location = attribute.location
 				or BufferFormat.getFormatAttributeLocationFromName(
@@ -1082,8 +1084,9 @@ function BufferFormat:new(format, packed)
 				),
 			name = attribute.name,
 			format = attribute.format,
-			arraylength = attribute.arraylength or 1,
 		}
+
+		local arrayLength = attribute.arraylength or 1
 
 		assert(
 			remappedAttribute.location,
@@ -1129,11 +1132,10 @@ function BufferFormat:new(format, packed)
 
 		local defaultValues =
 			ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES[remappedAttribute.name]
-		if defaultValues and remappedAttribute.arraylength > 1 then
+		if defaultValues and arrayLength > 1 then
 			local baseCount = #defaultValues
-			local repeated =
-				Table.new(baseCount * remappedAttribute.arraylength, 0)
-			for i = 1, remappedAttribute.arraylength do
+			local repeated = Table.new(baseCount * arrayLength, 0)
+			for i = 1, arrayLength do
 				for j = 1, baseCount do
 					repeated[(i - 1) * baseCount + j] = defaultValues[j]
 				end
@@ -1154,7 +1156,7 @@ function BufferFormat:new(format, packed)
 			shaderType = BufferFormat.getFormatShaderType(
 				remappedAttribute.format
 			),
-			arraylength = remappedAttribute.arraylength,
+			arrayLength = arrayLength,
 			count = count,
 			offset = offset,
 			byteOffset = byteOffset,
@@ -1256,7 +1258,7 @@ function BufferFormat:getAttributeArrayLength(key)
 		key
 	)
 
-	return attributeInfo.arraylength
+	return attributeInfo.arrayLength
 end
 
 --- @param key string | integer
@@ -1441,7 +1443,6 @@ function BufferFormat:isMatch(other)
 				selfAttribute.location == otherAttribute.location
 				and selfAttribute.name == otherAttribute.name
 				and selfAttribute.format == otherAttribute.format
-				and selfAttribute.arraylength == otherAttribute.arraylength
 			)
 		then
 			return false

@@ -31,7 +31,7 @@ struct RatScratchPipelineMesh
 
 struct RatScratchPipelineMeshCluster
 {
-	vec4 bounds; // xyz = position, w = radius
+	vec4 boundsPositionRadius;
 	float error;
 	uint refinedIndex;
 	uvec2 indexOffsetCount;
@@ -39,16 +39,16 @@ struct RatScratchPipelineMeshCluster
 
 struct RatScratchPipelineMeshClusterGroup
 {
-	vec4 bounds; // xyz = position, w = radius
+	vec4 boundsPositionRadius;
 	float error;
 	uvec2 clusterIndexCount;
 };
 
 struct RatScratchPipelineMeshClusterNode
 {
-	vec4 bounds; // xyz = position, w = radius
+	vec4 boundsPositionRadius;
 	float error;
-	uint group;
+	uint groupIndex;
 	uvec2 childIndexCount;
 };
 
