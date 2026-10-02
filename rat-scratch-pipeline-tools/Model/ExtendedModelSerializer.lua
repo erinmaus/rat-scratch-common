@@ -329,7 +329,7 @@ function ExtendedModelSerializer:_buildClusterMeshletData(
 			* clusterMeshletFormatInstance:getStride()
 	)
 	BufferFormat.copyFromFlatTableToByteData(
-		clusterMeshlets,
+		clusterMeshletFormatInstance,
 		1,
 		0,
 		extendedMesh:getMeshletCount(),
@@ -397,7 +397,7 @@ function ExtendedModelSerializer:_buildClusterGroupData(
 			* clusterGroupFormatInstance:getStride()
 	)
 	BufferFormat.copyFromFlatTableToByteData(
-		clusterGroups,
+		clusterGroupFormatInstance,
 		1,
 		0,
 		extendedMesh:getClusterGroupCount(),
@@ -467,7 +467,7 @@ function ExtendedModelSerializer:_buildClusterNodeData(
 			* clusterNodeFormatInstance:getStride()
 	)
 	BufferFormat.copyFromFlatTableToByteData(
-		clusterNodes,
+		clusterNodeFormatInstance,
 		1,
 		0,
 		extendedMesh:getClusterNodeCount(),
@@ -516,12 +516,14 @@ function ExtendedModelSerializer:_serializeModel(builder, node)
 			}),
 			cluster = {
 				meshlets = -1,
-				meshletCount = extendedMesh:getMeshletCount(),
+				meshletCount = tonumber(extendedMesh:getMeshletCount()) or 0,
 				groups = -1,
-				groupCount = extendedMesh:getClusterGroupCount(),
+				groupCount = tonumber(extendedMesh:getClusterGroupCount()) or 0,
 				nodes = -1,
-				nodeCount = extendedMesh:getClusterNodeCount(),
-				rootNodeCount = extendedMesh:getClusterRootNodeCount(),
+				nodeCount = tonumber(extendedMesh:getClusterNodeCount()) or 0,
+				rootNodeCount = tonumber(
+					extendedMesh:getClusterRootNodeCount()
+				) or 0,
 			},
 		}
 

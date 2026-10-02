@@ -110,8 +110,9 @@ function MeshOptimizerFFI.buildClusters(
 		clodResult
 	)
 
-	local newIndexData =
-		love.data.newByteData(clodResult.indexCount * ffi.sizeof("uint32_t"))
+	local newIndexData = love.data.newByteData(
+		tonumber(clodResult.indexCount) * ffi.sizeof("uint32_t")
+	)
 	ffi.copy(
 		newIndexData:getFFIPointer(),
 		clodResult.indices,
@@ -121,8 +122,8 @@ function MeshOptimizerFFI.buildClusters(
 	--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Cluster[]
 	local clusters = {}
 
-	for i = 1, tonumber(ratMeshoptimizer.clusterCount) do
-		local inputCluster = ratMeshoptimizer.clusters[i - 1]
+	for i = 1, tonumber(clodResult.clusterCount) do
+		local inputCluster = clodResult.clusters[i - 1]
 
 		--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Cluster
 		local outputCluster = {
@@ -147,8 +148,8 @@ function MeshOptimizerFFI.buildClusters(
 	--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Group[]
 	local groups = {}
 
-	for i = 1, tonumber(ratMeshoptimizer.groupCount) do
-		local inputGroup = ratMeshoptimizer.groups[i - 1]
+	for i = 1, tonumber(clodResult.groupCount) do
+		local inputGroup = clodResult.groups[i - 1]
 
 		--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Group
 		local outputGroup = {
@@ -172,8 +173,8 @@ function MeshOptimizerFFI.buildClusters(
 	local nodes = {}
 	local rootNodeCount = clodResult.rootNodeCount
 
-	for i = 1, tonumber(ratMeshoptimizer.nodeCount) do
-		local inputNode = ratMeshoptimizer.nodes[i - 1]
+	for i = 1, tonumber(clodResult.nodeCount) do
+		local inputNode = clodResult.nodes[i - 1]
 
 		--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Node
 		local outputNode = {

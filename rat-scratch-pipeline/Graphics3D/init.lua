@@ -1,4 +1,5 @@
 return {
+	PipelineLOD = require("rat-scratch-pipeline.Graphics3D.PipelineLOD"),
 	PipelineMaterial = require(
 		"rat-scratch-pipeline.Graphics3D.PipelineMaterial"
 	),
