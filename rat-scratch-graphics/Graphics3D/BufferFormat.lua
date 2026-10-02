@@ -488,29 +488,6 @@ function BufferFormat.getFormatAttributeCountOffset(format, attributeName)
 	return nil, nil
 end
 
-function BufferFormat.getFormatVertexAttributeValues(
-	count,
-	offset,
-	attributeName,
-	vertex
-)
-	local defaultValues = ATTRIBUTE_NAME_DEFAULT_COMPONENT_VALUES[attributeName]
-		or DEFAULT_MISSING_COMPONENT_VALUES
-	local baseCount = #defaultValues
-
-	-- todo: fix this later, just a hack to get it working
-	local result = Table.new(count, 0)
-	for i = 1, count do
-		local value = vertex[offset + i - 1]
-		if value then
-			result[i] = value
-		else
-			result[i] = defaultValues[((i - 1) % baseCount) + 1] or 0
-		end
-	end
-	return Table.unpack(result)
-end
-
 local FORMAT_POOL = setmetatable({}, { __mode = "k" })
 
 --- @param format RatScratch.Graphics.Graphics3D.InputBufferFormatAttribute[]
@@ -578,6 +555,34 @@ function BufferFormat.setValue(format, vertex, attribute, offset, ...)
 	local c, o = formatInstance:getCountOffset(attribute)
 	local i = o + offset
 	local j = o + c + offset - 1
+	Table.copy(vertex, i, j, ...)
+end
+
+--- @param format RatScratch.Graphics.Graphics3D.MeshFormatAttribute[] | RatScratch.Graphics.Graphics3D.BufferFormat
+--- @param vertex number[]
+--- @param attribute number | string
+--- @param count? integer
+--- @param index? integer
+--- @param offset? integer
+--- @param ... number
+function BufferFormat.setArrayValue(
+	format,
+	vertex,
+	attribute,
+	count,
+	index,
+	offset,
+	...
+)
+	local formatInstance = Object.isDerived(
+		Object.getType(format),
+		BufferFormat
+	) and format or BufferFormat.get(format)
+	offset = offset or 0
+
+	local c, o = formatInstance:getCountOffset(attribute)
+	local i = o + c * ((index or 1) - 1) + offset
+	local j = i + c * (count or 1) - 1
 	Table.copy(vertex, i, j, ...)
 end
 

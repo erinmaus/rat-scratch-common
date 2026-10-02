@@ -1,5 +1,4 @@
 local Object = require("rat-scratch-common").Object
-local assert = require("rat-scratch-common").Debug.assert
 local CameraEvent = require("rat-scratch-pipeline.CameraEvent")
 local Transform = require("rat-scratch-math.Transform")
 

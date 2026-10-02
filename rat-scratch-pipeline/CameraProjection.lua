@@ -2,6 +2,8 @@ local Object = require("rat-scratch-common").Object
 local CameraEvent = require("rat-scratch-pipeline.CameraEvent")
 local EventSource = require("rat-scratch-common.EventSource")
 
+--- @alias RatScratch.Pipeline.CameraProjectionType "orthographic" | "perspective"
+
 --- @class RatScratch.Pipeline.CameraProjection : RatScratch.Common.BaseObject
 --- @field private eventSource RatScratch.Common.EventSource<RatScratch.Pipeline.CameraProjection>
 --- @overload fun(): RatScratch.Pipeline.CameraProjection
@@ -22,6 +24,11 @@ CameraProjection.listen, CameraProjection.silence =
 --- @param transform? love.Transform
 --- @return love.Transform
 function CameraProjection:getProjection(transform)
+	return self:ABSTRACT()
+end
+
+--- @return RatScratch.Pipeline.CameraProjectionType
+function CameraProjection:getProjectionType()
 	return self:ABSTRACT()
 end
 

@@ -4,7 +4,7 @@ local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local Transform = require("rat-scratch-math").Transform
 
 --- @class RatScratch.Pipeline.CameraFrame : RatScratch.Common.BaseObject
---- @field private camera RatScratch.Pipeline.Camera
+--- @field private camera RatScratch.Pipeline.Camera<RatScratch.Pipeline.CameraProjection, RatScratch.Pipeline.CameraView>
 --- @field private data number[]
 --- @field private currentView love.Transform
 --- @field private currentInverseView love.Transform
@@ -58,6 +58,25 @@ CameraFrame.CAMERA_FORMAT = {
 		format = "floatmat4x4",
 	},
 	{ location = 11, name = "planes", format = "floatvec4", arraylength = 6 },
+	{ location = 12, name = "projectionType", format = "uint32" },
+}
+
+CameraFrame.PLANE_INDICES = {
+	left = 1,
+	right = 2,
+	top = 3,
+	bottom = 4,
+	near = 5,
+	far = 6,
+}
+
+CameraFrame.PROJECTION_TYPE_NONE = 0
+CameraFrame.PROJECTION_TYPE_PERSPECTIVE = 1
+CameraFrame.PROJECTION_TYPE_ORTHOGRAPHIC = 2
+
+CameraFrame.PROJECTION_TYPE = {
+	orthographic = CameraFrame.PROJECTION_TYPE_ORTHOGRAPHIC,
+	perspective = CameraFrame.PROJECTION_TYPE_PERSPECTIVE,
 }
 
 CameraFrame.CAMERA_FORMAT_INSTANCE = BufferFormat.get(CameraFrame.CAMERA_FORMAT)
@@ -164,10 +183,12 @@ end
 --- @param d number
 function CameraFrame:_updatePlane(name, x, y, z, d)
 	local inverseLength = 1 / math.sqrt(x ^ 2 + y ^ 2 + z ^ 2)
-	BufferFormat.setValue(
+	BufferFormat.setArrayValue(
 		CameraFrame.CAMERA_FORMAT_INSTANCE,
 		self.data,
 		name,
+		1,
+		CameraFrame.PLANE_INDICES[name],
 		0,
 		x * inverseLength,
 		y * inverseLength,
@@ -189,11 +210,25 @@ function CameraFrame:_updatePlanesData()
 	self:_updatePlane("far", m41 - m31, m42 - m32, m43 - m33, m44 - m34)
 end
 
+--- @private
+function CameraFrame:_updateCameraMetadata()
+	BufferFormat.setValue(
+		CameraFrame.CAMERA_FORMAT_INSTANCE,
+		self.data,
+		"projectionType",
+		0,
+		CameraFrame.PROJECTION_TYPE[self.camera
+			:getProjection()
+			:getProjectionType()]
+	)
+end
+
 function CameraFrame:update()
 	self:_updatePreviousCameraTransforms()
 	self:_updateCurrentCameraTransforms()
 
 	self:_updateCameraData()
+	self:_updateCameraMetadata()
 	self:_updatePlanesData()
 end
 

@@ -81,4 +81,8 @@ function PerspectiveFOVCameraProjection:getProjection(transform)
 	)
 end
 
+function PerspectiveFOVCameraProjection:getProjectionType()
+	return "perspective"
+end
+
 return PerspectiveFOVCameraProjection
