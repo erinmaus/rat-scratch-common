@@ -15,6 +15,8 @@ local ImplBuffer = {}
 --- @field private indexBuffer RatScratch.Pipeline.ExtendedMesh.impl.Buffer<RatScratch.Pipeline.IndexBufferInfo>
 --- @field private attributeToVertexBuffer table<string, integer>
 --- @field private meshlets RatScratch.Pipeline.ExtendedMeshMeshlet[]
+--- @field private groups RatScratch.Pipeline.impl.MeshOptimizerFFI.Group[]
+--- @field private nodes RatScratch.Pipeline.impl.MeshOptimizerFFI.Node[]
 local ExtendedMesh = Object()
 
 --- @param vertexCount? integer
@@ -25,6 +27,8 @@ function ExtendedMesh:new(vertexCount, indexCount)
 	self.vertexBuffers = {}
 	self.attributeToVertexBuffer = {}
 	self.meshlets = {}
+	self.groups = {}
+	self.nodes = {}
 end
 
 function ExtendedMesh:getVertexCount()
@@ -71,12 +75,51 @@ function ExtendedMesh:getMeshletCount()
 	return #self.meshlets
 end
 
+--- @param index integer
 function ExtendedMesh:getMeshlet(index)
 	return self.meshlets[index]
 end
 
+--- @param meshlet RatScratch.Pipeline.ExtendedMeshMeshlet
 function ExtendedMesh:addMeshlet(meshlet)
 	table.insert(self.meshlets, meshlet)
+end
+
+function ExtendedMesh:getClusterGroupCount()
+	return #self.groups
+end
+
+--- @param index integer
+function ExtendedMesh:getClusterGroup(index)
+	return self.groups[index]
+end
+
+function ExtendedMesh:getClusterNodeCount()
+	return #self.nodes
+end
+
+--- @param index integer
+function ExtendedMesh:getClusterNode(index)
+	return self.nodes[index]
+end
+
+--- @param group RatScratch.Pipeline.impl.MeshOptimizerFFI.Group
+function ExtendedMesh:addClusterGroup(group)
+	table.insert(self.groups, group)
+end
+
+--- @param node RatScratch.Pipeline.impl.MeshOptimizerFFI.Node
+function ExtendedMesh:addClusterNode(node)
+	table.insert(self.nodes, node)
+end
+
+function ExtendedMesh:getClusterRootNodeCount()
+	return self.rootNodeCount
+end
+
+--- @param value integer
+function ExtendedMesh:setClusterRootNodeCount(value)
+	self.rootNodeCount = value
 end
 
 function ExtendedMesh:getIsSkinned()

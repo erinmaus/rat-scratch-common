@@ -29,6 +29,29 @@ struct RatScratchPipelineMesh
 	uint skinnedBaseVertexOffset;
 };
 
+struct RatScratchPipelineMeshCluster
+{
+	vec4 bounds; // xyz = position, w = radius
+	float error;
+	uint refinedIndex;
+	uvec2 indexOffsetCount;
+};
+
+struct RatScratchPipelineMeshClusterGroup
+{
+	vec4 bounds; // xyz = position, w = radius
+	float error;
+	uvec2 clusterIndexCount;
+};
+
+struct RatScratchPipelineMeshClusterNode
+{
+	vec4 bounds; // xyz = position, w = radius
+	float error;
+	uint group;
+	uvec2 childIndexCount;
+};
+
 struct RatScratchPipelineMeshlet
 {
 	vec4 staticCenterRadius;

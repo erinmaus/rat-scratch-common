@@ -3,6 +3,8 @@ local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
 local SkinnedModel = require("rat-scratch-graphics").Graphics3D.SkinnedModel
 local Scene = require("rat-scratch-graphics").Graphics3D.Scene
+local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
+local PipelineLOD = require("rat-scratch-pipeline.Graphics3D.PipelineLOD")
 local RatScratchModule = require("lib.rat-scratch-module")
 
 --- @class RatScratch.Pipeline.ExtendedModelSerializer : RatScratch.Common.BaseObject
@@ -277,6 +279,15 @@ function ExtendedModelSerializer:_serializeModel(builder, node)
 			indices = builder:addWorkingBufferView({
 				data = extendedMesh:getIndexBufferData(),
 			}),
+			cluster = {
+				meshlets = -1,
+				meshletCount = extendedMesh:getMeshletCount(),
+				groups = -1,
+				groupCount = extendedMesh:getClusterGroupCount(),
+				nodes = -1,
+				nodeCount = extendedMesh:getClusterNodeCount(),
+				rootNodeCount = extendedMesh:getClusterRootNodeCount(),
+			},
 		}
 
 		for j = 1, extendedMesh:getVertexAttributeBufferCount() do
@@ -293,7 +304,7 @@ function ExtendedModelSerializer:_serializeModel(builder, node)
 		end
 
 		for j = 1, extendedMesh:getMeshletCount() do
-			local extendedMeshMeshlet = extendedMesh:getMeshlet(i)
+			local extendedMeshMeshlet = extendedMesh:getMeshlet(j)
 
 			local indexBufferViewIndex = builder:addWorkingBufferView({
 				data = extendedMeshMeshlet:getIndexData(),
@@ -311,6 +322,64 @@ function ExtendedModelSerializer:_serializeModel(builder, node)
 
 			table.insert(primitiveExtras.meshlets, meshlet)
 		end
+
+		local clusterGroups = {}
+		local clusterGroupFormatInstance =
+			BufferFormat.get(PipelineLOD.GROUP_FORMAT)
+		for j = 1, extendedMesh:getClusterGroupCount() do
+			local group = extendedMesh:getClusterGroup(j)
+			local offset = (j - 1)
+				* clusterGroupFormatInstance:getComponentCount()
+
+			BufferFormat.resetValue(
+				clusterGroupFormatInstance,
+				clusterGroups,
+				offset
+			)
+
+			BufferFormat.setValue(
+				clusterGroupFormatInstance,
+				clusterGroups,
+				"boundsPositionRadius",
+				offset,
+				group.bounds.position.x,
+				group.bounds.position.y,
+				group.bounds.position.z,
+				group.bounds.radius
+			)
+
+			BufferFormat.setValue(
+				clusterGroupFormatInstance,
+				clusterGroups,
+				"error",
+				offset,
+				group.error
+			)
+
+			BufferFormat.setValue(
+				clusterGroupFormatInstance,
+				clusterGroups,
+				"clusterIndexCount",
+				offset,
+				group.clusterIndex,
+				group.clusterCount
+			)
+		end
+		local clusterGroupsData = love.data.newByteData(
+			extendedMesh:getClusterGroupCount()
+				* clusterGroupFormatInstance:getStride()
+		)
+		BufferFormat.copyFromFlatTableToByteData(
+			clusterGroups,
+			1,
+			0,
+			extendedMesh:getClusterGroupCount(),
+			clusterGroups,
+			clusterGroupsData
+		)
+		primitiveExtras.cluster.groups = builder:addWorkingBufferView({
+			data = clusterGroupsData,
+		})
 
 		if
 			self.model and Object.isDerived(self.model:getType(), SkinnedModel)

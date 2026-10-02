@@ -30,6 +30,7 @@ local SerializedExtendedMeshMeshlet = {}
 --- @field private primaryBone integer
 --- @field private staticBoundsPosition RatScratch.Math.Vector3
 --- @field private staticBoundsRadius number
+--- @field private error number
 local ExtendedMeshMeshlet = Object()
 
 --- @param indexData love.ByteData
@@ -42,6 +43,7 @@ function ExtendedMeshMeshlet:new(indexData)
 	self.primaryBone = 0
 	self.staticBoundsPosition = Vector3()
 	self.staticBoundsRadius = 0
+	self.error = 0
 end
 
 --- @return RatScratch.Pipeline.SerializedExtendedMeshMeshlet
@@ -74,6 +76,15 @@ function ExtendedMeshMeshlet:setStaticBounds(position, radius)
 	self.staticBoundsRadius = radius
 end
 
+function ExtendedMeshMeshlet:getError()
+	return self.error
+end
+
+--- @param value number
+function ExtendedMeshMeshlet:setError(value)
+	self.error = value
+end
+
 function ExtendedMeshMeshlet:getIndexData()
 	return self.indexData
 end
@@ -104,7 +115,7 @@ function ExtendedMeshMeshlet:getIsSkinned()
 end
 
 --- @param pipelineConfig RatScratch.Pipeline.PipelineConfig
---- @param indexData love.ByteData
+--- @param indexData love.Data
 --- @param meshDefinition RatScratch.Graphics.Graphics3D.MeshDefinition
 function ExtendedMeshMeshlet.fromMesh(pipelineConfig, indexData, meshDefinition)
 	local indexFormat = BufferFormat.get(Mesh.INDEX_FORMAT)
