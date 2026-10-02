@@ -57,29 +57,25 @@ CameraFrame.CAMERA_FORMAT = {
 		name = "inversePreviousProjectionViewTransform",
 		format = "floatmat4x4",
 	},
-	{ location = 11, name = "planes", format = "floatvec4", arraylength = 6 },
-	{ location = 12, name = "projectionType", format = "uint32" },
+	{ location = 11, name = "leftPlane", format = "floatvec4" },
+	{ location = 12, name = "rightPlane", format = "floatvec4" },
+	{ location = 13, name = "topPlane", format = "floatvec4" },
+	{ location = 14, name = "bottomPlane", format = "floatvec4" },
+	{ location = 15, name = "nearPlane", format = "floatvec4" },
+	{ location = 16, name = "farPlane", format = "floatvec4" },
+	{ location = 17, name = "projectionType", format = "uint32" },
 }
 
-CameraFrame.PLANE_INDICES = {
-	left = 1,
-	right = 2,
-	top = 3,
-	bottom = 4,
-	near = 5,
-	far = 6,
-}
+CameraFrame.CAMERA_FORMAT_INSTANCE = BufferFormat.get(CameraFrame.CAMERA_FORMAT)
 
 CameraFrame.PROJECTION_TYPE_NONE = 0
 CameraFrame.PROJECTION_TYPE_PERSPECTIVE = 1
 CameraFrame.PROJECTION_TYPE_ORTHOGRAPHIC = 2
 
 CameraFrame.PROJECTION_TYPE = {
-	orthographic = CameraFrame.PROJECTION_TYPE_ORTHOGRAPHIC,
 	perspective = CameraFrame.PROJECTION_TYPE_PERSPECTIVE,
+	orthographic = CameraFrame.PROJECTION_TYPE_ORTHOGRAPHIC,
 }
-
-CameraFrame.CAMERA_FORMAT_INSTANCE = BufferFormat.get(CameraFrame.CAMERA_FORMAT)
 
 --- @param camera RatScratch.Pipeline.Camera
 function CameraFrame:new(camera)
@@ -183,12 +179,10 @@ end
 --- @param d number
 function CameraFrame:_updatePlane(name, x, y, z, d)
 	local inverseLength = 1 / math.sqrt(x ^ 2 + y ^ 2 + z ^ 2)
-	BufferFormat.setArrayValue(
+	BufferFormat.setValue(
 		CameraFrame.CAMERA_FORMAT_INSTANCE,
 		self.data,
 		name,
-		1,
-		CameraFrame.PLANE_INDICES[name],
 		0,
 		x * inverseLength,
 		y * inverseLength,
@@ -202,12 +196,12 @@ function CameraFrame:_updatePlanesData()
 	local m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44 =
 		self.currentProjectionView:getMatrix()
 
-	self:_updatePlane("left", m41 + m11, m42 + m12, m43 + m13, m44 + m14)
-	self:_updatePlane("right", m41 - m11, m42 - m12, m43 - m13, m44 - m14)
-	self:_updatePlane("top", m41 - m21, m42 - m22, m43 - m23, m44 - m24)
-	self:_updatePlane("bottom", m41 + m21, m42 + m22, m43 + m23, m44 + m24)
-	self:_updatePlane("near", m41 + m31, m42 + m32, m43 + m33, m44 + m34)
-	self:_updatePlane("far", m41 - m31, m42 - m32, m43 - m33, m44 - m34)
+	self:_updatePlane("leftPlane", m41 + m11, m42 + m12, m43 + m13, m44 + m14)
+	self:_updatePlane("rightPlane", m41 - m11, m42 - m12, m43 - m13, m44 - m14)
+	self:_updatePlane("topPlane", m41 - m21, m42 - m22, m43 - m23, m44 - m24)
+	self:_updatePlane("bottomPlane", m41 + m21, m42 + m22, m43 + m23, m44 + m24)
+	self:_updatePlane("nearPlane", m41 + m31, m42 + m32, m43 + m33, m44 + m34)
+	self:_updatePlane("farPlane", m41 - m31, m42 - m32, m43 - m33, m44 - m34)
 end
 
 --- @private

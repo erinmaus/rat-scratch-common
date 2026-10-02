@@ -84,7 +84,12 @@ struct RatScratchPipelineCamera
 	mat4 projectionViewTransform;
 	mat4 inverseProjectionViewTransform;
 	mat4 inversePreviousProjectionViewTransform;
-	vec4 planes[RAT_SCRATCH_PIPELINE_CAMERA_PLANE_COUNT];
+	vec4 leftPlane;
+	vec4 rightPlane;
+	vec4 topPlane;
+	vec4 bottomPlane;
+	vec4 nearPlane;
+	vec4 farPlane;
 	uint projectionType;
 };
 
