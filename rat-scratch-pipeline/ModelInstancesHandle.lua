@@ -111,14 +111,14 @@ function ModelInstancesHandle:setMaterial(model, meshIndex, materialIndex)
 	end
 end
 
-function ModelInstancesHandle:calculateMeshletCount()
+function ModelInstancesHandle:calculateClusterGroupCount()
 	local count = 0
 	for _, modelResource in ipairs(self.modelsByIndex) do
 		local model = modelResource:getIsReady() and modelResource:get()
 
 		if model then
 			for i = 1, model:getMeshCount() do
-				count = count + model:getMesh(i):getMeshletCount()
+				count = count + model:getMesh(i):getLOD():getGroupCount()
 			end
 		end
 	end

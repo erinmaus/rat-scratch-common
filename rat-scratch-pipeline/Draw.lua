@@ -21,13 +21,14 @@ Draw.DRAW_FORMAT = {
 	{ location = 2, name = "meshInstanceIndex", format = "uint32" },
 	{ location = 3, name = "modelIndex", format = "uint32" },
 	{ location = 4, name = "meshIndex", format = "uint32" },
-	{ location = 5, name = "meshletIndex", format = "uint32" },
-	{ location = 6, name = "staticBaseVertexOffset", format = "uint32" },
-	{ location = 7, name = "skinnedBaseVertexOffset", format = "uint32" },
-	{ location = 8, name = "boneOffsetCount", format = "uint32vec2" },
-	{ location = 9, name = "indexOffset", format = "uint32" },
-	{ location = 10, name = "cameraIndex", format = "uint32" },
-	{ location = 11, name = "layerIndex", format = "uint32" },
+	{ location = 5, name = "clusterIndex", format = "uint32" },
+	{ location = 6, name = "groupIndex", format = "uint32" },
+	{ location = 7, name = "lodIndex", format = "int32" },
+	{ location = 8, name = "staticBaseVertexOffset", format = "uint32" },
+	{ location = 9, name = "skinnedBaseVertexOffset", format = "uint32" },
+	{ location = 10, name = "boneOffsetCount", format = "uint32vec2" },
+	{ location = 11, name = "indexOffset", format = "uint32" },
+	{ location = 12, name = "cameraIndex", format = "uint32" },
 }
 
 Draw.DRAW_FORMAT_INSTANCE = BufferFormat.get(Draw.DRAW_FORMAT)

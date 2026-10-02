@@ -20,6 +20,18 @@
         "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_THREAD",
         "format": "uint32",
         "default": [16]
+      },
+      {
+        "key": "pipeline.properties.lod.errorThreshold",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_LOD_ERROR_THRESHOLD",
+        "format": "float",
+        "default": [0.002]
+      },
+      {
+        "key": "pipeline.properties.lod.maxPendingClusterDraws",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_LOD_MAX_PENDING_CLUSTER_DRAWS",
+        "format": "uint32",
+        "default": [32]
       }
     ],
     "settings": [
