@@ -13,6 +13,37 @@ local MeshOptimizerFFI = Object()
 --- @field public radius number
 local MeshOptimizerFFIBounds = {}
 
+--- @class RatScratch.Pipeline.impl.MeshOptimizerFFI.Group
+--- @field public bounds RatScratch.Pipeline.impl.MeshOptimizerFFI.Bounds
+--- @field public error number
+--- @field public clusterIndex integer
+--- @field public clusterCount integer
+local MeshOptimizerFFIGroup = {}
+
+--- @class RatScratch.Pipeline.impl.MeshOptimizerFFI.Cluster
+--- @field public refinedIndex integer
+--- @field public bounds RatScratch.Pipeline.impl.MeshOptimizerFFI.Bounds
+--- @field public error number
+--- @field public boneIndex integer
+--- @field public indexOffset integer
+--- @field public indexCount integer
+local MeshOptimizerFFICluster = {}
+
+--- @class RatScratch.Pipeline.impl.MeshOptimizerFFI.Node
+--- @field public bounds RatScratch.Pipeline.impl.MeshOptimizerFFI.Bounds
+--- @field public error number
+--- @field public groupIndex integer
+--- @field public childIndex integer
+--- @field public childCount integer
+local MeshOptimizerFFINode = {}
+
+--- @class RatScratch.Pipeline.impl.MeshOptimizerFFI.ClusterResult
+--- @field public groups RatScratch.Pipeline.impl.MeshOptimizerFFI.Group[]
+--- @field public clusters RatScratch.Pipeline.impl.MeshOptimizerFFI.Cluster[]
+--- @field public nodes RatScratch.Pipeline.impl.MeshOptimizerFFI.Node[]
+--- @field public rootNodeCount integer
+local MeshOptimizerFFIClusterResult = {}
+
 --- @private
 MeshOptimizerFFI._IS_INTIALIZED = false
 
@@ -25,7 +56,7 @@ MeshOptimizerFFI._IS_INTIALIZED = false
 --- @param textureCoordinateFormat RatScratch.Graphics.Graphics3D.BufferFormat
 --- @param maxTriangles integer
 --- @param nodeWidth integer
---- @return love.ByteData[], RatScratch.Pipeline.impl.MeshOptimizerFFI.Bounds[]
+--- @return love.ByteData, RatScratch.Pipeline.impl.MeshOptimizerFFI.ClusterResult
 function MeshOptimizerFFI.buildClusters(
 	indexData,
 	indexCount,
@@ -79,7 +110,99 @@ function MeshOptimizerFFI.buildClusters(
 		clodResult
 	)
 
+	local newIndexData =
+		love.data.newByteData(clodResult.indexCount * ffi.sizeof("uint32_t"))
+	ffi.copy(
+		newIndexData:getFFIPointer(),
+		clodResult.indices,
+		clodResult.indexCount * ffi.sizeof("uint32_t")
+	)
+
+	--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Cluster[]
+	local clusters = {}
+
+	for i = 1, tonumber(ratMeshoptimizer.clusterCount) do
+		local inputCluster = ratMeshoptimizer.clusters[i - 1]
+
+		--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Cluster
+		local outputCluster = {
+			refinedIndex = inputCluster.refinedIndex,
+			bounds = {
+				position = Vector3(
+					inputCluster.bounds.center[0],
+					inputCluster.bounds.center[1],
+					inputCluster.bounds.center[2]
+				),
+				radius = inputCluster.bounds.radius,
+			},
+			error = inputCluster.bounds.error,
+			boneIndex = 0,
+			indexOffset = inputCluster.indexOffset,
+			indexCount = inputCluster.indexCount,
+		}
+
+		table.insert(clusters, outputCluster)
+	end
+
+	--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Group[]
+	local groups = {}
+
+	for i = 1, tonumber(ratMeshoptimizer.groupCount) do
+		local inputGroup = ratMeshoptimizer.groups[i - 1]
+
+		--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Group
+		local outputGroup = {
+			bounds = {
+				position = Vector3(
+					inputGroup.bounds.center[0],
+					inputGroup.bounds.center[1],
+					inputGroup.bounds.center[2]
+				),
+				radius = inputGroup.bounds.radius,
+			},
+			error = inputGroup.bounds.error,
+			clusterIndex = inputGroup.clusterIndex,
+			clusterCount = inputGroup.clusterCount,
+		}
+
+		table.insert(groups, outputGroup)
+	end
+
+	--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Node[]
+	local nodes = {}
+	local rootNodeCount = clodResult.rootNodeCount
+
+	for i = 1, tonumber(ratMeshoptimizer.nodeCount) do
+		local inputNode = ratMeshoptimizer.nodes[i - 1]
+
+		--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Node
+		local outputNode = {
+			bounds = {
+				position = Vector3(
+					inputNode.bounds.center[0],
+					inputNode.bounds.center[1],
+					inputNode.bounds.center[2]
+				),
+				radius = inputNode.bounds.radius,
+			},
+			error = inputNode.bounds.error,
+			groupIndex = inputNode.groupIndex,
+			childIndex = inputNode.childIndex,
+			childCount = inputNode.childCount,
+		}
+
+		table.insert(nodes, outputNode)
+	end
+
 	ratMeshoptimizer.rat_clusterlod_freeResult(clodResult)
+
+	return newIndexData,
+		{
+			groups = groups,
+			clusters = clusters,
+			nodes = nodes,
+			rootNodeCount = rootNodeCount,
+		}
 end
 
 --- @param indexData love.ByteData
