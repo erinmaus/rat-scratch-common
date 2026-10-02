@@ -6,6 +6,7 @@ local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local ModelInstancesHandle =
 	require("rat-scratch-pipeline.ModelInstancesHandle")
 local Pipeline = require("rat-scratch-pipeline.impl.Pipeline")
+local PipelineLOD = require("rat-scratch-pipeline.Graphics3D.PipelineLOD")
 local PipelineMultiBuffer =
 	require("rat-scratch-pipeline.Buffer.PipelineMultiBuffer")
 local Transform = require("rat-scratch-math").Transform
@@ -16,8 +17,9 @@ local Transform = require("rat-scratch-math").Transform
 --- @field private indexBuffer RatScratch.Pipeline.Buffer.PipelineMultiBuffer<RatScratch.Pipeline.Graphics3D.PipelineMesh>
 --- @field private modelsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Graphics3D.PipelineModel>
 --- @field private meshesBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Graphics3D.PipelineModel>
---- @field private meshletsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Graphics3D.PipelineMesh>
---- @field private meshletsSkinnedBoundsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Graphics3D.PipelineMeshlet>
+--- @field private meshClustersBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Graphics3D.PipelineMesh>
+--- @field private meshClusterGroupsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Graphics3D.PipelineMesh>
+--- @field private meshClusterNodesBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Graphics3D.PipelineMesh>
 --- @field private models table<RatScratch.Pipeline.Graphics3D.PipelineModel, true>
 --- @field private modelsByIndex RatScratch.Pipeline.Graphics3D.PipelineModel[]
 --- @field private dirtyModels table<RatScratch.Pipeline.Graphics3D.PipelineModel, true>
@@ -43,23 +45,23 @@ ModelPipeline.MODEL_FORMAT = {
 }
 
 ModelPipeline.MESH_FORMAT = {
-	{ location = 0, name = "meshletIndexCount", format = "uint32vec2" },
-	{ location = 1, name = "indexOffset", format = "uint32" },
-	{ location = 2, name = "staticBaseVertexOffset", format = "uint32" },
-	{ location = 3, name = "skinnedBaseVertexOffset", format = "uint32" },
+	{ location = 0, name = "clusterIndexCount", format = "uint32vec2" },
+	{ location = 1, name = "clusterGroupIndexCount", format = "uint32vec2" },
+	{ location = 2, name = "clusterNodeIndexCount", format = "uint32vec2" },
+	{ location = 3, name = "clusterRootNodeCount", format = "uint32vec2" },
+	{ location = 4, name = "indexOffset", format = "uint32" },
+	{ location = 5, name = "staticBaseVertexOffset", format = "uint32" },
+	{ location = 6, name = "skinnedBaseVertexOffset", format = "uint32" },
 }
 
-ModelPipeline.MESHLET_FORMAT = {
+ModelPipeline.CLUSTER_FORMAT = {
 	{ location = 0, name = "staticCenterRadius", format = "floatvec4" },
-	{ location = 1, name = "indexOffset", format = "uint32" },
-	{
-		location = 2,
-		name = "skinnedMeshletBoundsIndexCount",
-		format = "uint32vec2",
-	},
+	{ location = 1, name = "error", format = "float" },
+	{ location = 2, name = "refinedIndex", format = "int32" },
+	{ location = 3, name = "indexOffsetCount", format = "uint32vec2" },
 }
 
-ModelPipeline.SKINNED_MESHLET_BOUNDS_FORMAT = {
+ModelPipeline.SKINNED_CLUSTER_BOUNDS_FORMAT = {
 	{ location = 0, name = "centerRadius", format = "floatvec4" },
 	{ location = 1, name = "animationIndex", format = "uint32" },
 	{ location = 2, name = "bone", format = "uint32" },
@@ -69,11 +71,15 @@ ModelPipeline.INDEX_FORMAT = {
 	{ location = 0, name = "index", format = "uint32" },
 }
 
+ModelPipeline.CLUSTER_TO_MESH_FORMAT = {
+	{ location = 0, name = "clusterToMesh", format = "uint32" },
+}
+
 ModelPipeline.DEFAULT_VERTEX_COUNT = 2 ^ 20
 ModelPipeline.DEFAULT_MODEL_COUNT = 1024
 ModelPipeline.DEFAULT_MESH_COUNT = ModelPipeline.DEFAULT_MODEL_COUNT * 64
-ModelPipeline.DEFAULT_MESHLET_COUNT = ModelPipeline.DEFAULT_MESH_COUNT * 64
-ModelPipeline.DEFAULT_MESHLET_SKINNED_BOUNDS_COUNT = ModelPipeline.DEFAULT_MESHLET_COUNT
+ModelPipeline.DEFAULT_CLUSTER_COUNT = ModelPipeline.DEFAULT_MESH_COUNT * 64
+ModelPipeline.DEFAULT_CLUSTER_SKINNED_BOUNDS_COUNT = ModelPipeline.DEFAULT_CLUSTER_COUNT
 	* 4
 ModelPipeline.DEFAULT_MODEL_INSTANCE_COUNT = 2048
 ModelPipeline.DEFAULT_MESH_INSTANCE_COUNT = ModelPipeline.DEFAULT_MODEL_INSTANCE_COUNT
@@ -133,16 +139,28 @@ function ModelPipeline:new(pipelineRuntime)
 		ModelPipeline.DEFAULT_MESH_COUNT
 	)
 
-	self.meshletsBuffer = PipelineBuffer(
-		ModelPipeline.MESHLET_FORMAT,
+	self.meshClustersBuffer = PipelineBuffer(
+		PipelineLOD.CLUSTER_FORMAT,
 		{ shaderstorage = true },
-		ModelPipeline.DEFAULT_MESHLET_COUNT
+		ModelPipeline.DEFAULT_CLUSTER_COUNT
 	)
 
-	self.meshletsSkinnedBoundsBuffer = PipelineBuffer(
-		ModelPipeline.SKINNED_MESHLET_BOUNDS_FORMAT,
+	self.meshClusterGroupsBuffer = PipelineBuffer(
+		PipelineLOD.GROUP_FORMAT,
 		{ shaderstorage = true },
-		ModelPipeline.DEFAULT_MESHLET_SKINNED_BOUNDS_COUNT
+		ModelPipeline.DEFAULT_CLUSTER_COUNT
+	)
+
+	self.meshClusterNodesBuffer = PipelineBuffer(
+		PipelineLOD.NODE_FORMAT,
+		{ shaderstorage = true },
+		ModelPipeline.DEFAULT_CLUSTER_COUNT
+	)
+
+	self.clustersSkinnedBoundsBuffer = PipelineBuffer(
+		ModelPipeline.SKINNED_CLUSTER_BOUNDS_FORMAT,
+		{ shaderstorage = true },
+		ModelPipeline.DEFAULT_CLUSTER_SKINNED_BOUNDS_COUNT
 	)
 
 	self.modelInstancesBuffer = PipelineBuffer(
@@ -218,8 +236,25 @@ function ModelPipeline:bind(shader, qualityPreset)
 		shader:send("rat_MeshesBuffer", self.meshesBuffer:getBuffer())
 	end
 
-	if shader:hasUniform("rat_MeshletsBuffer") then
-		shader:send("rat_MeshletsBuffer", self.meshletsBuffer:getBuffer())
+	if shader:hasUniform("rat_MeshClustersBuffer") then
+		shader:send(
+			"rat_MeshClustersBuffer",
+			self.meshClustersBuffer:getBuffer()
+		)
+	end
+
+	if shader:hasUniform("rat_MeshClusterGroupsBuffer") then
+		shader:send(
+			"rat_MeshClusterGroupsBuffer",
+			self.meshClusterGroupsBuffer:getBuffer()
+		)
+	end
+
+	if shader:hasUniform("rat_MeshClusterNodesBuffer") then
+		shader:send(
+			"rat_MeshClusterNodesBuffer",
+			self.meshClusterNodesBuffer:getBuffer()
+		)
 	end
 end
 
@@ -242,16 +277,6 @@ function ModelPipeline:addModel(model)
 	self.meshesBuffer:register(model, model:getMeshCount())
 	for i = 1, model:getMeshCount() do
 		local mesh = model:getMesh(i)
-
-		self.meshletsBuffer:register(mesh, mesh:getMeshletCount())
-
-		for j = 1, mesh:getMeshletCount() do
-			local meshlet = mesh:getMeshlet(j)
-			self.meshletsSkinnedBoundsBuffer:register(
-				meshlet,
-				math.max(meshlet:getSkinnedBoundsCount(), 1)
-			)
-		end
 
 		self.staticVertexBuffer:register(mesh, mesh:getVertexCount())
 
@@ -283,11 +308,14 @@ function ModelPipeline:removeModel(model)
 	for i = 1, model:getMeshCount() do
 		local mesh = model:getMesh(i)
 
-		self.meshletsBuffer:unregister(mesh)
+		self.meshClustersBuffer:unregister(mesh)
 
-		for j = 1, mesh:getMeshletCount() do
-			local meshlet = mesh:getMeshlet(j)
-			self.meshletsSkinnedBoundsBuffer:unregister(meshlet)
+		if self.meshClusterGroupsBuffer:has(mesh) then
+			self.meshClusterGroupsBuffer:unregister(mesh)
+		end
+
+		if self.meshClusterNodesBuffer:has(mesh) then
+			self.meshClusterNodesBuffer:unregister(mesh)
 		end
 
 		self.staticVertexBuffer:unregister(mesh)
@@ -321,14 +349,36 @@ function ModelPipeline:getMeshesIndexCount(mesh)
 end
 
 --- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
-function ModelPipeline:getMeshletsPointer(mesh)
-	return self.meshletsBuffer:newPointer(mesh)
+function ModelPipeline:getClustersPointer(mesh)
+	return self.meshClustersBuffer:newPointer(mesh)
 end
 
 --- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
 --- @return integer, integer
-function ModelPipeline:getMeshletsIndexCount(mesh)
-	return self.meshletsBuffer:getIndexCount(mesh)
+function ModelPipeline:getClustersIndexCount(mesh)
+	return self.meshClustersBuffer:getIndexCount(mesh)
+end
+
+--- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
+function ModelPipeline:getClusterGroupsPointer(mesh)
+	return self.meshClusterGroupsBuffer:newPointer(mesh)
+end
+
+--- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
+--- @return integer, integer
+function ModelPipeline:getClusterGroupsIndexCount(mesh)
+	return self.meshClusterGroupsBuffer:getIndexCount(mesh)
+end
+
+--- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
+function ModelPipeline:getClusterNodesPointer(mesh)
+	return self.meshClusterNodesBuffer:newPointer(mesh)
+end
+
+--- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
+--- @return integer, integer
+function ModelPipeline:getClusterNodesIndexCount(mesh)
+	return self.meshClusterNodesBuffer:getIndexCount(mesh)
 end
 
 --- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
@@ -399,57 +449,42 @@ function ModelPipeline:_updateModelBuffer(model)
 end
 
 --- @private
---- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
---- @param meshlet RatScratch.Pipeline.Graphics3D.PipelineMeshlet
---- @param meshletIndex integer
-function ModelPipeline:_updateMeshlet(mesh, meshlet, meshletIndex)
-	local skinnedBoundsIndex, skinnedBoundsCount =
-		self.meshletsSkinnedBoundsBuffer:getIndexCount(meshlet)
-	local staticCenter, staticRadius = meshlet:getStaticBounds()
-	local indexCount = self:getPipelineConfig()
-		:getMeshletFormat()
-		:getTriangleCount() * 3
-	local indexOffset = self.indexBuffer:getIndexCount(mesh)
-		+ (meshletIndex - 1) * indexCount
-
-	self.meshletsBuffer:set(
-		mesh,
-		meshletIndex,
-		1,
-		staticCenter.x,
-		staticCenter.y,
-		staticCenter.z,
-		staticRadius,
-		indexOffset,
-		skinnedBoundsIndex - 1,
-		skinnedBoundsCount
-	)
-
-	for i = 1, meshlet:getSkinnedBoundsCount() do
-		local primaryBone = meshlet:getPrimaryBoneByIndex(i)
-		local animation = meshlet:getAnimationByIndex(i)
-		local center, radius = meshlet:getSkinnedBoundsByIndex(i)
-
-		self.meshletsSkinnedBoundsBuffer:set(
-			meshlet,
-			i,
-			1,
-			center.x,
-			center.y,
-			center.z,
-			radius,
-			animation,
-			primaryBone
-		)
-	end
-end
-
---- @private
 --- @param model RatScratch.Pipeline.Graphics3D.PipelineModel
 --- @param mesh RatScratch.Pipeline.Graphics3D.PipelineMesh
 --- @param meshIndex integer
 function ModelPipeline:_updateMesh(model, mesh, meshIndex)
-	local meshletIndex, meshletCount = self.meshletsBuffer:getIndexCount(mesh)
+	local lod = mesh:getLOD()
+
+	self.meshClustersBuffer:registerOrResize(mesh, lod:getClusterCount())
+	self.meshClustersBuffer:copyData(
+		mesh,
+		lod:getClusterData(),
+		1,
+		lod:getClusterCount()
+	)
+
+	self.meshClusterGroupsBuffer:registerOrResize(mesh, lod:getGroupCount())
+	self.meshClusterGroupsBuffer:copyData(
+		mesh,
+		lod:getGroupData(),
+		1,
+		lod:getGroupCount()
+	)
+
+	self.meshClusterNodesBuffer:registerOrResize(mesh, lod:getNodeCount())
+	self.meshClusterNodesBuffer:copyData(
+		mesh,
+		lod:getNodeData(),
+		1,
+		lod:getNodeCount()
+	)
+
+	local clusterIndex, clusterCount =
+		self.meshClustersBuffer:getIndexCount(mesh)
+	local groupIndex, groupCount =
+		self.meshClusterGroupsBuffer:getIndexCount(mesh)
+	local nodeIndex, nodeCount = self.meshClusterNodesBuffer:getIndexCount(mesh)
+
 	local indexOffset = self.indexBuffer:getIndexCount(mesh)
 	local staticVertexIndex = self.staticVertexBuffer:getIndexCount(mesh)
 	local skinnedVertexIndex = self.skinnedVertexBuffer:has(mesh)
@@ -460,16 +495,18 @@ function ModelPipeline:_updateMesh(model, mesh, meshIndex)
 		model,
 		meshIndex,
 		1,
-		meshletIndex - 1,
-		meshletCount,
+		1,
+		clusterIndex - 1,
+		clusterCount,
+		groupIndex - 1,
+		groupCount,
+		nodeIndex,
+		nodeCount - 1,
+		lod:getRootNodeCount(),
 		indexOffset - 1,
 		staticVertexIndex - 1,
 		skinnedVertexIndex - 1
 	)
-
-	for i = 1, mesh:getMeshletCount() do
-		self:_updateMeshlet(mesh, mesh:getMeshlet(i), i)
-	end
 end
 
 do
@@ -507,8 +544,8 @@ function ModelPipeline:_updateDirtyModels()
 
 	self.modelsBuffer:flush()
 	self.meshesBuffer:flush()
-	self.meshletsBuffer:flush()
-	self.meshletsSkinnedBoundsBuffer:flush()
+	self.meshClustersBuffer:flush()
+	self.clustersSkinnedBoundsBuffer:flush()
 end
 
 --- @private
@@ -573,8 +610,8 @@ end
 function ModelPipeline:compact()
 	self.modelsBuffer:flush()
 	self.meshesBuffer:flush()
-	self.meshletsBuffer:flush()
-	self.meshletsSkinnedBoundsBuffer:flush()
+	self.meshClustersBuffer:flush()
+	self.clustersSkinnedBoundsBuffer:flush()
 
 	self.staticVertexBuffer:compact()
 	self.skinnedVertexBuffer:compact()

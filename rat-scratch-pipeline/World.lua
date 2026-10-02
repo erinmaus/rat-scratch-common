@@ -613,7 +613,7 @@ function World:_updateObjectHandleDraw(objectHandle)
 	local drawPipeline = scene:getPipeline(DrawPipeline)
 
 	local modelInstances = self.objectHandleToModelInstancesHandle[objectHandle]
-	local meshletCount = modelInstances:calculateMeshletCount()
+	local meshletCount = modelInstances:calculateClusterGroupCount()
 
 	local draws = drawPipeline:resizeDrawable(objectHandle, meshletCount)
 	--- @cast draws RatScratch.Pipeline.Draw[]
@@ -637,8 +637,8 @@ function World:_updateObjectHandleDraw(objectHandle)
 
 		for j = 1, model:getMeshCount() do
 			local mesh = model:getMesh(j)
-			local meshletPointer = self:getPipeline(ModelPipeline)
-				:getMeshletsPointer(mesh)
+			local groupPointer = self:getPipeline(ModelPipeline)
+				:getClusterGroupsPointer(mesh)
 			local staticBaseVertexPointer = self:getPipeline(ModelPipeline)
 				:getStaticBaseVertexPointer(mesh)
 			local skinnedBaseVertexPointer = self:getPipeline(ModelPipeline)
@@ -646,7 +646,7 @@ function World:_updateObjectHandleDraw(objectHandle)
 			local baseIndexPointer = self:getPipeline(ModelPipeline)
 				:getBaseIndexPointer(mesh)
 
-			for k = 1, mesh:getMeshletCount() do
+			for k = 1, mesh:getLOD():getGroupCount() do
 				local draw = draws[currentDraw]
 
 				draw:setPointer("objectInstanceIndex", objectInstancePointer)
@@ -654,7 +654,7 @@ function World:_updateObjectHandleDraw(objectHandle)
 				draw:setPointer("meshInstanceIndex", meshInstancesPointer, j)
 				draw:setPointer("modelIndex", modelPointer)
 				draw:setPointer("meshIndex", meshInstancesPointer, j)
-				draw:setPointer("meshletIndex", meshletPointer, k)
+				draw:setPointer("groupIndex", groupPointer, k)
 				draw:setPointer(
 					"staticBaseVertexOffset",
 					staticBaseVertexPointer

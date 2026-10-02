@@ -24,7 +24,10 @@ struct RatScratchPipelineModel
 
 struct RatScratchPipelineMesh
 {
-	uvec2 meshletCountIndex;
+	uvec2 clusterIndexCount;
+	uvec2 clusterGroupIndexCount;
+	uvec2 clusterNodeIndexCount;
+	uint clusterRootNodeCount;
 	uint staticBaseVertexOffset;
 	uint skinnedBaseVertexOffset;
 };
@@ -51,12 +54,6 @@ struct RatScratchPipelineMeshClusterNode
 	float error;
 	uint groupIndex;
 	uvec2 childIndexCount;
-};
-
-struct RatScratchPipelineMeshlet
-{
-	vec4 staticCenterRadius;
-	uvec2 skinnedMeshletBoundsIndexCount;
 };
 
 struct RatScratchPipelineSkinnedMeshletBounds
@@ -101,11 +98,12 @@ struct RatScratchPipelineDraw
 	uint meshInstanceIndex;
 	uint modelIndex;
 	uint meshIndex;
-	uint meshletIndex;
+	uint clusterIndex;
+	uint groupIndex;
+	int lodIndex;
 	uint staticBaseVertexOffset;
 	uint skinnedBaseVertexOffset;
 	uvec2 boneOffsetCount;
 	uint indexOffset;
 	uint cameraIndex;
-	uint layerIndex;
 };
