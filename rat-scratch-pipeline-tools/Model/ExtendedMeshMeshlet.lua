@@ -31,6 +31,7 @@ local SerializedExtendedMeshMeshlet = {}
 --- @field private staticBoundsPosition RatScratch.Math.Vector3
 --- @field private staticBoundsRadius number
 --- @field private error number
+--- @field private refinedIndex integer
 local ExtendedMeshMeshlet = Object()
 
 --- @param indexData love.ByteData
@@ -44,6 +45,7 @@ function ExtendedMeshMeshlet:new(indexData)
 	self.staticBoundsPosition = Vector3()
 	self.staticBoundsRadius = 0
 	self.error = 0
+	self.refinedIndex = -1
 end
 
 --- @return RatScratch.Pipeline.SerializedExtendedMeshMeshlet
@@ -83,6 +85,15 @@ end
 --- @param value number
 function ExtendedMeshMeshlet:setError(value)
 	self.error = value
+end
+
+function ExtendedMeshMeshlet:getRefinedIndex()
+	return self.refinedIndex
+end
+
+--- @param value integer
+function ExtendedMeshMeshlet:setRefinedIndex(value)
+	self.refinedIndex = value
 end
 
 function ExtendedMeshMeshlet:getIndexData()

@@ -16,7 +16,7 @@ PipelineLOD.CLUSTER_FORMAT = {
 PipelineLOD.NODE_FORMAT = {
 	{ location = 0, name = "boundsPositionRadius", format = "floatvec4" },
 	{ location = 1, name = "error", format = "float" },
-	{ location = 2, name = "group", format = "int32" },
+	{ location = 2, name = "groupIndex", format = "int32" },
 	{ location = 3, name = "childIndexCount", format = "uint32vec2" },
 }
 
