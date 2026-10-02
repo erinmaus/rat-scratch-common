@@ -16,6 +16,7 @@ local MeshOptimizerFFIBounds = {}
 --- @class RatScratch.Pipeline.impl.MeshOptimizerFFI.Group
 --- @field public bounds RatScratch.Pipeline.impl.MeshOptimizerFFI.Bounds
 --- @field public error number
+--- @field public depth integer
 --- @field public clusterIndex integer
 --- @field public clusterCount integer
 local MeshOptimizerFFIGroup = {}
@@ -138,8 +139,8 @@ function MeshOptimizerFFI.buildClusters(
 			},
 			error = inputCluster.bounds.error,
 			boneIndex = 0,
-			indexOffset = inputCluster.indexOffset,
-			indexCount = inputCluster.indexCount,
+			indexOffset = tonumber(inputCluster.indexOffset) or 0,
+			indexCount = tonumber(inputCluster.indexCount) or 0,
 		}
 
 		table.insert(clusters, outputCluster)
@@ -162,8 +163,9 @@ function MeshOptimizerFFI.buildClusters(
 				radius = inputGroup.bounds.radius,
 			},
 			error = inputGroup.bounds.error,
-			clusterIndex = inputGroup.clusterIndex,
-			clusterCount = inputGroup.clusterCount,
+			depth = inputGroup.lodDepth,
+			clusterIndex = tonumber(inputGroup.clusterIndex) or 0,
+			clusterCount = tonumber(inputGroup.clusterCount) or 0,
 		}
 
 		table.insert(groups, outputGroup)
@@ -187,9 +189,9 @@ function MeshOptimizerFFI.buildClusters(
 				radius = inputNode.bounds.radius,
 			},
 			error = inputNode.bounds.error,
-			groupIndex = inputNode.groupIndex,
-			childIndex = inputNode.childIndex,
-			childCount = inputNode.childCount,
+			groupIndex = tonumber(inputNode.groupIndex) or 0,
+			childIndex = tonumber(inputNode.childIndex) or 0,
+			childCount = tonumber(inputNode.childCount) or 0,
 		}
 
 		table.insert(nodes, outputNode)
@@ -463,6 +465,7 @@ function MeshOptimizerFFI.load()
 		typedef struct RatScratchGroup
 		{
 			struct meshopt_clodBounds bounds;
+			int32_t lodDepth;
 			uint32_t clusterIndex;
 			uint32_t clusterCount;
 		} RatScratchGroup;

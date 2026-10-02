@@ -14,6 +14,7 @@ extern "C"
 	typedef struct RatScratchGroup
 	{
 		clodBounds bounds;
+		int32_t lodDepth;
 		uint32_t clusterIndex;
 		uint32_t clusterCount;
 	} RatScratchGroup;

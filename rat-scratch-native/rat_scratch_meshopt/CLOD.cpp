@@ -104,6 +104,7 @@ extern "C" RAT_SCRATCH_API void rat_clusterlod_build(const struct clodConfig *co
 
 		RatScratchGroup outputGroup = {};
 		outputGroup.bounds = inputGroup.simplified;
+		outputGroup.lodDepth = inputGroup.depth;
 		outputGroup.clusterIndex = clusterIndex;
 		outputGroup.clusterCount = clusterCount;
 

@@ -1,37 +1,36 @@
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
 local Material = require("rat-scratch-graphics").Graphics3D.Material
-local PipelineMeshlet =
-	require("rat-scratch-pipeline.Graphics3D.PipelineMeshlet")
+local PipelineLOD = require("rat-scratch-pipeline.Graphics3D.PipelineLOD")
 
 --- @class RatScratch.Pipeline.Graphics3D.PipelineMesh : RatScratch.Common.BaseObject
 --- @field private indexCount integer
 --- @field private vertexCount integer
 --- @field private indices love.Data
---- @field private meshlets RatScratch.Pipeline.Graphics3D.PipelineMeshlet[]
+--- @field private lod RatScratch.Pipeline.Graphics3D.PipelineLOD
 --- @field private material? RatScratch.Graphics.Graphics3D.Material
---- @overload fun(vertexCount: integer, indexCount: integer, vertices: table<string, love.Data>, indices: love.Data, meshlets: RatScratch.Pipeline.Graphics3D.PipelineMeshlet[], material?: RatScratch.Graphics.Graphics3D.Material): RatScratch.Pipeline.Graphics3D.PipelineMesh
+--- @overload fun(vertexCount: integer, indexCount: integer, vertices: table<string, love.Data>, indices: love.Data, lod: RatScratch.Pipeline.Graphics3D.PipelineLOD, material?: RatScratch.Graphics.Graphics3D.Material): RatScratch.Pipeline.Graphics3D.PipelineMesh
 local PipelineMesh = Object()
 
 --- @param vertexCount integer
 --- @param indexCount integer
 --- @param vertices table<string, love.Data>
 --- @param indices love.Data
---- @param meshlets RatScratch.Pipeline.Graphics3D.PipelineMeshlet[]
+--- @param lod RatScratch.Pipeline.Graphics3D.PipelineLOD
 --- @param material? RatScratch.Graphics.Graphics3D.Material
 function PipelineMesh:new(
 	vertexCount,
 	indexCount,
 	vertices,
 	indices,
-	meshlets,
+	lod,
 	material
 )
 	self.vertexCount = vertexCount
 	self.indexCount = indexCount
 	self.indices = indices
 	self.vertices = Table.cloneHash(vertices)
-	self.meshlets = meshlets
+	self.lod = lod
 	self.material = material
 end
 
@@ -60,15 +59,9 @@ function PipelineMesh:getIndexData()
 	return self.indices
 end
 
---- @return integer
-function PipelineMesh:getMeshletCount()
-	return #self.meshlets
-end
-
---- @param index integer
---- @return RatScratch.Pipeline.Graphics3D.PipelineMeshlet
-function PipelineMesh:getMeshlet(index)
-	return self.meshlets[index]
+--- @return RatScratch.Pipeline.Graphics3D.PipelineLOD
+function PipelineMesh:getLOD()
+	return self.lod
 end
 
 function PipelineMesh:getMaterial()
@@ -77,21 +70,12 @@ end
 
 --- @param meshDefinition RatScratch.Pipeline.Graphics3D.PipelineMeshDefinition
 function PipelineMesh.fromDefinition(meshDefinition)
-	local meshlets = {}
-
-	for _, meshletDefinition in ipairs(meshDefinition.meshlets) do
-		table.insert(
-			meshlets,
-			PipelineMeshlet.fromDefinition(meshletDefinition)
-		)
-	end
-
 	return PipelineMesh(
 		meshDefinition.vertexCount,
 		meshDefinition.indexCount,
 		meshDefinition.vertices,
 		meshDefinition.indices,
-		meshlets,
+		PipelineLOD.fromDefinition(meshDefinition.lod),
 		Material.fromDefinition(meshDefinition.material)
 	)
 end
