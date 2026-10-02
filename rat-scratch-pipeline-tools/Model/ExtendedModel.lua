@@ -363,34 +363,51 @@ function ExtendedModel:_transformIndexData(
 	local vertexData = mesh:getVertexAttributeBufferData("VertexPosition")
 	local vertexFormat = mesh:getVertexAttributeBufferInfo("VertexPosition")
 		:getInputFormat()
-	local meshlets, meshletBounds = MeshOptimizerFFI.buildMeshletsFlex(
+	local textureData = mesh:getVertexAttributeBufferData("VertexTexCoord")
+	local textureFormat = mesh:getVertexAttributeBufferInfo("VertexTexCoord")
+		:getInputFormat()
+
+	local indexData, clusterResults = MeshOptimizerFFI.buildClusters(
 		indexData,
 		#meshDefinition.indices,
 		vertexData,
 		#meshDefinition.vertices,
 		vertexFormat,
+		textureData,
+		textureFormat,
 		triangleCount * 3,
-		triangleCount,
-		triangleCount,
-		0,
-		1
+		8
 	)
 
 	local totalIndexBufferSize = 0
-	for i, meshletIndexData in ipairs(meshlets) do
+	for _, cluster in ipairs(clusterResults.clusters) do
 		local meshlet = ExtendedMeshMeshlet.fromMesh(
 			pipelineConfig,
-			meshletIndexData,
+			love.data.newDataView(
+				indexData,
+				cluster.indexOffset * ffi.sizeof("uint32_t"),
+				cluster.indexCount * ffi.sizeof("uint32_t")
+			),
 			meshDefinition
 		)
-		meshlet:setStaticBounds(
-			meshletBounds[i].position,
-			meshletBounds[i].radius
-		)
+
+		meshlet:setStaticBounds(cluster.bounds.position, cluster.bounds.radius)
+		meshlet:setError(cluster.error)
+
 		totalIndexBufferSize = totalIndexBufferSize
 			+ meshlet:getIndexData():getSize()
 		mesh:addMeshlet(meshlet)
 	end
+
+	for _, group in ipairs(clusterResults.groups) do
+		mesh:addClusterGroup(group)
+	end
+
+	for _, node in ipairs(clusterResults.nodes) do
+		mesh:addClusterNode(node)
+	end
+
+	mesh:setClusterRootNodeCount(clusterResults.rootNodeCount)
 
 	local combinedMeshletIndexData = love.data.newByteData(totalIndexBufferSize)
 	local indexBufferOffset = 0

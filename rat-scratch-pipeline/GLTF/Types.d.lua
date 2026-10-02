@@ -10,7 +10,18 @@ local RATPipelineExtra = {}
 --- @field public indices integer
 --- @field public meshlets RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets.PrimitiveMeshlet[]
 --- @field public material? RatScratch.Pipeline.GLTF.RATMaterial
+--- @field public cluster? RatScratch.Pipeline.GLTF.RAT_mesh_primitive_cluster
 local RATMeshMeshletPrimitive = {}
+
+--- @class RatScratch.Pipeline.GLTF.RAT_mesh_primitive_cluster
+--- @field public meshlets integer
+--- @field public meshletCount integer
+--- @field public groups integer
+--- @field public groupCount integer
+--- @field public nodes integer
+--- @field public nodeCount integer
+--- @field public rootNodeCount integer
+local RATMeshPrimitiveCluster = {}
 
 --- @class RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets.Bounds
 --- @field public center number[]
