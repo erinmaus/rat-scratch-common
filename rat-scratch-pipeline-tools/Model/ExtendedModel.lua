@@ -393,6 +393,7 @@ function ExtendedModel:_transformIndexData(
 
 		meshlet:setStaticBounds(cluster.bounds.position, cluster.bounds.radius)
 		meshlet:setError(cluster.error)
+		meshlet:setRefinedIndex(cluster.refinedIndex)
 
 		totalIndexBufferSize = totalIndexBufferSize
 			+ meshlet:getIndexData():getSize()

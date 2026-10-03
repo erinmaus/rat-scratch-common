@@ -495,7 +495,6 @@ function ModelPipeline:_updateMesh(model, mesh, meshIndex)
 		model,
 		meshIndex,
 		1,
-		1,
 		clusterIndex - 1,
 		clusterCount,
 		groupIndex - 1,
@@ -545,6 +544,8 @@ function ModelPipeline:_updateDirtyModels()
 	self.modelsBuffer:flush()
 	self.meshesBuffer:flush()
 	self.meshClustersBuffer:flush()
+	self.meshClusterGroupsBuffer:flush()
+	self.meshClusterNodesBuffer:flush()
 	self.clustersSkinnedBoundsBuffer:flush()
 end
 

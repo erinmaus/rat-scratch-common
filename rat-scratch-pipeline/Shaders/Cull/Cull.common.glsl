@@ -37,7 +37,7 @@ bool ratSphereInsideFrustum(RatScratchPipelineCamera camera, vec3 position, floa
 		float distanceFromPlane = dot(planes[i].xyz, position) + planes[i].w;
 		if (distanceFromPlane < -radius)
 		{
-			return false;
+			return true;
 		}
 	}
 
@@ -91,7 +91,7 @@ bool ratSelectClusterLOD(RatScratchPipelineCamera camera, RatScratchPipelineMesh
 	return false;
 }
 
-void ratEmitClusterDraws(RatScratchPipelineDraw baseDraw, uint cameraIndex,
+void ratEmitClusterDraws(RatScratchPipelineDraw baseDraw, uint cameraIndex, int lodDepth,
 						 uint selectedClusters[RAT_SCRATCH_PIPELINE_CONFIG_LOD_MAX_PENDING_CLUSTER_DRAWS],
 						 uint clusterCount)
 {
@@ -100,11 +100,15 @@ void ratEmitClusterDraws(RatScratchPipelineDraw baseDraw, uint cameraIndex,
 		return;
 	}
 
+	uint baseIndexOffset = baseDraw.indexOffset;
 	uint drawStartIndex = atomicAdd(rat_IndirectDraws[cameraIndex].instanceCount, clusterCount);
 	for (uint i = 0; i < clusterCount; ++i)
 	{
-		baseDraw.clusterIndex = selectedClusters[i];
+		uint clusterIndex = selectedClusters[i];
+		baseDraw.clusterIndex = clusterIndex;
 		baseDraw.cameraIndex = cameraIndex;
+		baseDraw.lodIndex = lodDepth;
+		baseDraw.indexOffset = baseIndexOffset + rat_MeshClusters[clusterIndex].indexOffsetCount.x;
 		rat_OutputDraws[drawStartIndex + i] = baseDraw;
 	}
 }

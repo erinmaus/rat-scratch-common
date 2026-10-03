@@ -45,7 +45,7 @@ struct RatScratchPipelineMeshClusterGroup
 {
 	vec4 boundsPositionRadius;
 	float error;
-	uint lodDepth;
+	int lodDepth;
 	uvec2 clusterIndexCount;
 };
 
