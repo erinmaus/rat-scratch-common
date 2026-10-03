@@ -4,8 +4,6 @@ layout(local_size_x = 64, local_size_y = 1) in;
 #include "@Pipeline/Common/Types/Indirect.common.glsl"
 #include "@Pipeline/Common/Buffers/Draw.common.glsl"
 #include "@Pipeline/Common/Buffers/Materials.common.glsl"
-#include "@Pipeline/Common/Buffers/Planes.common.glsl"
-#include "./Cull.common.glsl"
 
 restrict readonly buffer rat_DrawsBuffer
 {
@@ -14,13 +12,15 @@ restrict readonly buffer rat_DrawsBuffer
 
 restrict buffer rat_OutputDrawsBuffer
 {
-	RatScratchPipelineDraw rat_OutputDepthDraws[];
+	RatScratchPipelineDraw rat_OutputDraws[];
 };
 
 restrict buffer rat_IndirectDrawsBuffer
 {
 	RatScratchPipelineIndirectDraw rat_IndirectDraws[];
 };
+
+#include "./Cull.common.glsl"
 
 uniform uint rat_DrawCount;
 uniform uint rat_CameraCount;
@@ -48,32 +48,31 @@ void computemain()
 	RatScratchPipelineMeshClusterGroup clusterGroup = rat_MeshClusterGroups[draw.groupIndex];
 	RatScratchPipelineCamera camera = rat_Cameras[cameraIndex];
 
-	mat4 transform = objectInstance.worldTransform * model.localTransform;
+	mat4 worldTransform = objectInstance.worldTransform * model.localTransform;
 
 	if (!ratSelectGroupLOD(camera, clusterGroup, worldTransform))
 	{
-		return;
+		// return;
 	}
 
 	uint selectedClusters[RAT_SCRATCH_PIPELINE_CONFIG_LOD_MAX_PENDING_CLUSTER_DRAWS];
 	uint currentClusterCount = 0;
 
-	uint clusterStartIndex = mesh.clusterGroupIndexCount.x + clusterGroup.clusterIndexCount.x;
-	uint clusterStopIndex = mesh.clusterGroupIndexCount.x + clusterGroup.clusterIndexCount.x +
-							mesh.clusterGroupIndexCount.x + clusterGroup.clusterIndexCount.y;
+	uint clusterStartIndex = mesh.clusterIndexCount.x + clusterGroup.clusterIndexCount.x;
+	uint clusterStopIndex = clusterStartIndex + clusterGroup.clusterIndexCount.y;
 	for (uint i = clusterStartIndex; i < clusterStopIndex; ++i)
 	{
-		if (ratSelectClusterLOD(camera, rat_MeshClusters[i], worldTransform))
+		// if (ratSelectClusterLOD(camera, rat_MeshClusters[i], mesh.clusterGroupIndexCount.x, worldTransform))
 		{
 			selectedClusters[currentClusterCount] = i;
 			++currentClusterCount;
 
 			if (currentClusterCount >= RAT_SCRATCH_PIPELINE_CONFIG_LOD_MAX_PENDING_CLUSTER_DRAWS)
 			{
-				ratEmitClusterDraws(draw, selectedClusters, currentClusterCount);
+				ratEmitClusterDraws(draw, cameraIndex, selectedClusters, currentClusterCount);
 			}
 		}
 	}
 
-	ratEmitClusterDraws(draw, selectedClusters, currentClusterCount);
+	ratEmitClusterDraws(draw, cameraIndex, selectedClusters, currentClusterCount);
 }

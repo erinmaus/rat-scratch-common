@@ -17,6 +17,11 @@ local PipelineRenderer = Object()
 function PipelineRenderer:new(pipelineRuntime)
 	self.pipelineRuntime = pipelineRuntime
 	self.world = World(pipelineRuntime)
+
+	self.cullShader = pipelineRuntime:loadComputeShader(
+		"@Pipeline/Cull/Cull.compute.glsl",
+		pipelineRuntime:getDefaultQualityPreset()
+	)
 end
 
 function PipelineRenderer:getWorld()
@@ -58,7 +63,18 @@ end
 
 --- @private
 --- @param scene RatScratch.Pipeline.Scene
+function PipelineRenderer:_cullScene(scene)
+	self:_bindWorldUniforms(self.cullShader)
+	self:_bindSceneUniforms(self.cullShader, scene)
+
+	scene:getPipeline(DrawPipeline):cull(self.cullShader, 1)
+end
+
+--- @private
+--- @param scene RatScratch.Pipeline.Scene
 function PipelineRenderer:_drawForward(scene)
+	self:_cullScene(scene)
+
 	local material = self.world:getPipeline(MaterialPipeline)
 
 	local drawShader = material:getShader(

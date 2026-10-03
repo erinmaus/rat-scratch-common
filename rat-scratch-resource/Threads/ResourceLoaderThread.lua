@@ -22,10 +22,15 @@ while isRunning do
 		end
 
 		local data, dependencies, otherResources
-		local success, a, b, c =
-			pcall(resourceType.loadDataFromFile, resourceType, event.filename)
+		local success, a, b, c = xpcall(
+			resourceType.loadDataFromFile,
+			debug.traceback,
+			resourceType,
+			event.filename
+		)
 		if not success then
 			-- TODO: log error message somehow ("a")
+			print(a)
 			data = resourceType:createDefaultResource()
 			dependencies = { resourceType:resolvePath(event.filename) }
 		else

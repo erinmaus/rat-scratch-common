@@ -17,6 +17,7 @@ local Transform = require("rat-scratch-math").Transform
 --- @field private indirectDrawBuffer love.GraphicsBuffer
 --- @field private camerasBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>
 --- @field private inputDrawsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.ObjectHandle>
+--- @field private outputDrawsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.ObjectHandle>
 --- @overload fun(pipelineRuntime: RatScratch.Pipeline.PipelineRuntime): RatScratch.Pipeline.DrawPipeline
 local DrawPipeline = Object(Pipeline)
 
@@ -41,6 +42,12 @@ function DrawPipeline:new(pipelineRuntime)
 	self.drawableToDraws = {}
 	self.compactDrawables = false
 
+	self.indirectDrawBufferData = {}
+	BufferFormat.resetValue(
+		DrawPipeline.INDIRECT_DRAW_FORMAT,
+		self.indirectDrawBufferData
+	)
+
 	self.indirectDrawBuffer = love.graphics.newBuffer(
 		DrawPipeline.INDIRECT_DRAW_FORMAT,
 		1,
@@ -53,28 +60,16 @@ function DrawPipeline:new(pipelineRuntime)
 		DrawPipeline.DEFAULT_DRAW_COUNT
 	)
 
-	self.deferredDepthDrawsBuffer = love.graphics.newBuffer(
+	self.outputDrawsBuffer = PipelineBuffer(
 		Draw.DRAW_FORMAT,
-		DrawPipeline.DEFAULT_DRAW_COUNT * 8,
-		{ shaderstorage = true }
-	)
-
-	self.deferredDepthDiscardDrawsBuffer = love.graphics.newBuffer(
-		Draw.DRAW_FORMAT,
-		DrawPipeline.DEFAULT_DRAW_COUNT * 8,
-		{ shaderstorage = true }
-	)
-
-	self.forwardDrawsBuffer = love.graphics.newBuffer(
-		Draw.DRAW_FORMAT,
-		DrawPipeline.DEFAULT_DRAW_COUNT * 8,
-		{ shaderstorage = true }
+		{ shaderstorage = true },
+		DrawPipeline.DEFAULT_DRAW_COUNT
 	)
 end
 
 function DrawPipeline:bind(shader, qualityPreset)
 	if shader:hasUniform("rat_DrawsBuffer") then
-		shader:send("rat_DrawsBuffer", self.inputDrawsBuffer:getBuffer())
+		shader:send("rat_DrawsBuffer", self.outputDrawsBuffer:getBuffer())
 	end
 end
 
@@ -164,14 +159,59 @@ function DrawPipeline:flush()
 	self.inputDrawsBuffer:flush()
 end
 
-function DrawPipeline:draw()
-	local _, count = self.inputDrawsBuffer:getIndexCount()
+--- @param cullShader love.Shader
+--- @param cameraCount integer
+function DrawPipeline:cull(cullShader, cameraCount)
+	local _, drawCount = self.inputDrawsBuffer:getIndexCount()
 
-	love.graphics.drawFromShader(
-		"triangles",
-		self:getPipelineConfig():getMeshletFormat():getTriangleCount() * 3,
-		count
+	BufferFormat.resetValue(
+		DrawPipeline.INDIRECT_DRAW_FORMAT,
+		self.indirectDrawBufferData
 	)
+	BufferFormat.setValue(
+		DrawPipeline.INDIRECT_DRAW_FORMAT,
+		self.indirectDrawBufferData,
+		"vertexCount",
+		0,
+		self:getPipelineConfig():getMeshletFormat():getTriangleCount() * 3
+	)
+	self.indirectDrawBuffer:setArrayData(self.indirectDrawBufferData)
+
+	local localX, localY = cullShader:getLocalThreadgroupSize()
+	if cullShader:hasUniform("rat_DrawsBuffer") then
+		cullShader:send("rat_DrawsBuffer", self.inputDrawsBuffer:getBuffer())
+	end
+
+	if cullShader:hasUniform("rat_OutputDrawsBuffer") then
+		cullShader:send(
+			"rat_OutputDrawsBuffer",
+			self.outputDrawsBuffer:getBuffer()
+		)
+	end
+
+	if cullShader:hasUniform("rat_IndirectDrawsBuffer") then
+		cullShader:send("rat_IndirectDrawsBuffer", self.indirectDrawBuffer)
+	end
+
+	love.graphics.dispatchThreadgroups(
+		cullShader,
+		math.max(math.ceil(drawCount / localX), 1),
+		math.max(math.ceil(cameraCount / localY), 1)
+	)
+end
+
+function DrawPipeline:draw()
+	-- local readback = love.graphics.readbackBuffer(self.indirectDrawBuffer)
+	-- local r = {}
+	-- BufferFormat.copyFromByteDataToFlatTable(DrawPipeline.INDIRECT_DRAW_FORMAT, 0, 1, 1, readback, r)
+	-- for k, v in ipairs(DrawPipeline.INDIRECT_DRAW_FORMAT) do
+	-- 	local instance = BufferFormat.get(DrawPipeline.INDIRECT_DRAW_FORMAT)
+	-- 	local c, o = instance:getCountOffset(v.name)
+	-- 	print(v.name, "=", Table.unpack(r, o, o + c - 1))
+	-- end
+	-- print()
+
+	love.graphics.drawFromShaderIndirect("triangles", self.indirectDrawBuffer)
 end
 
 return DrawPipeline
