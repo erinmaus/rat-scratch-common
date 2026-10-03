@@ -28,6 +28,7 @@ struct RatScratchPipelineMesh
 	uvec2 clusterGroupIndexCount;
 	uvec2 clusterNodeIndexCount;
 	uint clusterRootNodeCount;
+	uint indexOffset;
 	uint staticBaseVertexOffset;
 	uint skinnedBaseVertexOffset;
 };

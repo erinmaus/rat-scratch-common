@@ -3,8 +3,8 @@
 
 float ratCalculateScreenError(RatScratchPipelineCamera camera, vec3 boundsPosition, float boundsRadius, float error)
 {
-	float factor = ratGetCameraErrorFactor(cameraIndex);
-	if (cam.projectionType == RAT_SCRATCH_PIPELINE_PROJECTION_TYPE_ORTHOGRAPHIC)
+	float factor = ratGetCameraErrorFactor(camera);
+	if (camera.projectionType == RAT_SCRATCH_PIPELINE_PROJECTION_TYPE_ORTHOGRAPHIC)
 	{
 		return error * factor;
 	}
@@ -30,12 +30,12 @@ void ratTransformBoundsSphere(mat4 worldTransform, inout vec3 position, inout fl
 bool ratSphereInsideFrustum(RatScratchPipelineCamera camera, vec3 position, float radius)
 {
 	vec4 planes[] = vec4[](camera.leftPlane, camera.rightPlane, camera.topPlane, camera.bottomPlane, camera.nearPlane,
-						   camera.farPlane, );
+						   camera.farPlane);
 
 	for (uint i = 0; i < RAT_SCRATCH_PIPELINE_CAMERA_PLANE_COUNT; ++i)
 	{
-		float distanceFromPlane = dot(planes[i].xyz, meshletBoundsPosition) + cameraPlanes.planes[i].w;
-		if (distanceFromPlane < -meshletBoundsRadius)
+		float distanceFromPlane = dot(planes[i].xyz, position) + planes[i].w;
+		if (distanceFromPlane < -radius)
 		{
 			return false;
 		}
@@ -57,8 +57,8 @@ bool ratSelectGroupLOD(RatScratchPipelineCamera camera, RatScratchPipelineMeshCl
 		return false;
 	}
 
-	if (ratCalculateScreenError(camera, groupBoundsPositionRadius.xyz, groupBoundsPositionRadius.w, group.error)
-			errorThreshold)
+	if (ratCalculateScreenError(camera, groupBoundsPositionRadius.xyz, groupBoundsPositionRadius.w,
+								clusterGroup.error) <= errorThreshold)
 	{
 		return false;
 	}
@@ -66,7 +66,8 @@ bool ratSelectGroupLOD(RatScratchPipelineCamera camera, RatScratchPipelineMeshCl
 	return true;
 }
 
-bool ratSelectClusterLOD(RatScratchPipelineCamera camera, RatScratchPipelineMeshCluster cluster, mat4 worldTransform)
+bool ratSelectClusterLOD(RatScratchPipelineCamera camera, RatScratchPipelineMeshCluster cluster, uint groupOffset,
+						 mat4 worldTransform)
 {
 	float errorThreshold = RAT_SCRATCH_PIPELINE_CONFIG_LOD_ERROR_THRESHOLD;
 
@@ -75,7 +76,8 @@ bool ratSelectClusterLOD(RatScratchPipelineCamera camera, RatScratchPipelineMesh
 		return true;
 	}
 
-	RatScratchPipelineMeshClusterGroup refinedClusterGroup = rat_MeshClusterGroups[cluster.refinedIndex];
+	RatScratchPipelineMeshClusterGroup refinedClusterGroup =
+		rat_MeshClusterGroups[groupOffset + uint(cluster.refinedIndex)];
 
 	vec4 groupBoundsPositionRadius = refinedClusterGroup.boundsPositionRadius;
 	ratTransformBoundsSphere(worldTransform, groupBoundsPositionRadius.xyz, groupBoundsPositionRadius.w);
@@ -89,7 +91,7 @@ bool ratSelectClusterLOD(RatScratchPipelineCamera camera, RatScratchPipelineMesh
 	return false;
 }
 
-void ratEmitClusterDraws(RatScratchPipelineDraw baseDraw,
+void ratEmitClusterDraws(RatScratchPipelineDraw baseDraw, uint cameraIndex,
 						 uint selectedClusters[RAT_SCRATCH_PIPELINE_CONFIG_LOD_MAX_PENDING_CLUSTER_DRAWS],
 						 uint clusterCount)
 {
@@ -102,6 +104,7 @@ void ratEmitClusterDraws(RatScratchPipelineDraw baseDraw,
 	for (uint i = 0; i < clusterCount; ++i)
 	{
 		baseDraw.clusterIndex = selectedClusters[i];
-		rat_OutputDrawsBuffer[drawStartIndex + i] = baseDraw;
+		baseDraw.cameraIndex = cameraIndex;
+		rat_OutputDraws[drawStartIndex + i] = baseDraw;
 	}
 }
