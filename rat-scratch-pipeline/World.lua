@@ -666,14 +666,7 @@ function World:_updateObjectHandleDraw(objectHandle)
 				draw:setPointer("boneOffsetCount", bonesPointer)
 				draw:setPointer(
 					"indexOffset",
-					baseIndexPointer,
-					(k - 1)
-							* self.pipelineRuntime
-								:getConfig()
-								:getMeshletFormat()
-								:getTriangleCount()
-							* 3
-						+ 1
+					baseIndexPointer
 				)
 
 				currentDraw = currentDraw + 1

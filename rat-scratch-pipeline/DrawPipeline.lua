@@ -193,6 +193,14 @@ function DrawPipeline:cull(cullShader, cameraCount)
 		cullShader:send("rat_IndirectDrawsBuffer", self.indirectDrawBuffer)
 	end
 
+	if cullShader:hasUniform("rat_DrawCount") then
+		cullShader:send("rat_DrawCount", drawCount)
+	end
+
+	if cullShader:hasUniform("rat_CameraCount") then
+		cullShader:send("rat_CameraCount", cameraCount)
+	end
+
 	love.graphics.dispatchThreadgroups(
 		cullShader,
 		math.max(math.ceil(drawCount / localX), 1),

@@ -52,7 +52,7 @@ void computemain()
 
 	if (!ratSelectGroupLOD(camera, clusterGroup, worldTransform))
 	{
-		// return;
+		return;
 	}
 
 	uint selectedClusters[RAT_SCRATCH_PIPELINE_CONFIG_LOD_MAX_PENDING_CLUSTER_DRAWS];
@@ -62,17 +62,17 @@ void computemain()
 	uint clusterStopIndex = clusterStartIndex + clusterGroup.clusterIndexCount.y;
 	for (uint i = clusterStartIndex; i < clusterStopIndex; ++i)
 	{
-		// if (ratSelectClusterLOD(camera, rat_MeshClusters[i], mesh.clusterGroupIndexCount.x, worldTransform))
+		if (ratSelectClusterLOD(camera, rat_MeshClusters[i], mesh.clusterGroupIndexCount.x, worldTransform))
 		{
 			selectedClusters[currentClusterCount] = i;
 			++currentClusterCount;
 
 			if (currentClusterCount >= RAT_SCRATCH_PIPELINE_CONFIG_LOD_MAX_PENDING_CLUSTER_DRAWS)
 			{
-				ratEmitClusterDraws(draw, cameraIndex, selectedClusters, currentClusterCount);
+				ratEmitClusterDraws(draw, cameraIndex, clusterGroup.lodDepth, selectedClusters, currentClusterCount);
 			}
 		}
 	}
 
-	ratEmitClusterDraws(draw, cameraIndex, selectedClusters, currentClusterCount);
+	ratEmitClusterDraws(draw, cameraIndex, clusterGroup.lodDepth, selectedClusters, currentClusterCount);
 }
