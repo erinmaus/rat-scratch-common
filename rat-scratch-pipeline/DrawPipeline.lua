@@ -209,16 +209,6 @@ function DrawPipeline:cull(cullShader, cameraCount)
 end
 
 function DrawPipeline:draw()
-	-- local readback = love.graphics.readbackBuffer(self.indirectDrawBuffer)
-	-- local r = {}
-	-- BufferFormat.copyFromByteDataToFlatTable(DrawPipeline.INDIRECT_DRAW_FORMAT, 0, 1, 1, readback, r)
-	-- for k, v in ipairs(DrawPipeline.INDIRECT_DRAW_FORMAT) do
-	-- 	local instance = BufferFormat.get(DrawPipeline.INDIRECT_DRAW_FORMAT)
-	-- 	local c, o = instance:getCountOffset(v.name)
-	-- 	print(v.name, "=", Table.unpack(r, o, o + c - 1))
-	-- end
-	-- print()
-
 	love.graphics.drawFromShaderIndirect("triangles", self.indirectDrawBuffer)
 end
 
