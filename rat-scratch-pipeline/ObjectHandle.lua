@@ -598,6 +598,15 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 	end
 
 	self.overrideMaterials[meshResource] = overrideMaterial
+
+	if not overrideMaterial then
+		self.eventSource:process(
+			ObjectHandleEvent.fromMaterialAdded(
+				mesh,
+				self.defaultMaterials[mesh]
+			)
+		)
+	end
 end
 
 --- @private
@@ -636,9 +645,17 @@ function ObjectHandle:_updateModel(modelResource, previousModel)
 			end
 
 			if self.defaultMaterials[mesh] then
+				self.eventSource:process(
+					ObjectHandleEvent.fromMaterialRemoved(
+						mesh,
+						self.defaultMaterials[mesh]
+					)
+				)
+
 				materialPipeline:freeMaterialInstance(
 					self.defaultMaterials[mesh]
 				)
+
 				self.defaultMaterials[mesh] = nil
 			end
 		end

@@ -81,9 +81,10 @@ void ratClearFragmentOutput(out RatScratchPipelineFragmentOutput fragmentOutput)
 	fragmentOutput.emissive = vec3(0.0);
 	fragmentOutput.normal = vec3(0.0);
 	fragmentOutput.fluorescence = vec3(0.0);
-	fragmentOutput.metal = 1;
-	fragmentOutput.roughness = 1;
-	fragmentOutput.occlusion = 1;
+	fragmentOutput.heat = 0.0;
+	fragmentOutput.metal = 1.0;
+	fragmentOutput.roughness = 1.0;
+	fragmentOutput.occlusion = 1.0;
 	fragmentOutput.materialDefinitionIndex = 0;
 	fragmentOutput.cameraIndex = 0;
 	fragmentOutput.discardFragment = 0;

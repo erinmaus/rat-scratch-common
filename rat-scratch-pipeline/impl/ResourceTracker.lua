@@ -14,6 +14,7 @@ local ResourceTrackerEvent =
 --- @field private dirtyResources table<RatScratch.Resource.Resource<T>, boolean>
 --- @field private dirtyResourcesByIndex RatScratch.Resource.Resource<T>[]
 --- @field private dirtyResourcePreviousValue table<RatScratch.Resource.Resource<T>, T>
+--- @field private dirtyObjects table<RatScratch.Pipeline.ObjectHandle, table<RatScratch.Resource.Resource<T>, true>>
 --- @field private eventSource RatScratch.Common.EventSource<RatScratch.Pipeline.ResourceTracker<T>>
 --- @overload fun(): RatScratch.Pipeline.ResourceTracker
 local ResourceTracker = Object()
@@ -28,6 +29,8 @@ function ResourceTracker:new()
 	self.dirtyResources = {}
 	self.dirtyResourcesByIndex = {}
 	self.dirtyResourcePreviousValue = {}
+
+	self.dirtyObjects = {}
 end
 
 ResourceTracker.listen, ResourceTracker.silence =
@@ -66,6 +69,13 @@ function ResourceTracker:add(resource, object)
 			ResourceTrackerEvent.fromAdd(resource, objects)
 		)
 		resource:listen(ResourceEvent.MODIFY, self._onResourceUpdate, self)
+	elseif resource:getIsReady() then
+		local resources = self.dirtyObjects[object]
+		if not resources then
+			resources = {}
+			self.dirtyObjects[object] = resources
+		end
+		resources[resource] = true
 	end
 
 	self.resourceValue[resource] = (resource:getIsReady() and resource:get())
@@ -142,6 +152,19 @@ function ResourceTracker:flush()
 			)
 		)
 	end
+
+	for object, dirtyResources in pairs(self.dirtyObjects) do
+		for resource in pairs(dirtyResources) do
+			self.eventSource:process(
+				ResourceTrackerEvent.fromUpdate(
+					resource,
+					nil,
+					{ [object] = true }
+				)
+			)
+		end
+	end
+	Table.clear(self.dirtyObjects)
 
 	Table.clear(self.dirtyResourcesByIndex)
 end

@@ -4,7 +4,7 @@ local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local Transform = require("rat-scratch-math").Transform
 
 --- @class RatScratch.Pipeline.CameraFrame : RatScratch.Common.BaseObject
---- @field private camera RatScratch.Pipeline.Camera
+--- @field private camera RatScratch.Pipeline.Camera<RatScratch.Pipeline.CameraProjection, RatScratch.Pipeline.CameraView>
 --- @field private data number[]
 --- @field private currentView love.Transform
 --- @field private currentInverseView love.Transform
@@ -57,9 +57,25 @@ CameraFrame.CAMERA_FORMAT = {
 		name = "inversePreviousProjectionViewTransform",
 		format = "floatmat4x4",
 	},
+	{ location = 11, name = "leftPlane", format = "floatvec4" },
+	{ location = 12, name = "rightPlane", format = "floatvec4" },
+	{ location = 13, name = "topPlane", format = "floatvec4" },
+	{ location = 14, name = "bottomPlane", format = "floatvec4" },
+	{ location = 15, name = "nearPlane", format = "floatvec4" },
+	{ location = 16, name = "farPlane", format = "floatvec4" },
+	{ location = 17, name = "projectionType", format = "uint32" },
 }
 
 CameraFrame.CAMERA_FORMAT_INSTANCE = BufferFormat.get(CameraFrame.CAMERA_FORMAT)
+
+CameraFrame.PROJECTION_TYPE_NONE = 0
+CameraFrame.PROJECTION_TYPE_PERSPECTIVE = 1
+CameraFrame.PROJECTION_TYPE_ORTHOGRAPHIC = 2
+
+CameraFrame.PROJECTION_TYPE = {
+	perspective = CameraFrame.PROJECTION_TYPE_PERSPECTIVE,
+	orthographic = CameraFrame.PROJECTION_TYPE_ORTHOGRAPHIC,
+}
 
 --- @param camera RatScratch.Pipeline.Camera
 function CameraFrame:new(camera)
@@ -101,7 +117,8 @@ function CameraFrame:_setMatrix(name, transform)
 	)
 end
 
-function CameraFrame:update()
+--- @private
+function CameraFrame:_updatePreviousCameraTransforms()
 	self.previousView:setMatrix(self.currentView:getMatrix())
 	self.previousInverseView:setMatrix(self.currentInverseView:getMatrix())
 	self.previousProjection:setMatrix(self.currentProjection:getMatrix())
@@ -114,9 +131,12 @@ function CameraFrame:update()
 	self.previousInverseProjectionView:setMatrix(
 		self.currentInverseProjectionView:getMatrix()
 	)
+end
 
-	self.camera:getProjection(self.currentProjection)
-	self.camera:getView(self.currentView)
+--- @private
+function CameraFrame:_updateCurrentCameraTransforms()
+	self.camera:getProjectionTransform(self.currentProjection)
+	self.camera:getViewTransform(self.currentView)
 
 	self.currentProjectionView:reset()
 	self.currentProjectionView:apply(self.currentProjection)
@@ -125,7 +145,10 @@ function CameraFrame:update()
 	self.currentInverseView:inverseOf(self.currentView)
 	self.currentInverseProjection:inverseOf(self.currentProjection)
 	self.currentInverseProjectionView:inverseOf(self.currentProjectionView)
+end
 
+--- @private
+function CameraFrame:_updateCameraData()
 	self:_setMatrix("viewTransform", self.currentView)
 	self:_setMatrix("inverseViewTransform", self.currentInverseView)
 	self:_setMatrix("previousViewTransform", self.previousView)
@@ -146,6 +169,61 @@ function CameraFrame:update()
 		"inversePreviousProjectionViewTransform",
 		self.previousInverseProjectionView
 	)
+end
+
+--- @private
+--- @param name string
+--- @param x number
+--- @param y number
+--- @param z number
+--- @param d number
+function CameraFrame:_updatePlane(name, x, y, z, d)
+	local inverseLength = 1 / math.sqrt(x ^ 2 + y ^ 2 + z ^ 2)
+	BufferFormat.setValue(
+		CameraFrame.CAMERA_FORMAT_INSTANCE,
+		self.data,
+		name,
+		0,
+		x * inverseLength,
+		y * inverseLength,
+		z * inverseLength,
+		d * inverseLength
+	)
+end
+
+--- @private
+function CameraFrame:_updatePlanesData()
+	local m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44 =
+		self.currentProjectionView:getMatrix()
+
+	self:_updatePlane("leftPlane", m41 + m11, m42 + m12, m43 + m13, m44 + m14)
+	self:_updatePlane("rightPlane", m41 - m11, m42 - m12, m43 - m13, m44 - m14)
+	self:_updatePlane("topPlane", m41 - m21, m42 - m22, m43 - m23, m44 - m24)
+	self:_updatePlane("bottomPlane", m41 + m21, m42 + m22, m43 + m23, m44 + m24)
+	self:_updatePlane("nearPlane", m41 + m31, m42 + m32, m43 + m33, m44 + m34)
+	self:_updatePlane("farPlane", m41 - m31, m42 - m32, m43 - m33, m44 - m34)
+end
+
+--- @private
+function CameraFrame:_updateCameraMetadata()
+	BufferFormat.setValue(
+		CameraFrame.CAMERA_FORMAT_INSTANCE,
+		self.data,
+		"projectionType",
+		0,
+		CameraFrame.PROJECTION_TYPE[self.camera
+			:getProjection()
+			:getProjectionType()]
+	)
+end
+
+function CameraFrame:update()
+	self:_updatePreviousCameraTransforms()
+	self:_updateCurrentCameraTransforms()
+
+	self:_updateCameraData()
+	self:_updateCameraMetadata()
+	self:_updatePlanesData()
 end
 
 function CameraFrame:getData()

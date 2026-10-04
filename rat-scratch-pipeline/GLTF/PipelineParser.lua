@@ -236,47 +236,26 @@ function PipelineParser:loadModelDefinition(index)
 
 		local indices = self.parser:getBufferViewData(primitiveMeshlets.indices)
 
-		--- @type RatScratch.Pipeline.Graphics3D.PipelineMeshletDefinition[]
-		local meshletDefinitions = {}
-
-		local meshletIndexOffset = 0
-		for _, meshlet in ipairs(primitiveMeshlets.meshlets) do
-			--- @type RatScratch.Pipeline.Graphics3D.PipelineMeshletDefinition
-			local meshletDefinition = {
-				indices = love.data.newDataView(
-					indices,
-					meshletIndexOffset,
-					meshletIndexSize
-				),
-				staticBounds = {
-					center = Vector3(unpack(meshlet.staticBounds.center)),
-					radius = meshlet.staticBounds.radius,
-				},
-			}
-
-			if meshlet.skinnedBounds then
-				meshletDefinition.skinnedBounds = {}
-
-				for _, bounds in ipairs(meshlet.skinnedBounds) do
-					table.insert(meshletDefinition.skinnedBounds, {
-						center = Vector3(unpack(bounds.center)),
-						radius = bounds.radius,
-						bone = bounds.bone,
-						animation = bounds.animation,
-					})
-				end
-			end
-
-			table.insert(meshletDefinitions, meshletDefinition)
-			meshletIndexOffset = meshletIndexOffset + meshletIndexSize
-		end
+		--- @type RatScratch.Pipeline.Graphics3D.PipelineLODDefinition
+		local lodDefinition = {
+			clusters = self.parser:getBufferViewData(
+				primitiveMeshlets.cluster.clusters
+			),
+			groups = self.parser:getBufferViewData(
+				primitiveMeshlets.cluster.groups
+			),
+			nodes = self.parser:getBufferViewData(
+				primitiveMeshlets.cluster.nodes
+			),
+			rootNodeCount = primitiveMeshlets.cluster.rootNodeCount,
+		}
 
 		table.insert(modelDefinition.meshes, {
 			vertexCount = primitiveMeshlets.vertexCount,
 			indexCount = primitiveMeshlets.indexCount,
 			vertices = vertices,
 			indices = indices,
-			meshlets = meshletDefinitions,
+			lod = lodDefinition,
 			material = primitive.material
 				and self.parser:loadMaterial(primitive.material),
 		})

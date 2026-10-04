@@ -339,8 +339,7 @@ end
 --- @param count integer
 --- @return integer, integer
 function PipelineBufferContext:register(instance, count)
-	count = count or 1
-	assert(count >= 1, "count must be >= 1; got %d", count)
+	count = math.max(count or 1, 1)
 
 	assert(
 		not self.indexCountByInstance[instance],

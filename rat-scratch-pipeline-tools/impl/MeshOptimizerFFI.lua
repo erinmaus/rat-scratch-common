@@ -13,8 +13,200 @@ local MeshOptimizerFFI = Object()
 --- @field public radius number
 local MeshOptimizerFFIBounds = {}
 
+--- @class RatScratch.Pipeline.impl.MeshOptimizerFFI.Group
+--- @field public bounds RatScratch.Pipeline.impl.MeshOptimizerFFI.Bounds
+--- @field public error number
+--- @field public depth integer
+--- @field public clusterIndex integer
+--- @field public clusterCount integer
+local MeshOptimizerFFIGroup = {}
+
+--- @class RatScratch.Pipeline.impl.MeshOptimizerFFI.Cluster
+--- @field public refinedIndex integer
+--- @field public bounds RatScratch.Pipeline.impl.MeshOptimizerFFI.Bounds
+--- @field public error number
+--- @field public boneIndex integer
+--- @field public indexOffset integer
+--- @field public indexCount integer
+local MeshOptimizerFFICluster = {}
+
+--- @class RatScratch.Pipeline.impl.MeshOptimizerFFI.Node
+--- @field public bounds RatScratch.Pipeline.impl.MeshOptimizerFFI.Bounds
+--- @field public error number
+--- @field public groupIndex integer
+--- @field public childIndex integer
+--- @field public childCount integer
+local MeshOptimizerFFINode = {}
+
+--- @class RatScratch.Pipeline.impl.MeshOptimizerFFI.ClusterResult
+--- @field public groups RatScratch.Pipeline.impl.MeshOptimizerFFI.Group[]
+--- @field public clusters RatScratch.Pipeline.impl.MeshOptimizerFFI.Cluster[]
+--- @field public nodes RatScratch.Pipeline.impl.MeshOptimizerFFI.Node[]
+--- @field public rootNodeCount integer
+local MeshOptimizerFFIClusterResult = {}
+
 --- @private
 MeshOptimizerFFI._IS_INTIALIZED = false
+
+--- @param indexData love.ByteData
+--- @param indexCount integer
+--- @param vertexData love.ByteData
+--- @param vertexCount integer
+--- @param vertexFormat RatScratch.Graphics.Graphics3D.BufferFormat
+--- @param textureCoordinateData love.ByteData
+--- @param textureCoordinateFormat RatScratch.Graphics.Graphics3D.BufferFormat
+--- @param maxTriangles integer
+--- @param nodeWidth integer
+--- @return love.ByteData, RatScratch.Pipeline.impl.MeshOptimizerFFI.ClusterResult
+function MeshOptimizerFFI.buildClusters(
+	indexData,
+	indexCount,
+	vertexData,
+	vertexCount,
+	vertexFormat,
+	textureCoordinateData,
+	textureCoordinateFormat,
+	maxTriangles,
+	nodeWidth
+)
+	local _, ratMeshoptimizer = MeshOptimizerFFI.load()
+
+	local indexDataPointer =
+		ffi.cast("unsigned int *", indexData:getFFIPointer())
+
+	local vertexDataPointer = ffi.cast(
+		"float *",
+		ffi.cast("uint8_t *", vertexData:getFFIPointer())
+			+ vertexFormat:getByteOffset("VertexPosition")
+	)
+
+	local textureCoordinateDataPointer = textureCoordinateData
+		and ffi.cast(
+			"float *",
+			ffi.cast("uint8_t *", textureCoordinateData:getFFIPointer())
+				+ textureCoordinateFormat:getByteOffset("VertexTexCoord")
+		)
+
+	local clodConfig = ffi.new("struct meshopt_clodConfig")
+	ratMeshoptimizer.rat_clusterlod_initializeConfig(clodConfig, maxTriangles)
+
+	local clodMesh = ffi.new("struct meshopt_clodMesh")
+	ratMeshoptimizer.rat_clusterlod_initializeMesh(
+		clodMesh,
+		indexDataPointer,
+		indexCount,
+		vertexCount,
+		vertexDataPointer,
+		vertexFormat:getStride(),
+		textureCoordinateDataPointer,
+		textureCoordinateFormat and textureCoordinateFormat:getStride() or 0
+	)
+
+	--- @type any
+	local clodResult = ffi.new("RatScratchClusterLODResult")
+	ratMeshoptimizer.rat_clusterlod_build(
+		clodConfig,
+		clodMesh,
+		nodeWidth,
+		clodResult
+	)
+
+	local newIndexData = love.data.newByteData(
+		tonumber(clodResult.indexCount) * ffi.sizeof("uint32_t")
+	)
+	ffi.copy(
+		newIndexData:getFFIPointer(),
+		clodResult.indices,
+		clodResult.indexCount * ffi.sizeof("uint32_t")
+	)
+
+	--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Cluster[]
+	local clusters = {}
+
+	for i = 1, tonumber(clodResult.clusterCount) do
+		local inputCluster = clodResult.clusters[i - 1]
+
+		--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Cluster
+		local outputCluster = {
+			refinedIndex = inputCluster.refinedIndex,
+			bounds = {
+				position = Vector3(
+					inputCluster.bounds.center[0],
+					inputCluster.bounds.center[1],
+					inputCluster.bounds.center[2]
+				),
+				radius = inputCluster.bounds.radius,
+			},
+			error = inputCluster.bounds.error,
+			boneIndex = 0,
+			indexOffset = tonumber(inputCluster.indexOffset) or 0,
+			indexCount = tonumber(inputCluster.indexCount) or 0,
+		}
+
+		table.insert(clusters, outputCluster)
+	end
+
+	--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Group[]
+	local groups = {}
+
+	for i = 1, tonumber(clodResult.groupCount) do
+		local inputGroup = clodResult.groups[i - 1]
+
+		--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Group
+		local outputGroup = {
+			bounds = {
+				position = Vector3(
+					inputGroup.bounds.center[0],
+					inputGroup.bounds.center[1],
+					inputGroup.bounds.center[2]
+				),
+				radius = inputGroup.bounds.radius,
+			},
+			error = inputGroup.bounds.error,
+			depth = inputGroup.lodDepth,
+			clusterIndex = tonumber(inputGroup.clusterIndex) or 0,
+			clusterCount = tonumber(inputGroup.clusterCount) or 0,
+		}
+
+		table.insert(groups, outputGroup)
+	end
+
+	--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Node[]
+	local nodes = {}
+	local rootNodeCount = clodResult.rootNodeCount
+
+	for i = 1, tonumber(clodResult.nodeCount) do
+		local inputNode = clodResult.nodes[i - 1]
+
+		--- @type RatScratch.Pipeline.impl.MeshOptimizerFFI.Node
+		local outputNode = {
+			bounds = {
+				position = Vector3(
+					inputNode.bounds.center[0],
+					inputNode.bounds.center[1],
+					inputNode.bounds.center[2]
+				),
+				radius = inputNode.bounds.radius,
+			},
+			error = inputNode.bounds.error,
+			groupIndex = tonumber(inputNode.groupIndex) or 0,
+			childIndex = tonumber(inputNode.childIndex) or 0,
+			childCount = tonumber(inputNode.childCount) or 0,
+		}
+
+		table.insert(nodes, outputNode)
+	end
+
+	ratMeshoptimizer.rat_clusterlod_freeResult(clodResult)
+
+	return newIndexData,
+		{
+			groups = groups,
+			clusters = clusters,
+			nodes = nodes,
+			rootNodeCount = rootNodeCount,
+		}
+end
 
 --- @param indexData love.ByteData
 --- @param indexCount integer
@@ -135,7 +327,7 @@ function MeshOptimizerFFI.load()
 		return unpack(MeshOptimizerFFI._LIBRARY)
 	end
 
-	ffi.cdef([[
+	ffi.cdef [[
 		struct meshopt_Meshlet
 		{
 			unsigned int vertex_offset;
@@ -184,7 +376,165 @@ function MeshOptimizerFFI.load()
 			size_t vertexPositionsStride,
 			struct meshopt_Bounds *bounds
 		);
-	]])
+
+		struct meshopt_clodConfig
+		{
+			size_t max_vertices;
+			size_t min_triangles;
+			size_t max_triangles;
+
+			bool partition_spatial;
+			bool partition_sort;
+			size_t partition_size;
+
+			bool cluster_spatial;
+			float cluster_fill_weight;
+			float cluster_split_factor;
+
+			float simplify_ratio;
+			float simplify_threshold;
+
+			float simplify_error_merge_previous;
+			float simplify_error_merge_additive;
+
+			float simplify_error_factor_sloppy;
+
+			float simplify_error_edge_limit;
+
+			bool simplify_permissive;
+
+			bool simplify_fallback_permissive;
+			bool simplify_fallback_sloppy;
+
+			bool simplify_regularize;
+
+			bool optimize_bounds;
+
+			bool optimize_clusters;
+			int optimize_clusters_level;
+		};
+
+		struct meshopt_clodMesh
+		{
+			const unsigned int* indices;
+			size_t index_count;
+
+			size_t vertex_count;
+
+			const float* vertex_positions;
+			size_t vertex_positions_stride;
+
+			const float* vertex_attributes;
+			size_t vertex_attributes_stride;
+
+			const unsigned char* vertex_lock;
+
+			const float* attribute_weights;
+			size_t attribute_count;
+
+			unsigned int attribute_protect_mask;
+		};
+
+		struct meshopt_clodBounds
+		{
+			float center[3];
+			float radius;
+
+			float error;
+		};
+
+		struct meshopt_clodCluster
+		{
+			int refined;
+
+			struct meshopt_clodBounds bounds;
+
+			const unsigned int* indices;
+			size_t index_count;
+
+			size_t vertex_count;
+		};
+
+		struct meshopt_clodGroup
+		{
+			int depth;
+
+			struct meshopt_clodBounds simplified;
+		};
+
+		typedef struct RatScratchGroup
+		{
+			struct meshopt_clodBounds bounds;
+			int32_t lodDepth;
+			uint32_t clusterIndex;
+			uint32_t clusterCount;
+		} RatScratchGroup;
+
+		typedef struct RatScratchCluster
+		{
+			int32_t refinedIndex;
+
+			struct meshopt_clodBounds bounds;
+			int32_t boneIndex;
+
+			uint32_t indexOffset;
+			uint32_t indexCount;
+		} RatScratchCluster;
+
+		typedef struct RatScratchNode
+		{
+			struct meshopt_clodBounds bounds;
+			int32_t groupIndex;
+			
+			uint32_t childIndex;
+			uint32_t childCount;
+		} RatScratchNode;
+
+		typedef struct RatScratchClusterLODResult
+		{
+			RatScratchGroup *groups;
+			size_t groupCount;
+
+			RatScratchCluster *clusters;
+			size_t clusterCount;
+
+			RatScratchNode *nodes;
+			size_t nodeCount;
+			size_t rootNodeCount;
+
+			uint32_t *indices;
+			size_t indexCount;
+
+			void *userdata;
+		} RatScratchClusterLODResult;
+
+		void rat_clusterlod_initializeConfig(
+			struct meshopt_clodConfig *config,
+			size_t triangleCount
+		);
+
+		void rat_clusterlod_initializeMesh(
+			struct meshopt_clodMesh *mesh,
+			const uint32_t *indices,
+			size_t indexCount,
+			size_t vertexCount,
+			const float *vertexPositions,
+			size_t vertexPositionStride,
+			const float *vertexTextureCoordinates,
+			size_t vertexTextureCoordinateStride
+		);
+
+		void rat_clusterlod_build(
+			const struct meshopt_clodConfig *config,
+			const struct meshopt_clodMesh *mesh,
+			size_t nodeWidth,
+			RatScratchClusterLODResult *result
+		);
+
+		void rat_clusterlod_freeResult(
+			RatScratchClusterLODResult *result
+		);
+	]]
 
 	MeshOptimizerFFI._LIBRARY = {
 		RatScratchModule.loadLibrary(PATH, "libmeshoptimizer"),

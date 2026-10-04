@@ -24,6 +24,7 @@ struct RatScratchPipelineFragmentOutput
 	vec3 fluorescence;
 	vec3 emissive;
 	vec3 normal;
+	float heat;
 	float metal;
 	float roughness;
 	float occlusion;

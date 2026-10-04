@@ -2,14 +2,17 @@ local Object = require("rat-scratch-common").Object
 local Vector3 = require("rat-scratch-math").Vector3
 local Light = require("rat-scratch-pipeline.Light")
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
-local ArcballCamera = require("rat-scratch-pipeline.ArcballCamera")
 local Quaternion = require("rat-scratch-math").Quaternion
 local CubeMap = require("rat-scratch-graphics").CubeMap
+local ArcballCameraView = require("rat-scratch-pipeline.ArcballCameraView")
+local Camera = require("rat-scratch-pipeline.Camera")
+local PerspectiveFOVCameraProjection =
+	require("rat-scratch-pipeline.PerspectiveFOVCameraProjection")
 
 --- @class RatScratch.Pipeline.PointLight : RatScratch.Pipeline.Light
 --- @field position RatScratch.Math.Vector3
 --- @field attenuation number
---- @field cameras (RatScratch.Pipeline.ArcballCamera | false)[]
+--- @field cameras (RatScratch.Pipeline.Camera<RatScratch.Pipeline.PerspectiveFOVCameraProjection, RatScratch.Pipeline.ArcballCameraView> | false)[]
 --- @overload fun(): RatScratch.Pipeline.PointLight
 local PointLight = Object(Light)
 
@@ -89,14 +92,15 @@ do
 	function PointLight:getCamera(index)
 		local camera = self.cameras[index]
 		if not camera then
-			camera = ArcballCamera()
-			camera:setRotation(CubeMap.getRotation(index, _rotation))
+			camera =
+				Camera(PerspectiveFOVCameraProjection(), ArcballCameraView())
+			camera:getView():setRotation(CubeMap.getRotation(index, _rotation))
 			self.cameras[index] = camera
 		end
 
-		camera:setNear(0.1)
-		camera:setFar(math.max(self.attenuation, 1))
-		camera:setTranslation(self.position)
+		camera:getProjection():setNear(0.1)
+		camera:getProjection():setFar(math.max(self.attenuation, 1))
+		camera:getView():setTranslation(self.position)
 
 		return camera
 	end

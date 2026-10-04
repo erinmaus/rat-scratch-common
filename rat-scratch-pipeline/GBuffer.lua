@@ -11,11 +11,10 @@ local GBuffer = Object()
 
 GBuffer.FORMAT = {
 	"rgba8", -- albedo (rgb) + alpha mask (a)
-	"rgb5a1", -- emissive (rgb) + alpha unused
+	"rgba8", -- emissive (rgb) + alpha (heat)
 	"rgb5a1", -- ultraviolet fluorescence (rgb) + alpha unused
-	"rg16f", -- rg16f (encoded normals)
-	"rgba8", -- rgba8 (metal, roughness, occlusion) + alpha unused
-	"r8", -- r8 (material)
+	"rg16f", -- encoded normals
+	"rgba8", -- metal, roughness, occlusion + alpha (material)
 }
 
 GBuffer.DEPTH_STENCIL_FORMAT = "depth32f"
@@ -87,7 +86,7 @@ function GBuffer:resize(width, height, layers)
 
 		binding[1] = canvas
 
-		-- TODO: enable layer rendered
+		-- TODO: enable layer rendering
 		if self.layers == 1 then
 			binding.layer = 1
 		end

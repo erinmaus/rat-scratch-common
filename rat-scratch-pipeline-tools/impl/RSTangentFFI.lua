@@ -74,7 +74,7 @@ function RSTangentFFI.load()
 		return RSTangentFFI._LIBRARY
 	end
 
-	ffi.cdef([[
+	ffi.cdef [[
 		int rat_generateTangents(
 			uint32_t *indices,
 			size_t indexCount,
@@ -86,7 +86,7 @@ function RSTangentFFI.load()
 			size_t textureCoordinateStride,
 			float *tangent,
 			size_t tangentStride);
-	]])
+	]]
 
 	RSTangentFFI._LIBRARY =
 		RatScratchModule.loadLibrary(PATH, "rat_scratch_tangents")

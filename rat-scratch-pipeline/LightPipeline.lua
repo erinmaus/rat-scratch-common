@@ -229,6 +229,9 @@ function LightPipeline:_dispatchCluster(qualityPreset, shader, result)
 	local _, lightsCount = self.lightsBuffer:getIndexCount()
 	shader:send("rat_LightCount", lightsCount)
 
+	local cellsBuffer = LightPipeline._CELLS_BUFFER
+	shader:send("rat_WorldCellsBuffer", cellsBuffer)
+
 	local camerasBuffer = result:getCamerasBuffer()
 	local _, cameraCount = camerasBuffer:getIndexCount()
 	shader:send("rat_CameraCount", cameraCount)

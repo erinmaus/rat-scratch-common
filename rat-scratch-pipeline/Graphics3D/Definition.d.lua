@@ -22,27 +22,16 @@ local PipelineModelDefinition = {}
 --- @field public indexCount integer
 --- @field public vertices table<string, love.Data>
 --- @field public indices love.Data
---- @field public meshlets RatScratch.Pipeline.Graphics3D.PipelineMeshletDefinition[]
+--- @field public lod RatScratch.Pipeline.Graphics3D.PipelineLODDefinition[]
 --- @field public material RatScratch.Graphics.Graphics3D.MaterialDefinition
 local PipelineMeshDefinition = {}
 
---- @class RatScratch.Pipeline.Graphics3D.PipelineMeshletDefinition
---- @field public indices love.Data
---- @field public staticBounds RatScratch.Pipeline.Graphics3D.PipelineMeshletDefinitionBounds
---- @field public skinnedBounds? RatScratch.Pipeline.Graphics3D.PipelineMeshletDefinitionSkinnedBounds[]
-local PipelineMeshletDefinition = {}
-
---- @class RatScratch.Pipeline.Graphics3D.PipelineMeshletDefinitionBounds
---- @field public center number[]
---- @field public radius number
-local PipelineMeshletDefinitionBounds = {}
-
---- @class RatScratch.Pipeline.Graphics3D.PipelineMeshletDefinitionSkinnedBounds : RatScratch.Pipeline.Graphics3D.PipelineMeshletDefinitionBounds
---- @field public center number[]
---- @field public radius number
---- @field public bone integer
---- @field public animation integer
-local PipelineMeshletDefinitionBounds = {}
+--- @class RatScratch.Pipeline.Graphics3D.PipelineLODDefinition
+--- @field public clusters love.Data
+--- @field public groups love.Data
+--- @field public nodes love.Data
+--- @field public rootNodeCount integer
+local PipelineLODDefinition = {}
 
 --- @class RatScratch.Pipeline.Graphics3D.PipelineMaterialDefinition
 --- @field public name string

@@ -24,15 +24,37 @@ struct RatScratchPipelineModel
 
 struct RatScratchPipelineMesh
 {
-	uvec2 meshletCountIndex;
+	uvec2 clusterIndexCount;
+	uvec2 clusterGroupIndexCount;
+	uvec2 clusterNodeIndexCount;
+	uint clusterRootNodeCount;
+	uint indexOffset;
 	uint staticBaseVertexOffset;
 	uint skinnedBaseVertexOffset;
 };
 
-struct RatScratchPipelineMeshlet
+struct RatScratchPipelineMeshCluster
 {
-	vec4 staticCenterRadius;
-	uvec2 skinnedMeshletBoundsIndexCount;
+	vec4 boundsPositionRadius;
+	float error;
+	int refinedIndex;
+	uvec2 indexOffsetCount;
+};
+
+struct RatScratchPipelineMeshClusterGroup
+{
+	vec4 boundsPositionRadius;
+	float error;
+	int lodDepth;
+	uvec2 clusterIndexCount;
+};
+
+struct RatScratchPipelineMeshClusterNode
+{
+	vec4 boundsPositionRadius;
+	float error;
+	uint groupIndex;
+	uvec2 childIndexCount;
 };
 
 struct RatScratchPipelineSkinnedMeshletBounds
@@ -41,6 +63,12 @@ struct RatScratchPipelineSkinnedMeshletBounds
 	uint animationIndex;
 	uint bone;
 };
+
+const uint RAT_SCRATCH_PIPELINE_CAMERA_PLANE_COUNT = 6;
+
+const uint RAT_SCRATCH_PIPELINE_PROJECTION_TYPE_NONE = 0;
+const uint RAT_SCRATCH_PIPELINE_PROJECTION_TYPE_PERSPECTIVE = 1;
+const uint RAT_SCRATCH_PIPELINE_PROJECTION_TYPE_ORTHOGRAPHIC = 2;
 
 struct RatScratchPipelineCamera
 {
@@ -55,6 +83,13 @@ struct RatScratchPipelineCamera
 	mat4 projectionViewTransform;
 	mat4 inverseProjectionViewTransform;
 	mat4 inversePreviousProjectionViewTransform;
+	vec4 leftPlane;
+	vec4 rightPlane;
+	vec4 topPlane;
+	vec4 bottomPlane;
+	vec4 nearPlane;
+	vec4 farPlane;
+	uint projectionType;
 };
 
 struct RatScratchPipelineDraw
@@ -64,11 +99,12 @@ struct RatScratchPipelineDraw
 	uint meshInstanceIndex;
 	uint modelIndex;
 	uint meshIndex;
-	uint meshletIndex;
+	uint clusterIndex;
+	uint groupIndex;
+	int lodIndex;
 	uint staticBaseVertexOffset;
 	uint skinnedBaseVertexOffset;
 	uvec2 boneOffsetCount;
 	uint indexOffset;
 	uint cameraIndex;
-	uint layerIndex;
 };

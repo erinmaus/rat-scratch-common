@@ -7,6 +7,7 @@ ifneq ($(MSYS_VERSION),0)
 	RAT_SCRATCH_STATIC_LIB_EXT := a
 	LDFLAGS += -shared
 	CPPFLAGS += -DRAT_SCRATCH_WINDOWS '-DRAT_SCRATCH_CALLING_CONVENTION=__declspec(dllimport)'
+	CXXFLAGS += -static -static-libgcc -static-libstdc++
 else
 	CPPFLAGS += '-DRAT_SCRATCH_CALLING_CONVENTION=__attribute__((visibility("default")))'
 
@@ -34,7 +35,8 @@ else
 	CXXFLAGS += -O3
 endif
 
-OBJ = $(FILES:%.c=$(RAT_SCRATCH_BUILD_DIR)/%.o)
+OBJ = $(CXXFILES:%.cpp=$(RAT_SCRATCH_BUILD_DIR)/%.o) $(CFILES:%.c=$(RAT_SCRATCH_BUILD_DIR)/%.o)
+
 DEP = $(OBJ:%.o=%.d)
 BIN = $(shell $(RAT_SCRATCH) get --meta=./.rsmeta name).$(RAT_SCRATCH_SHARED_LIB_EXT)
 
@@ -46,16 +48,17 @@ $(RAT_SCRATCH_BUILD_DIR):
 
 $(RAT_SCRATCH_BUILD_DIR)/%.o: %.c $(RAT_SCRATCH_BUILD_DIR)
 	mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -MMD -c $< -o $@
+	$(CC) $(CFLAGS) -Wall $(CPPFLAGS) -MMD -c $< -o $@
 	touch $@
 
 $(RAT_SCRATCH_BUILD_DIR)/%.o: %.cpp $(RAT_SCRATCH_BUILD_DIR)
 	mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -MMD -c $< -o $@
+	$(CXX) $(CXXFLAGS) -Wall $(CPPFLAGS) -MMD -c $< -o $@
 	touch $@
 
 $(RAT_SCRATCH_BUILD_DIR)/$(BIN): $(OBJ)
-	$(CC) $(LDFLAGS) $^ -o $@
+	echo $(OBJ)
+	$(CXX) $(LDFLAGS) $^ -o $@
 
 all: $(RAT_SCRATCH_BUILD_DIR) $(RAT_SCRATCH_BUILD_DIR)/$(BIN)
 

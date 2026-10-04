@@ -27,10 +27,9 @@ void screenSpaceToNDC(inout vec3 value)
 void ndcToWorldSpace(in RatScratchPipelineCamera camera, inout vec3 value)
 {
 	vec4 position = vec4(value, 1.0);
-	vec4 viewPosition = camera.inverseProjectionTransform * position;
-	viewPosition /= viewPosition.w;
+	vec4 worldPosition = camera.inverseProjectionViewTransform * position;
+	worldPosition /= worldPosition.w;
 
-	vec4 worldPosition = camera.inverseViewTransform * viewPosition;
 	value = worldPosition.xyz;
 }
 

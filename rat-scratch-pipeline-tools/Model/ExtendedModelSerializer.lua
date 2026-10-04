@@ -1,8 +1,11 @@
 local PATH = ...
+local ffi = require("ffi")
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
 local SkinnedModel = require("rat-scratch-graphics").Graphics3D.SkinnedModel
 local Scene = require("rat-scratch-graphics").Graphics3D.Scene
+local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
+local PipelineLOD = require("rat-scratch-pipeline").Graphics3D.PipelineLOD
 local RatScratchModule = require("lib.rat-scratch-module")
 
 --- @class RatScratch.Pipeline.ExtendedModelSerializer : RatScratch.Common.BaseObject
@@ -93,6 +96,7 @@ function ExtendedModelSerializer:new(modelDefinition, extendedModel)
 		skeleton = skeletonDefinition,
 		animations = animationDefinitions,
 		meshes = modelDefinition.meshes,
+		transform = modelDefinition.transform,
 		extras = {
 			RAT_extras_serialize = {
 				userdata = self,
@@ -257,6 +261,252 @@ end
 
 --- @private
 --- @param builder RatScratch.GLTF.GLTFBuilder
+--- @param extendedMesh RatScratch.Pipeline.ExtendedMesh
+--- @param clusterExtra RatScratch.Pipeline.GLTF.RAT_mesh_primitive_cluster
+function ExtendedModelSerializer:_buildClusterMeshletData(
+	builder,
+	extendedMesh,
+	clusterExtra
+)
+	local clusterMeshlets = {}
+	local clusterMeshletsIndexOffset = 0
+	local clusterMeshletFormatInstance =
+		BufferFormat.get(PipelineLOD.CLUSTER_FORMAT)
+	for j = 1, extendedMesh:getMeshletCount() do
+		local meshlet = extendedMesh:getMeshlet(j)
+		local offset = (j - 1)
+			* clusterMeshletFormatInstance:getComponentCount()
+
+		BufferFormat.resetValue(
+			clusterMeshletFormatInstance,
+			clusterMeshlets,
+			offset
+		)
+
+		local boundsPosition, boundsRadius = meshlet:getStaticBounds()
+		BufferFormat.setValue(
+			clusterMeshletFormatInstance,
+			clusterMeshlets,
+			"boundsPositionRadius",
+			offset,
+			boundsPosition.x,
+			boundsPosition.y,
+			boundsPosition.z,
+			boundsRadius
+		)
+
+		BufferFormat.setValue(
+			clusterMeshletFormatInstance,
+			clusterMeshlets,
+			"error",
+			offset,
+			meshlet:getError()
+		)
+
+		BufferFormat.setValue(
+			clusterMeshletFormatInstance,
+			clusterMeshlets,
+			"refinedIndex",
+			offset,
+			meshlet:getRefinedIndex()
+		)
+
+		local count = meshlet:getIndexData():getSize() / ffi.sizeof("uint32_t")
+		BufferFormat.setValue(
+			clusterMeshletFormatInstance,
+			clusterMeshlets,
+			"indexOffsetCount",
+			offset,
+			clusterMeshletsIndexOffset,
+			count
+		)
+
+		clusterMeshletsIndexOffset = clusterMeshletsIndexOffset + count
+	end
+
+	local clusterMeshletsData = love.data.newByteData(
+		extendedMesh:getMeshletCount()
+			* clusterMeshletFormatInstance:getStride()
+	)
+	BufferFormat.copyFromFlatTableToByteData(
+		clusterMeshletFormatInstance,
+		1,
+		0,
+		extendedMesh:getMeshletCount(),
+		clusterMeshlets,
+		clusterMeshletsData
+	)
+
+	clusterExtra.clusters = builder:addWorkingBufferView({
+		data = clusterMeshletsData,
+	})
+end
+
+--- @private
+--- @param builder RatScratch.GLTF.GLTFBuilder
+--- @param extendedMesh RatScratch.Pipeline.ExtendedMesh
+--- @param clusterExtra RatScratch.Pipeline.GLTF.RAT_mesh_primitive_cluster
+function ExtendedModelSerializer:_buildClusterGroupData(
+	builder,
+	extendedMesh,
+	clusterExtra
+)
+	local clusterGroups = {}
+	local clusterGroupFormatInstance =
+		BufferFormat.get(PipelineLOD.GROUP_FORMAT)
+	for j = 1, extendedMesh:getClusterGroupCount() do
+		local group = extendedMesh:getClusterGroup(j)
+		local offset = (j - 1) * clusterGroupFormatInstance:getComponentCount()
+
+		BufferFormat.resetValue(
+			clusterGroupFormatInstance,
+			clusterGroups,
+			offset
+		)
+
+		BufferFormat.setValue(
+			clusterGroupFormatInstance,
+			clusterGroups,
+			"boundsPositionRadius",
+			offset,
+			group.bounds.position.x,
+			group.bounds.position.y,
+			group.bounds.position.z,
+			group.bounds.radius
+		)
+
+		BufferFormat.setValue(
+			clusterGroupFormatInstance,
+			clusterGroups,
+			"error",
+			offset,
+			group.error
+		)
+
+		BufferFormat.setValue(
+			clusterGroupFormatInstance,
+			clusterGroups,
+			"lodDepth",
+			offset,
+			group.depth
+		)
+
+		BufferFormat.setValue(
+			clusterGroupFormatInstance,
+			clusterGroups,
+			"clusterIndexCount",
+			offset,
+			group.clusterIndex,
+			group.clusterCount
+		)
+	end
+
+	local clusterGroupsData = love.data.newByteData(
+		extendedMesh:getClusterGroupCount()
+			* clusterGroupFormatInstance:getStride()
+	)
+	BufferFormat.copyFromFlatTableToByteData(
+		clusterGroupFormatInstance,
+		1,
+		0,
+		extendedMesh:getClusterGroupCount(),
+		clusterGroups,
+		clusterGroupsData
+	)
+
+	clusterExtra.groups = builder:addWorkingBufferView({
+		data = clusterGroupsData,
+	})
+end
+
+--- @private
+--- @param builder RatScratch.GLTF.GLTFBuilder
+--- @param extendedMesh RatScratch.Pipeline.ExtendedMesh
+--- @param clusterExtra RatScratch.Pipeline.GLTF.RAT_mesh_primitive_cluster
+function ExtendedModelSerializer:_buildClusterNodeData(
+	builder,
+	extendedMesh,
+	clusterExtra
+)
+	local clusterNodes = {}
+	local clusterNodeFormatInstance = BufferFormat.get(PipelineLOD.NODE_FORMAT)
+	for j = 1, extendedMesh:getClusterNodeCount() do
+		local node = extendedMesh:getClusterNode(j)
+		local offset = (j - 1) * clusterNodeFormatInstance:getComponentCount()
+
+		BufferFormat.resetValue(clusterNodeFormatInstance, clusterNodes, offset)
+
+		BufferFormat.setValue(
+			clusterNodeFormatInstance,
+			clusterNodes,
+			"boundsPositionRadius",
+			offset,
+			node.bounds.position.x,
+			node.bounds.position.y,
+			node.bounds.position.z,
+			node.bounds.radius
+		)
+
+		BufferFormat.setValue(
+			clusterNodeFormatInstance,
+			clusterNodes,
+			"error",
+			offset,
+			node.error
+		)
+
+		BufferFormat.setValue(
+			clusterNodeFormatInstance,
+			clusterNodes,
+			"groupIndex",
+			offset,
+			node.groupIndex
+		)
+
+		BufferFormat.setValue(
+			clusterNodeFormatInstance,
+			clusterNodes,
+			"childIndexCount",
+			offset,
+			node.childIndex,
+			node.childCount
+		)
+	end
+
+	local clusterNodesData = love.data.newByteData(
+		extendedMesh:getClusterNodeCount()
+			* clusterNodeFormatInstance:getStride()
+	)
+	BufferFormat.copyFromFlatTableToByteData(
+		clusterNodeFormatInstance,
+		1,
+		0,
+		extendedMesh:getClusterNodeCount(),
+		clusterNodes,
+		clusterNodesData
+	)
+
+	clusterExtra.nodes = builder:addWorkingBufferView({
+		data = clusterNodesData,
+	})
+end
+
+--- @private
+--- @param builder RatScratch.GLTF.GLTFBuilder
+--- @param extendedMesh RatScratch.Pipeline.ExtendedMesh
+--- @param clusterExtra RatScratch.Pipeline.GLTF.RAT_mesh_primitive_cluster
+function ExtendedModelSerializer:_buildClusterData(
+	builder,
+	extendedMesh,
+	clusterExtra
+)
+	self:_buildClusterMeshletData(builder, extendedMesh, clusterExtra)
+	self:_buildClusterGroupData(builder, extendedMesh, clusterExtra)
+	self:_buildClusterNodeData(builder, extendedMesh, clusterExtra)
+end
+
+--- @private
+--- @param builder RatScratch.GLTF.GLTFBuilder
 --- @param node RatScratch.GLTF.Node
 function ExtendedModelSerializer:_serializeModel(builder, node)
 	if not node.mesh then
@@ -276,6 +526,17 @@ function ExtendedModelSerializer:_serializeModel(builder, node)
 			indices = builder:addWorkingBufferView({
 				data = extendedMesh:getIndexBufferData(),
 			}),
+			cluster = {
+				clusters = -1,
+				clusterCount = tonumber(extendedMesh:getMeshletCount()) or 0,
+				groups = -1,
+				groupCount = tonumber(extendedMesh:getClusterGroupCount()) or 0,
+				nodes = -1,
+				nodeCount = tonumber(extendedMesh:getClusterNodeCount()) or 0,
+				rootNodeCount = tonumber(
+					extendedMesh:getClusterRootNodeCount()
+				) or 0,
+			},
 		}
 
 		for j = 1, extendedMesh:getVertexAttributeBufferCount() do
@@ -292,7 +553,7 @@ function ExtendedModelSerializer:_serializeModel(builder, node)
 		end
 
 		for j = 1, extendedMesh:getMeshletCount() do
-			local extendedMeshMeshlet = extendedMesh:getMeshlet(i)
+			local extendedMeshMeshlet = extendedMesh:getMeshlet(j)
 
 			local indexBufferViewIndex = builder:addWorkingBufferView({
 				data = extendedMeshMeshlet:getIndexData(),
@@ -310,6 +571,8 @@ function ExtendedModelSerializer:_serializeModel(builder, node)
 
 			table.insert(primitiveExtras.meshlets, meshlet)
 		end
+
+		self:_buildClusterData(builder, extendedMesh, primitiveExtras.cluster)
 
 		if
 			self.model and Object.isDerived(self.model:getType(), SkinnedModel)

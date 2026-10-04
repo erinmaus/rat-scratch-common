@@ -1,4 +1,5 @@
 return {
+	PipelineLOD = require("rat-scratch-pipeline.Graphics3D.PipelineLOD"),
 	PipelineMaterial = require(
 		"rat-scratch-pipeline.Graphics3D.PipelineMaterial"
 	),
@@ -18,9 +19,6 @@ return {
 		"rat-scratch-pipeline.Graphics3D.PipelineMaterialUniformsBuffer"
 	),
 	PipelineMesh = require("rat-scratch-pipeline.Graphics3D.PipelineMesh"),
-	PipelineMeshlet = require(
-		"rat-scratch-pipeline.Graphics3D.PipelineMeshlet"
-	),
 	PipelineModel = require("rat-scratch-pipeline.Graphics3D.PipelineModel"),
 	PipelineScene = require("rat-scratch-pipeline.Graphics3D.PipelineScene"),
 }

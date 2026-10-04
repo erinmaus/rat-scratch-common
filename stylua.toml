@@ -1,4 +1,5 @@
 column_width = 80
+call_parentheses = "Input"
 
 [sort_requires]
 enabled = true

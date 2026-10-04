@@ -76,6 +76,7 @@ MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT = {
 
 MaterialPipeline.MATERIAL_INSTANCES_FORMAT = {
 	{ location = 0, name = "materialDefinitionIndex", format = "uint32" },
+	{ location = 1, name = "hasAlphaDiscard", format = "uint32" },
 }
 
 MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT_INTEGER_BUFFER = 1
@@ -250,6 +251,11 @@ function MaterialPipeline:getTextureByIndex(index)
 end
 
 --- @param texture love.ImageData
+function MaterialPipeline:hasTexture(texture)
+	return self.textures[texture] ~= nil
+end
+
+--- @param texture love.ImageData
 function MaterialPipeline:addTexture(texture)
 	assert(
 		not self.textures[texture],
@@ -351,8 +357,7 @@ function MaterialPipeline:getMaterialInstanceIndex(materialInstance)
 		"material instance is not in material pipeline"
 	)
 
-	local index =
-		self.materialInstanceValuesBuffer:getIndexCount(materialInstance)
+	local index = self.materialInstancesBuffer:getIndexCount(materialInstance)
 	return index
 end
 
@@ -969,8 +974,15 @@ function MaterialPipeline:_rebuildMaterialInstanceUniforms(materialInstance)
 		0
 	)
 
-	local index = self.materialToIndex[materialInstance:getMaterial()]
-	self.materialInstancesBuffer:set(materialInstance, 1, 1, index - 1)
+	local material = materialInstance:getMaterial()
+	local index = self.materialToIndex[material]
+	self.materialInstancesBuffer:set(
+		materialInstance,
+		1,
+		1,
+		index - 1,
+		material:hasFeature("discard") and 1 or 0
+	)
 
 	return self:_rebuildMaterialInstanceUniformsImpl(materialInstance)
 end

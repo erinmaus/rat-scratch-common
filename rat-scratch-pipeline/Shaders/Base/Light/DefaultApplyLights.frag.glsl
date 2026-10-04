@@ -38,7 +38,7 @@ void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOu
 	float attenuation = clamp(1.0 - lightToSurfaceDistance / pointLight.attenuation, 0.0, 1.0);
 	float shadow = 1.0; // TODO: Implement actual shadow sampling
 	vec3 cameraPosition = rat_Cameras[fragmentOutput.cameraIndex].inverseViewTransform[3].xyz;
-	ratApplyPBR(fragmentOutput, -L, pointLight.color.rgb * attenuation * shadow, cameraPosition, result);
+	ratApplyPBR(fragmentOutput, L, pointLight.color.rgb * attenuation * shadow, cameraPosition, result);
 	result.fluorescence += fragmentOutput.fluorescence * vec3(attenuation * shadow * pointLight.ultraviolet);
 }
 
@@ -55,6 +55,6 @@ void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOu
 	float intensity = clamp((theta - epsilon) / (1.0 - epsilon), 0.0, 1.0);
 	float shadow = 1.0; // TODO: Implement actual shadow sampling
 	vec3 cameraPosition = rat_Cameras[fragmentOutput.cameraIndex].inverseViewTransform[3].xyz;
-	ratApplyPBR(fragmentOutput, -L, spotLight.color.rgb * attenuation * intensity * shadow, cameraPosition, result);
+	ratApplyPBR(fragmentOutput, L, spotLight.color.rgb * attenuation * intensity * shadow, cameraPosition, result);
 	result.fluorescence += fragmentOutput.fluorescence * vec3(attenuation * intensity * shadow * spotLight.ultraviolet);
 }

@@ -213,6 +213,7 @@ end
 --- @param event RatScratch.Pipeline.impl.ResourceTrackerEvent<RatScratch.Pipeline.Graphics3D.PipelineModel>
 function World:_onAddModel(event)
 	self:_tryAddModel(event:getResource())
+	self:_onUpdateModel(event)
 end
 
 --- @private
@@ -309,7 +310,9 @@ function World:_tryAddTexture(resource)
 
 	local imageData = resource:get()
 	local materialPipeline = self.pipelines:get(MaterialPipeline)
-	materialPipeline:addTexture(imageData)
+	if not materialPipeline:hasTexture(imageData) then
+		materialPipeline:addTexture(imageData)
+	end
 end
 
 --- @private
@@ -320,7 +323,9 @@ function World:_tryRemoveTexture(imageData)
 	end
 
 	local materialPipeline = self.pipelines:get(MaterialPipeline)
-	materialPipeline:removeTexture(imageData)
+	if materialPipeline:hasTexture(imageData) then
+		materialPipeline:removeTexture(imageData)
+	end
 end
 
 --- @private
@@ -541,6 +546,11 @@ end
 function World:_onAddMaterial(event, objectHandle)
 	self.dirtyObjectHandles[objectHandle] = true
 	self.dirtyMaterialObjectHandles[objectHandle] = true
+
+	self:getPipeline(ModelPipeline)
+		:updateModelInstances(
+			self.objectHandleToModelInstancesHandle[objectHandle]
+		)
 end
 
 --- @private
@@ -603,7 +613,7 @@ function World:_updateObjectHandleDraw(objectHandle)
 	local drawPipeline = scene:getPipeline(DrawPipeline)
 
 	local modelInstances = self.objectHandleToModelInstancesHandle[objectHandle]
-	local meshletCount = modelInstances:calculateMeshletCount()
+	local meshletCount = modelInstances:calculateClusterGroupCount()
 
 	local draws = drawPipeline:resizeDrawable(objectHandle, meshletCount)
 	--- @cast draws RatScratch.Pipeline.Draw[]
@@ -627,8 +637,8 @@ function World:_updateObjectHandleDraw(objectHandle)
 
 		for j = 1, model:getMeshCount() do
 			local mesh = model:getMesh(j)
-			local meshletPointer = self:getPipeline(ModelPipeline)
-				:getMeshletsPointer(mesh)
+			local groupPointer = self:getPipeline(ModelPipeline)
+				:getClusterGroupsPointer(mesh)
 			local staticBaseVertexPointer = self:getPipeline(ModelPipeline)
 				:getStaticBaseVertexPointer(mesh)
 			local skinnedBaseVertexPointer = self:getPipeline(ModelPipeline)
@@ -636,15 +646,15 @@ function World:_updateObjectHandleDraw(objectHandle)
 			local baseIndexPointer = self:getPipeline(ModelPipeline)
 				:getBaseIndexPointer(mesh)
 
-			for k = 1, mesh:getMeshletCount() do
+			for k = 1, mesh:getLOD():getGroupCount() do
 				local draw = draws[currentDraw]
 
 				draw:setPointer("objectInstanceIndex", objectInstancePointer)
 				draw:setPointer("modelInstanceIndex", modelInstancePointer, i)
 				draw:setPointer("meshInstanceIndex", meshInstancesPointer, j)
-				draw:setPointer("modelIndex", modelPointer, i)
+				draw:setPointer("modelIndex", modelPointer)
 				draw:setPointer("meshIndex", meshInstancesPointer, j)
-				draw:setPointer("meshletIndex", meshletPointer, k)
+				draw:setPointer("groupIndex", groupPointer, k)
 				draw:setPointer(
 					"staticBaseVertexOffset",
 					staticBaseVertexPointer
@@ -656,14 +666,7 @@ function World:_updateObjectHandleDraw(objectHandle)
 				draw:setPointer("boneOffsetCount", bonesPointer)
 				draw:setPointer(
 					"indexOffset",
-					baseIndexPointer,
-					(k - 1)
-							* self.pipelineRuntime
-								:getConfig()
-								:getMeshletFormat()
-								:getTriangleCount()
-							* 3
-						+ 1
+					baseIndexPointer
 				)
 
 				currentDraw = currentDraw + 1

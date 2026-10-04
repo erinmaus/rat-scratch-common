@@ -1,14 +1,10 @@
 local Object = require("rat-scratch-common").Object
-local Table = require("rat-scratch-common").Table
 local AnimationPipeline = require("rat-scratch-pipeline.AnimationPipeline")
 local DrawPipeline = require("rat-scratch-pipeline.DrawPipeline")
-local LightClusterResult = require("rat-scratch-pipeline.LightClusterResult")
 local LightPipeline = require("rat-scratch-pipeline.LightPipeline")
 local MaterialPipeline = require("rat-scratch-pipeline.MaterialPipeline")
 local ModelPipeline = require("rat-scratch-pipeline.ModelPipeline")
-local ObjectHandleEvent = require("rat-scratch-pipeline.ObjectHandleEvent")
 local ObjectPipeline = require("rat-scratch-pipeline.ObjectPipeline")
-local Pipelines = require("rat-scratch-pipeline.Pipelines")
 local World = require("rat-scratch-pipeline.World")
 
 --- @class RatScratch.Pipeline.PipelineRenderer : RatScratch.Common.BaseObject
@@ -21,6 +17,11 @@ local PipelineRenderer = Object()
 function PipelineRenderer:new(pipelineRuntime)
 	self.pipelineRuntime = pipelineRuntime
 	self.world = World(pipelineRuntime)
+
+	self.cullShader = pipelineRuntime:loadComputeShader(
+		"@Pipeline/Cull/Cull.compute.glsl",
+		pipelineRuntime:getDefaultQualityPreset()
+	)
 end
 
 function PipelineRenderer:getWorld()
@@ -62,7 +63,18 @@ end
 
 --- @private
 --- @param scene RatScratch.Pipeline.Scene
+function PipelineRenderer:_cullScene(scene)
+	self:_bindWorldUniforms(self.cullShader)
+	self:_bindSceneUniforms(self.cullShader, scene)
+
+	scene:getPipeline(DrawPipeline):cull(self.cullShader, 1)
+end
+
+--- @private
+--- @param scene RatScratch.Pipeline.Scene
 function PipelineRenderer:_drawForward(scene)
+	self:_cullScene(scene)
+
 	local material = self.world:getPipeline(MaterialPipeline)
 
 	local drawShader = material:getShader(
