@@ -104,6 +104,7 @@ function demo.load()
 		end
 
 		local pointLight = scene:newLight(PointLight)
+		pointLight:setIsShadowCaster(true)
 		pointLight:setAttenuation(love.math.random(1, 3))
 
 		pointLightInfo.light = pointLight
@@ -126,10 +127,26 @@ function demo.load()
 	scene:setCamera(camera)
 	scene:getPipeline(LightPipeline):loadDefaultShaders()
 
+	demo.runtime = pipelineRuntime
 	demo.renderer = renderer
 	demo.scene = scene
 	demo.directionalLight = directionalLight
 	demo.pointLights = pointLights
+	demo.cullResult = scene:newCullResult()
+	demo.lightCullResult = scene:getPipeline(LightPipeline):newCullResult()
+
+	demo.colorCanvas = love.graphics.newTexture(
+		love.graphics.getWidth(),
+		love.graphics.getHeight(),
+		1,
+		{ canvas = true, format = "srgba8" }
+	)
+	demo.depthCanvas = love.graphics.newTexture(
+		love.graphics.getWidth(),
+		love.graphics.getHeight(),
+		1,
+		{ readable = true, canvas = true, format = "depth32f" }
+	)
 end
 
 demo.isPanning = false
@@ -214,9 +231,36 @@ local _position = Vector3()
 function demo.draw()
 	love.graphics.push("all")
 	love.graphics.setDepthMode("lequal", true)
-	demo.renderer:draw(demo.scene)
+	demo.renderer:cull(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.scene,
+		demo.lightCullResult
+	)
+	demo.renderer:drawShadows(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.scene,
+		demo.lightCullResult
+	)
+
+	love.graphics.setCanvas({
+		demo.colorCanvas,
+		depthstencil = demo.depthCanvas,
+		alllayers = true,
+	})
+	love.graphics.clear(0, 0, 0, 0)
+	demo.renderer:cull(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.scene,
+		demo.cullResult
+	)
+	demo.renderer:drawForward(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.scene,
+		demo.cullResult
+	)
 	love.graphics.pop()
 
+	love.graphics.drawLayer(demo.colorCanvas, 1)
 	for i = 1, #demo.pointLights do
 		local position = demo.camera:project(
 			demo.pointLights[i].light:getPosition(),
