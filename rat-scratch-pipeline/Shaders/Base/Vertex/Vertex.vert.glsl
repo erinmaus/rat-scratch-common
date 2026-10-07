@@ -131,5 +131,5 @@ void vertexmain()
 	ratSetVertexOutputs(fragmentInput);
 
 	gl_Position = fragmentInput.position;
-	// gl_Layer = fragmentInput.layerIndex;
+	gl_Layer = int(fragmentInput.cameraIndex);
 }

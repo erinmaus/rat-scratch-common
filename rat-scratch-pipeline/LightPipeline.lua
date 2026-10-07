@@ -5,6 +5,8 @@ local Pipeline = require("rat-scratch-pipeline.impl.Pipeline")
 local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local CameraFrame = require("rat-scratch-pipeline.CameraFrame")
+local CullResult = require("rat-scratch-pipeline.CullResult")
+local DoubleBufferResult = require("rat-scratch-pipeline.DoubleBufferResult")
 local Draw = require("rat-scratch-pipeline.Draw")
 local Light = require("rat-scratch-pipeline.Light")
 local LightEvent = require("rat-scratch-pipeline.LightEvent")
@@ -16,6 +18,11 @@ local Transform = require("rat-scratch-math").Transform
 --- @class RatScratch.Pipeline.LightPipeline : RatScratch.Pipeline.impl.Pipeline
 --- @field private lights table<RatScratch.Pipeline.Light, true>
 --- @field private shadowCastingLights table<RatScratch.Pipeline.Light, true>
+--- @field private shadowAtlasDepth love.Texture
+--- @field private shadowAtlasColor love.Texture
+--- @field private shadowAtlasOtherColor love.Texture
+--- @field private shadowAtlasBinding table
+--- @field private shadowBlurResult RatScratch.Pipeline.DoubleBufferResult
 --- @field private dirtyLights table<RatScratch.Pipeline.Light, true>
 --- @field private lightsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Light>
 --- @field private lightData number[]
@@ -34,6 +41,18 @@ LightPipeline.CELLS_FORMAT = {
 
 LightPipeline.DEFAULT_LIGHTS_COUNT = 1024
 LightPipeline.DEFAULT_CAMERA_COUNT = 64
+
+LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_SETTINGS = {
+	format = "rg32f",
+	canvas = true,
+	readable = true,
+}
+
+LightPipeline.SHADOW_ATLAS_DEPTH_CANVAS_SETTINGS = {
+	format = "depth32f",
+	canvas = true,
+	readable = true,
+}
 
 --- @type love.GraphicsBuffer | false
 LightPipeline._CELLS_BUFFER = false
@@ -56,6 +75,48 @@ function LightPipeline:new(pipelineRuntime)
 		Table.new(Light.LIGHT_FORMAT_INSTANCE:getComponentCount(), 0)
 	BufferFormat.resetValue(Light.LIGHT_FORMAT_INSTANCE, self.lightData)
 
+	--- @type integer?, integer?
+	local width, height = pipelineRuntime:getCurrentProperty(
+		pipelineRuntime:getDefaultQualityPreset(),
+		"pipeline.properties.shadow.cascadeSizeInPixels"
+	)
+	assert(
+		width and height,
+		"missing property: 'pipeline.properties.shadow.cascadeSizeInPixels'"
+	)
+
+	self.currentCameraCount = 1
+
+	self.shadowAtlasColor = love.graphics.newTexture(
+		width,
+		height,
+		1,
+		LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_SETTINGS
+	)
+
+	self.shadowAtlasOtherColor = love.graphics.newTexture(
+		width,
+		height,
+		1,
+		LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_SETTINGS
+	)
+
+	self.shadowAtlasDepth = love.graphics.newTexture(
+		width,
+		height,
+		1,
+		LightPipeline.SHADOW_ATLAS_DEPTH_CANVAS_SETTINGS
+	)
+
+	self.shadowAtlasBinding = {
+		self.shadowAtlasColor,
+		depthstencil = self.shadowAtlasDepth,
+		alllayers = true,
+	}
+
+	self.shadowBlurResult =
+		DoubleBufferResult(self.shadowAtlasColor, self.shadowAtlasOtherColor)
+
 	self.camerasBuffer = PipelineBuffer(
 		CameraFrame.CAMERA_FORMAT,
 		{ shaderstorage = true },
@@ -73,6 +134,14 @@ end
 function LightPipeline:bind(shader, qualityPreset)
 	if shader:hasUniform("rat_LightsBuffer") then
 		shader:send("rat_LightsBuffer", self.lightsBuffer:getBuffer())
+	end
+
+	if shader:hasUniform("rat_ShadowCamerasBuffer") then
+		shader:send("rat_ShadowCamerasBuffer", self.camerasBuffer:getBuffer())
+	end
+
+	if shader:hasUniform("rat_PipelineShadowTextureAtlasView") then
+		shader:send("rat_PipelineShadowTextureAtlasView", self.shadowAtlasColor)
 	end
 end
 
@@ -155,6 +224,20 @@ end
 function LightPipeline:_flushLight(light)
 	light:toData(self.lightData)
 
+	local cameraIndex, cameraCount = 0, 0
+	if self.camerasBuffer:has(light) then
+		cameraIndex, cameraCount = self.camerasBuffer:getIndexCount(light)
+	end
+
+	BufferFormat.setValue(
+		Light.LIGHT_FORMAT_INSTANCE,
+		self.lightData,
+		"shadowTextureIndexCount",
+		0,
+		cameraIndex,
+		cameraCount
+	)
+
 	self.lightsBuffer:copyTable(light, self.lightData, 1, 1)
 
 	if self.shadowCastingLights[light] then
@@ -172,6 +255,55 @@ function LightPipeline:_flushLights()
 	end
 end
 
+--- @private
+function LightPipeline:_flushShadowAtlas()
+	local _, cameraCount = self.camerasBuffer:getIndexCount()
+	if self.currentCameraCount < cameraCount then
+		self.currentCameraCount = cameraCount
+
+		self.shadowAtlasDepth:release()
+		self.shadowAtlasColor:release()
+
+		--- @type integer?, integer?
+		local width, height = self:getPipelineRuntime():getCurrentProperty(
+			self:getPipelineRuntime():getDefaultQualityPreset(),
+			"pipeline.properties.shadow.cascadeSizeInPixels"
+		)
+
+		--- @cast width integer
+		--- @cast height integer
+
+		self.shadowAtlasColor = love.graphics.newTexture(
+			width,
+			height,
+			cameraCount,
+			LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_SETTINGS
+		)
+
+		self.shadowAtlasOtherColor = love.graphics.newTexture(
+			width,
+			height,
+			cameraCount,
+			LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_SETTINGS
+		)
+
+		self.shadowAtlasDepth = love.graphics.newTexture(
+			width,
+			height,
+			cameraCount,
+			LightPipeline.SHADOW_ATLAS_DEPTH_CANVAS_SETTINGS
+		)
+
+		self.shadowAtlasBinding[1] = self.shadowAtlasColor
+		self.shadowAtlasBinding.depthstencil = self.shadowAtlasDepth
+
+		self.shadowBlurResult = DoubleBufferResult(
+			self.shadowAtlasColor,
+			self.shadowAtlasOtherColor
+		)
+	end
+end
+
 function LightPipeline:flush()
 	if next(self.dirtyLights) then
 		self.camerasBuffer:compact()
@@ -181,7 +313,21 @@ function LightPipeline:flush()
 
 		self.camerasBuffer:flush()
 		self.lightsBuffer:flush()
+
+		self:_flushShadowAtlas()
 	end
+end
+
+function LightPipeline:newCullResult()
+	return CullResult(self.camerasBuffer)
+end
+
+function LightPipeline:setCanvas()
+	love.graphics.setCanvas(self.shadowAtlasBinding)
+end
+
+function LightPipeline:getShadowBlurResult()
+	return self.shadowBlurResult
 end
 
 function LightPipeline:loadDefaultShaders()

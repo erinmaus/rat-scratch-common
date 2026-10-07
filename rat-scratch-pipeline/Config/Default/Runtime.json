@@ -4,6 +4,12 @@
     "defaultQualityPreset": "main",
     "properties": [
       {
+        "key": "pipeline.properties.shadow.cascadeSizeInPixels",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_SHADOW_CASCADE_SIZE_IN_PIXELS",
+        "format": "uint32vec2",
+        "default": [512, 512]
+      },
+      {
         "key": "pipeline.properties.lighting.cells",
         "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS",
         "format": "uint32vec3",

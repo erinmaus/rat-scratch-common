@@ -67,10 +67,9 @@ function DrawPipeline:new(pipelineRuntime)
 	)
 end
 
-function DrawPipeline:bind(shader, qualityPreset)
-	if shader:hasUniform("rat_DrawsBuffer") then
-		shader:send("rat_DrawsBuffer", self.outputDrawsBuffer:getBuffer())
-	end
+--- @return RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.ObjectHandle>
+function DrawPipeline:getDrawsBuffer()
+	return self.inputDrawsBuffer
 end
 
 --- @param object RatScratch.Pipeline.ObjectHandle
