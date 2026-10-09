@@ -832,28 +832,25 @@ function GLTFBuilder:_addMaterialDefinition(materialDefinition)
 		self:_addMaterialDefinitionTexture(materialDefinition.emissiveTexture)
 
 	local materialIndex, material = self:addMaterial({
-		pbrMetallicRoughness = (
-			baseColorTextureIndex or metallicRoughnessTextureIndex
-		)
-			and {
-				baseColorTexture = baseColorTextureIndex and {
-					index = baseColorTextureIndex,
-				},
-
-				metallicRoughnessTexture = metallicRoughnessTextureIndex and {
-					index = metallicRoughnessTextureIndex,
-				},
-
-				metallicFactor = materialDefinition.metalRoughnessTexture
-					and materialDefinition.metalRoughnessTexture.metalFactor,
-				roughnessFactor = materialDefinition.metalRoughnessTexture
-					and materialDefinition.metalRoughnessTexture.roughnessFactor,
-				baseColorFactor = materialDefinition.texture
-					and materialDefinition.texture.albedoFactor
-					and {
-						unpack(materialDefinition.texture.albedoFactor),
-					},
+		pbrMetallicRoughness = {
+			baseColorTexture = baseColorTextureIndex and {
+				index = baseColorTextureIndex,
 			},
+
+			metallicRoughnessTexture = metallicRoughnessTextureIndex and {
+				index = metallicRoughnessTextureIndex,
+			},
+
+			metallicFactor = materialDefinition.metalRoughnessTexture
+				and materialDefinition.metalRoughnessTexture.metalFactor,
+			roughnessFactor = materialDefinition.metalRoughnessTexture
+				and materialDefinition.metalRoughnessTexture.roughnessFactor,
+			baseColorFactor = materialDefinition.texture
+				and materialDefinition.texture.albedoFactor
+				and {
+					unpack(materialDefinition.texture.albedoFactor),
+				},
+		},
 		normalTexture = normalTextureIndex and {
 			index = normalTextureIndex,
 			scale = materialDefinition.normalTexture
