@@ -7,6 +7,6 @@ varying vec2 frag_TextureCoordinate;
 void vertexmain()
 {
 	frag_TextureCoordinate = VertexPosition;
-	gl_Position = vec4((VertexPosition.xy - vec2(0.5)) * vec2(0.5), 0.0, 1.0);
+	gl_Position = vec4((VertexPosition.xy - vec2(0.5)) * vec2(2.0), 0.0, 1.0);
 	gl_Layer = gl_InstanceID;
 }

@@ -21,12 +21,12 @@ function DoubleBufferResult:new(sourceBuffer, otherBuffer)
 	self.otherBuffer = otherBuffer
 
 	self.binding1 = {
-		sourceBuffer,
+		otherBuffer,
 		alllayers = true,
 	}
 
 	self.binding2 = {
-		otherBuffer,
+		sourceBuffer,
 		alllayers = true,
 	}
 end

@@ -81,7 +81,7 @@ function demo.load()
 	world:getPipeline(AnimationPipeline):loadDefaultShaders()
 
 	local ambientLight = scene:newLight(AmbientLight)
-	ambientLight:setAmbience(0.3)
+	ambientLight:setAmbience(0.1)
 	ambientLight:setColor(GammaColor(0.85098, 0.713725, 0.556863, 1))
 
 	local directionalLight = scene:newLight(DirectionalLight)
@@ -105,21 +105,18 @@ function demo.load()
 
 		local pointLight = scene:newLight(PointLight)
 		pointLight:setIsShadowCaster(true)
-		pointLight:setAttenuation(love.math.random(1, 3))
+		pointLight:setAttenuation(love.math.random(5, 10))
 
 		pointLightInfo.light = pointLight
 		table.insert(pointLights, pointLightInfo)
 	end
-
-	local pointLight = scene:newLight(PointLight)
-	pointLight:setAttenuation(50)
-	pointLight:setPosition(Vector3(-2.3, -2.4, 2))
 
 	demo.projection = PerspectiveFOVCameraProjection()
 	demo.projection:setSize(love.graphics.getDimensions())
 	demo.projection:setFOV(math.rad(65.3))
 
 	demo.view = ArcballCameraView()
+	demo.view:setTranslation(Vector3(0, 2, 0))
 
 	local camera = Camera(demo.projection, demo.view)
 	demo.camera = camera
@@ -276,9 +273,26 @@ function demo.draw()
 			and position.z >= 0
 			and position.z <= 1
 		then
-			love.graphics.circle("fill", position.x, position.y, 8)
+			love.graphics.circle(
+				"fill",
+				position.x,
+				love.graphics.getHeight() - position.y,
+				8
+			)
 		end
 	end
+
+	local d = love.graphics.getStats()
+	love.graphics.print(
+		("draw calls = %d, canvas switches = %d, frame time = %f ms (%d FPS)"):format(
+			d.drawcalls,
+			d.canvasswitches,
+			love.timer.getAverageDelta() * 1000,
+			love.timer.getFPS()
+		),
+		8,
+		8
+	)
 end
 
 return demo

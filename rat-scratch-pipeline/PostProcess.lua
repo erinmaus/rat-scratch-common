@@ -5,12 +5,12 @@ PostProcess.MESH_FORMAT = {
 }
 
 PostProcess.MESH = love.graphics.newMesh(PostProcess.MESH_FORMAT, {
-	{ -1, -1 },
-	{ 1, -1 },
+	{ 0, 0 },
+	{ 1, 0 },
 	{ 1, 1 },
 	{ 1, 1 },
-	{ -1, 1 },
-	{ -1, -1 },
+	{ 0, 1 },
+	{ 0, 0 },
 }, "triangles")
 
 function PostProcess.draw()
@@ -18,7 +18,7 @@ function PostProcess.draw()
 end
 
 function PostProcess.drawInstanced(count)
-	love.graphics.draw(PostProcess.MESH, count)
+	love.graphics.drawInstanced(PostProcess.MESH, count)
 end
 
 return PostProcess

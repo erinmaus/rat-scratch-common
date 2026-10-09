@@ -44,6 +44,7 @@ void pixelmain()
 		rat_Color = vec4(fragmentOutput.albedo.rgb * result.diffuse + result.specular + result.fluorescence +
 							 fragmentOutput.emissive,
 						 fragmentOutput.albedo.a);
+		// rat_Color = vec4(result.diffuse, 1.0);
 	}
 
 	// TODO: OIT

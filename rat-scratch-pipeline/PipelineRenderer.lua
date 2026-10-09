@@ -147,6 +147,13 @@ function PipelineRenderer:cull(qualityPreset, scene, result)
 		)
 	end
 
+	if self.cullShader:hasUniform("rat_CamerasBuffer") then
+		self.cullShader:send(
+			"rat_CamerasBuffer",
+			result:getCamerasBuffer():getBuffer()
+		)
+	end
+
 	if self.cullShader:hasUniform("rat_DrawCount") then
 		self.cullShader:send("rat_DrawCount", inputDrawCount)
 	end
@@ -180,10 +187,20 @@ function PipelineRenderer:drawShadows(qualityPreset, scene, result)
 		drawShader:send("rat_DrawsBuffer", result:getDrawsBuffer())
 	end
 
+	if drawShader:hasUniform("rat_CamerasBuffer") then
+		drawShader:send(
+			"rat_CamerasBuffer",
+			result:getCamerasBuffer():getBuffer()
+		)
+	end
+
 	love.graphics.push("all")
 	do
 		love.graphics.setShader(drawShader)
+		love.graphics.setBlendState("add", "one", "zero")
+
 		scene:getPipeline(LightPipeline):setCanvas()
+		love.graphics.clear(0, 0, 0, 0)
 		love.graphics.drawFromShaderIndirect(
 			"triangles",
 			result:getIndirectBuffer()
@@ -197,6 +214,7 @@ function PipelineRenderer:drawShadows(qualityPreset, scene, result)
 	love.graphics.push("all")
 	do
 		love.graphics.setShader(self.shadowBlurShader)
+		love.graphics.setBlendState("add", "one", "zero")
 
 		blurResult:start()
 		do

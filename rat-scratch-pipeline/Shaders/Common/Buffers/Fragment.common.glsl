@@ -4,6 +4,7 @@
 
 varying vec3 frag_LocalPosition;
 varying vec3 frag_WorldPosition;
+varying vec3 frag_ViewPosition;
 varying vec3 frag_ScreenPosition;
 varying vec4 frag_Position;
 varying vec3 frag_LocalNormal;
@@ -21,6 +22,7 @@ void ratClearFragmentInput(out RatScratchPipelineFragmentInput fragmentInput)
 {
 	fragmentInput.localPosition = vec3(0.0);
 	fragmentInput.worldPosition = vec3(0.0);
+	fragmentInput.viewPosition = vec3(0.0);
 	fragmentInput.position = vec4(0.0);
 	fragmentInput.screenPosition = vec3(0.0);
 	fragmentInput.localNormal = vec3(0.0);
@@ -39,6 +41,7 @@ void ratGetFragmentInput(out RatScratchPipelineFragmentInput fragmentInput)
 {
 	fragmentInput.localPosition = frag_LocalPosition;
 	fragmentInput.worldPosition = frag_WorldPosition;
+	fragmentInput.viewPosition = frag_ViewPosition;
 	fragmentInput.position = frag_Position;
 	fragmentInput.screenPosition = frag_ScreenPosition;
 	fragmentInput.localNormal = frag_LocalNormal;
@@ -59,6 +62,7 @@ void ratSetVertexOutputs(in RatScratchPipelineFragmentInput fragmentInput)
 {
 	frag_LocalPosition = fragmentInput.localPosition;
 	frag_WorldPosition = fragmentInput.worldPosition;
+	frag_ViewPosition = fragmentInput.viewPosition;
 	frag_Position = fragmentInput.position;
 	frag_ScreenPosition = fragmentInput.screenPosition;
 	frag_LocalNormal = fragmentInput.localNormal;

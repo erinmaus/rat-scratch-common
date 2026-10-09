@@ -1,43 +1,62 @@
 const uint RAT_SCRATCH_CUBE_MAP_FACES = 6;
 
 const vec3[] RAT_SCRATCH_CUBE_MAP_NORMALS = vec3[](vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0),
-												   vec3(0.0, -1.0, 0.0), vec3(0.0, 0.0, 1.0), vec3(0.0, 0.0, -1.0), );
+												   vec3(0.0, -1.0, 0.0), vec3(0.0, 0.0, 1.0), vec3(0.0, 0.0, -1.0));
 
-const vec3[] RAT_SCRATCH_CUBE_MAP_TANGENTS = vec3[](vec3(0.0, 0.0, -1.0), vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0),
-													vec3(1.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0));
+const uint RAT_SCRATCH_CUBE_MAP_FACE_POSITIVE_X = 0;
+const uint RAT_SCRATCH_CUBE_MAP_FACE_NEGATIVE_X = 1;
+const uint RAT_SCRATCH_CUBE_MAP_FACE_POSITIVE_Y = 2;
+const uint RAT_SCRATCH_CUBE_MAP_FACE_NEGATIVE_Y = 3;
+const uint RAT_SCRATCH_CUBE_MAP_FACE_POSITIVE_Z = 4;
+const uint RAT_SCRATCH_CUBE_MAP_FACE_NEGATIVE_Z = 5;
 
-const vec3[] RAT_SCRATCH_CUBE_MAP_BITANGENTS = vec3[](vec3(0.0, 1.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, -1.0),
-													  vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 1.0, 0.0));
-
-vec2 ratCubeMapImplDirectionToTextureCoordinate(vec3 direction, uint faceIndex)
+void ratCalculateCubeMapFaceTextureCoordinate(vec3 direction, out uint faceIndex, out vec2 textureCoordinate)
 {
-	float w = abs(dot(direction, RAT_SCRATCH_CUBE_MAP_NORMALS[faceIndex]));
+	vec3 absoluteDirection = abs(direction);
+	bvec3 positiveAxis = greaterThanEqual(direction, vec3(0.0));
 
-	float s = dot(direction, RAT_SCRATCH_CUBE_MAP_TANGENTS[faceIndex]);
-	float t = dot(direction, RAT_SCRATCH_CUBE_MAP_BITANGENTS[faceIndex]);
-
-	return vec2(s, t) / vec2(w) * vec2(0.5) + vec2(0.5);
-}
-
-vec4 ratSampleSeamlessCubeArrayLod(sampler2DArray cubeArray, vec3 direction, float lod, uint index)
-{
-	vec3 dir = safeNormalize(direction);
-	float totalWeight = 0.0;
-	vec4 accumulatedColor = vec4(0.0);
-
-	for (uint i = 0; i < RAT_SCRATCH_CUBE_MAP_FACES; ++i)
+	float maxAxisValue = max(absoluteDirection.x, max(absoluteDirection.y, absoluteDirection.z));
+	if (absoluteDirection.x >= absoluteDirection.y && absoluteDirection.x >= absoluteDirection.z)
 	{
-		float weight = max(0.0, dot(dir, RAT_SCRATCH_CUBE_MAP_NORMALS[i]));
-
-		if (weight > 0.0)
+		if (positiveAxis.x)
 		{
-			vec2 textureCoordinate = ratCubeMapImplDirectionToTextureCoordinate(dir, i);
-			vec4 color = textureLod(cubeArray, vec3(textureCoordinate, float(index + i)), lod);
-
-			accumulatedColor += color * weight;
-			totalWeight += weight;
+			faceIndex = RAT_SCRATCH_CUBE_MAP_FACE_POSITIVE_X;
+			textureCoordinate = vec2(-direction.z, -direction.y);
+		}
+		else
+		{
+			faceIndex = RAT_SCRATCH_CUBE_MAP_FACE_NEGATIVE_X;
+			textureCoordinate = vec2(direction.z, -direction.y);
+		}
+	}
+	else if (absoluteDirection.y >= absoluteDirection.x && absoluteDirection.y >= absoluteDirection.z)
+	{
+		if (positiveAxis.y)
+		{
+			faceIndex = RAT_SCRATCH_CUBE_MAP_FACE_POSITIVE_Y;
+			textureCoordinate = vec2(direction.x, direction.z);
+		}
+		else
+		{
+			faceIndex = RAT_SCRATCH_CUBE_MAP_FACE_NEGATIVE_Y;
+			textureCoordinate = vec2(direction.x, -direction.z);
+		}
+	}
+	else
+	{
+		if (positiveAxis.z)
+		{
+			faceIndex = RAT_SCRATCH_CUBE_MAP_FACE_POSITIVE_Z;
+			textureCoordinate = vec2(direction.x, -direction.y);
+		}
+		else
+		{
+			faceIndex = RAT_SCRATCH_CUBE_MAP_FACE_NEGATIVE_Z;
+			textureCoordinate = vec2(-direction.x, -direction.y);
 		}
 	}
 
-	return totalWeight > 0.0 ? (accumulatedColor / totalWeight) : vec4(0.0);
+	textureCoordinate /= vec2(maxAxisValue);
+	textureCoordinate += vec2(1.0);
+	textureCoordinate /= vec2(2.0);
 }

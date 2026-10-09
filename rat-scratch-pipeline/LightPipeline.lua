@@ -34,6 +34,13 @@ local Transform = require("rat-scratch-math").Transform
 --- @overload fun(pipelineRuntime: RatScratch.Pipeline.PipelineRuntime): RatScratch.Pipeline.LightPipeline
 local LightPipeline = Object(Pipeline)
 
+LightPipeline.SHADOW_TEXTURE_ATLAS_FORMAT = {
+	{ location = 0, name = "size", format = "floatvec2" },
+	{ location = 1, name = "position", format = "floatvec2" },
+	{ location = 2, name = "layer", format = "float" },
+	{ location = 3, name = "cameraIndex", format = "uint32" },
+}
+
 LightPipeline.CELLS_FORMAT = {
 	{ location = 0, name = "worldMin", format = "floatvec3" },
 	{ location = 1, name = "worldMax", format = "floatvec3" },
@@ -114,6 +121,13 @@ function LightPipeline:new(pipelineRuntime)
 		alllayers = true,
 	}
 
+	self.shadowAtlasData = {}
+	self.shadowAtlasBuffer = love.graphics.newBuffer(
+		LightPipeline.SHADOW_TEXTURE_ATLAS_FORMAT,
+		1,
+		{ shaderstorage = true }
+	)
+
 	self.shadowBlurResult =
 		DoubleBufferResult(self.shadowAtlasColor, self.shadowAtlasOtherColor)
 
@@ -141,7 +155,14 @@ function LightPipeline:bind(shader, qualityPreset)
 	end
 
 	if shader:hasUniform("rat_PipelineShadowTextureAtlasView") then
-		shader:send("rat_PipelineShadowTextureAtlasView", self.shadowAtlasColor)
+		shader:send(
+			"rat_PipelineShadowTextureAtlasView",
+			self.shadowBlurResult:getResult()
+		)
+	end
+
+	if shader:hasUniform("rat_ShadowTexturesBuffer") then
+		shader:send("rat_ShadowTexturesBuffer", self.shadowAtlasBuffer)
 	end
 end
 
@@ -234,7 +255,7 @@ function LightPipeline:_flushLight(light)
 		self.lightData,
 		"shadowTextureIndexCount",
 		0,
-		cameraIndex,
+		cameraIndex - 1,
 		cameraCount
 	)
 
@@ -300,6 +321,40 @@ function LightPipeline:_flushShadowAtlas()
 		self.shadowBlurResult = DoubleBufferResult(
 			self.shadowAtlasColor,
 			self.shadowAtlasOtherColor
+		)
+
+		self.shadowAtlasBuffer = love.graphics.newBuffer(
+			LightPipeline.SHADOW_TEXTURE_ATLAS_FORMAT,
+			cameraCount,
+			{ shaderstorage = true }
+		)
+
+		Table.clear(self.shadowAtlasData)
+		local formatInstance =
+			BufferFormat.get(LightPipeline.SHADOW_TEXTURE_ATLAS_FORMAT)
+		local componentCount = formatInstance:getComponentCount()
+		local offset = 1
+		for i = 1, cameraCount do
+			Table.copy(
+				self.shadowAtlasData,
+				offset,
+				offset + componentCount - 1,
+				1,
+				1,
+				0,
+				0,
+				i - 1,
+				i - 1
+			)
+
+			offset = offset + componentCount
+		end
+
+		self.shadowAtlasBuffer:setArrayData(
+			self.shadowAtlasData,
+			1,
+			1,
+			cameraCount
 		)
 	end
 end

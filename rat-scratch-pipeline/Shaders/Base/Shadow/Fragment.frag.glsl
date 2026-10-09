@@ -4,6 +4,7 @@
 #include "@Pipeline/Common/Buffers/Materials.common.glsl"
 #include "@Pipeline/Common/Pack.common.glsl"
 #include "@Pipeline/Common/Types/Fragment.common.glsl"
+#include "@Pipeline/Common/Camera.common.glsl"
 
 #include "@Generated/Pipeline/Material/Properties.common.glsl"
 #include "@Generated/Pipeline/Material/Fragment.common.glsl"
@@ -29,7 +30,10 @@ void pixelmain()
 		discard;
 	}
 #endif
+	float z = fragmentInput.viewPosition.z;
+	float near = ratGetCameraZNear(fragmentInput.cameraIndex);
+	float far = ratGetCameraZFar(fragmentInput.cameraIndex);
+	z = (z - near) / (far - near);
 
-	rat_ShadowBufferDepth =
-		vec2(fragmentInput.worldPosition.z, fragmentInput.worldPosition.z * fragmentInput.worldPosition.z);
+	rat_ShadowBufferDepth = vec2(z, z * z);
 }

@@ -3,9 +3,11 @@ vec4 ratGaussian3(sampler2D inputTexture, ivec2 direction, ivec2 position, int l
 {
 	position -= ivec2(1) * direction;
 	vec4 result = vec4(0.0);
+	ivec2 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 3; ++i)
 	{
-		result += texelFetch(inputTexture, direction * ivec2(i) + position, lod) * vec4(ratImplGaussianKernel3[i]);
+		ivec2 offsetPosition = clamp(direction * ivec2(i) + position, ivec2(0.0), size - ivec2(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel3[i]);
 	}
 	return result;
 }
@@ -13,10 +15,11 @@ vec4 ratGaussian3(sampler2DArray inputTexture, ivec2 direction, ivec3 position, 
 {
 	position.xy -= ivec2(1) * direction;
 	vec4 result = vec4(0.0);
+	ivec3 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 3; ++i)
 	{
-		result += texelFetch(inputTexture, ivec3(direction * ivec2(i) + position.xy, position.z), lod) *
-				  vec4(ratImplGaussianKernel3[i]);
+		ivec3 offsetPosition = clamp(ivec3(direction * ivec2(i) + position.xy, position.z), ivec3(0), size - ivec3(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel3[i]);
 	}
 	return result;
 }
@@ -26,9 +29,11 @@ vec4 ratGaussian5(sampler2D inputTexture, ivec2 direction, ivec2 position, int l
 {
 	position -= ivec2(2) * direction;
 	vec4 result = vec4(0.0);
+	ivec2 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 5; ++i)
 	{
-		result += texelFetch(inputTexture, direction * ivec2(i) + position, lod) * vec4(ratImplGaussianKernel5[i]);
+		ivec2 offsetPosition = clamp(direction * ivec2(i) + position, ivec2(0.0), size - ivec2(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel5[i]);
 	}
 	return result;
 }
@@ -36,10 +41,11 @@ vec4 ratGaussian5(sampler2DArray inputTexture, ivec2 direction, ivec3 position, 
 {
 	position.xy -= ivec2(2) * direction;
 	vec4 result = vec4(0.0);
+	ivec3 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 5; ++i)
 	{
-		result += texelFetch(inputTexture, ivec3(direction * ivec2(i) + position.xy, position.z), lod) *
-				  vec4(ratImplGaussianKernel5[i]);
+		ivec3 offsetPosition = clamp(ivec3(direction * ivec2(i) + position.xy, position.z), ivec3(0), size - ivec3(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel5[i]);
 	}
 	return result;
 }
@@ -50,9 +56,11 @@ vec4 ratGaussian7(sampler2D inputTexture, ivec2 direction, ivec2 position, int l
 {
 	position -= ivec2(3) * direction;
 	vec4 result = vec4(0.0);
+	ivec2 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 7; ++i)
 	{
-		result += texelFetch(inputTexture, direction * ivec2(i) + position, lod) * vec4(ratImplGaussianKernel7[i]);
+		ivec2 offsetPosition = clamp(direction * ivec2(i) + position, ivec2(0.0), size - ivec2(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel7[i]);
 	}
 	return result;
 }
@@ -60,10 +68,11 @@ vec4 ratGaussian7(sampler2DArray inputTexture, ivec2 direction, ivec3 position, 
 {
 	position.xy -= ivec2(3) * direction;
 	vec4 result = vec4(0.0);
+	ivec3 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 7; ++i)
 	{
-		result += texelFetch(inputTexture, ivec3(direction * ivec2(i) + position.xy, position.z), lod) *
-				  vec4(ratImplGaussianKernel7[i]);
+		ivec3 offsetPosition = clamp(ivec3(direction * ivec2(i) + position.xy, position.z), ivec3(0), size - ivec3(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel7[i]);
 	}
 	return result;
 }
@@ -74,9 +83,11 @@ vec4 ratGaussian9(sampler2D inputTexture, ivec2 direction, ivec2 position, int l
 {
 	position -= ivec2(4) * direction;
 	vec4 result = vec4(0.0);
+	ivec2 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 9; ++i)
 	{
-		result += texelFetch(inputTexture, direction * ivec2(i) + position, lod) * vec4(ratImplGaussianKernel9[i]);
+		ivec2 offsetPosition = clamp(direction * ivec2(i) + position, ivec2(0.0), size - ivec2(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel9[i]);
 	}
 	return result;
 }
@@ -84,10 +95,11 @@ vec4 ratGaussian9(sampler2DArray inputTexture, ivec2 direction, ivec3 position, 
 {
 	position.xy -= ivec2(4) * direction;
 	vec4 result = vec4(0.0);
+	ivec3 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 9; ++i)
 	{
-		result += texelFetch(inputTexture, ivec3(direction * ivec2(i) + position.xy, position.z), lod) *
-				  vec4(ratImplGaussianKernel9[i]);
+		ivec3 offsetPosition = clamp(ivec3(direction * ivec2(i) + position.xy, position.z), ivec3(0), size - ivec3(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel9[i]);
 	}
 	return result;
 }
@@ -99,9 +111,11 @@ vec4 ratGaussian11(sampler2D inputTexture, ivec2 direction, ivec2 position, int 
 {
 	position -= ivec2(5) * direction;
 	vec4 result = vec4(0.0);
+	ivec2 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 11; ++i)
 	{
-		result += texelFetch(inputTexture, direction * ivec2(i) + position, lod) * vec4(ratImplGaussianKernel11[i]);
+		ivec2 offsetPosition = clamp(direction * ivec2(i) + position, ivec2(0.0), size - ivec2(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel11[i]);
 	}
 	return result;
 }
@@ -109,10 +123,11 @@ vec4 ratGaussian11(sampler2DArray inputTexture, ivec2 direction, ivec3 position,
 {
 	position.xy -= ivec2(5) * direction;
 	vec4 result = vec4(0.0);
+	ivec3 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 11; ++i)
 	{
-		result += texelFetch(inputTexture, ivec3(direction * ivec2(i) + position.xy, position.z), lod) *
-				  vec4(ratImplGaussianKernel11[i]);
+		ivec3 offsetPosition = clamp(ivec3(direction * ivec2(i) + position.xy, position.z), ivec3(0), size - ivec3(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel11[i]);
 	}
 	return result;
 }
@@ -124,9 +139,11 @@ vec4 ratGaussian13(sampler2D inputTexture, ivec2 direction, ivec2 position, int 
 {
 	position -= ivec2(6) * direction;
 	vec4 result = vec4(0.0);
+	ivec2 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 13; ++i)
 	{
-		result += texelFetch(inputTexture, direction * ivec2(i) + position, lod) * vec4(ratImplGaussianKernel13[i]);
+		ivec2 offsetPosition = clamp(direction * ivec2(i) + position, ivec2(0.0), size - ivec2(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel13[i]);
 	}
 	return result;
 }
@@ -134,10 +151,11 @@ vec4 ratGaussian13(sampler2DArray inputTexture, ivec2 direction, ivec3 position,
 {
 	position.xy -= ivec2(6) * direction;
 	vec4 result = vec4(0.0);
+	ivec3 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 13; ++i)
 	{
-		result += texelFetch(inputTexture, ivec3(direction * ivec2(i) + position.xy, position.z), lod) *
-				  vec4(ratImplGaussianKernel13[i]);
+		ivec3 offsetPosition = clamp(ivec3(direction * ivec2(i) + position.xy, position.z), ivec3(0), size - ivec3(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel13[i]);
 	}
 	return result;
 }
@@ -149,9 +167,11 @@ vec4 ratGaussian15(sampler2D inputTexture, ivec2 direction, ivec2 position, int 
 {
 	position -= ivec2(7) * direction;
 	vec4 result = vec4(0.0);
+	ivec2 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 15; ++i)
 	{
-		result += texelFetch(inputTexture, direction * ivec2(i) + position, lod) * vec4(ratImplGaussianKernel15[i]);
+		ivec2 offsetPosition = clamp(direction * ivec2(i) + position, ivec2(0.0), size - ivec2(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel15[i]);
 	}
 	return result;
 }
@@ -159,10 +179,11 @@ vec4 ratGaussian15(sampler2DArray inputTexture, ivec2 direction, ivec3 position,
 {
 	position.xy -= ivec2(7) * direction;
 	vec4 result = vec4(0.0);
+	ivec3 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 15; ++i)
 	{
-		result += texelFetch(inputTexture, ivec3(direction * ivec2(i) + position.xy, position.z), lod) *
-				  vec4(ratImplGaussianKernel15[i]);
+		ivec3 offsetPosition = clamp(ivec3(direction * ivec2(i) + position.xy, position.z), ivec3(0), size - ivec3(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel15[i]);
 	}
 	return result;
 }
@@ -175,9 +196,11 @@ vec4 ratGaussian17(sampler2D inputTexture, ivec2 direction, ivec2 position, int 
 {
 	position -= ivec2(8) * direction;
 	vec4 result = vec4(0.0);
+	ivec2 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 17; ++i)
 	{
-		result += texelFetch(inputTexture, direction * ivec2(i) + position, lod) * vec4(ratImplGaussianKernel17[i]);
+		ivec2 offsetPosition = clamp(direction * ivec2(i) + position, ivec2(0.0), size - ivec2(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel17[i]);
 	}
 	return result;
 }
@@ -185,10 +208,11 @@ vec4 ratGaussian17(sampler2DArray inputTexture, ivec2 direction, ivec3 position,
 {
 	position.xy -= ivec2(8) * direction;
 	vec4 result = vec4(0.0);
+	ivec3 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 17; ++i)
 	{
-		result += texelFetch(inputTexture, ivec3(direction * ivec2(i) + position.xy, position.z), lod) *
-				  vec4(ratImplGaussianKernel17[i]);
+		ivec3 offsetPosition = clamp(ivec3(direction * ivec2(i) + position.xy, position.z), ivec3(0), size - ivec3(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel17[i]);
 	}
 	return result;
 }
@@ -201,9 +225,11 @@ vec4 ratGaussian19(sampler2D inputTexture, ivec2 direction, ivec2 position, int 
 {
 	position -= ivec2(9) * direction;
 	vec4 result = vec4(0.0);
+	ivec2 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 19; ++i)
 	{
-		result += texelFetch(inputTexture, direction * ivec2(i) + position, lod) * vec4(ratImplGaussianKernel19[i]);
+		ivec2 offsetPosition = clamp(direction * ivec2(i) + position, ivec2(0.0), size - ivec2(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel19[i]);
 	}
 	return result;
 }
@@ -211,10 +237,11 @@ vec4 ratGaussian19(sampler2DArray inputTexture, ivec2 direction, ivec3 position,
 {
 	position.xy -= ivec2(9) * direction;
 	vec4 result = vec4(0.0);
+	ivec3 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 19; ++i)
 	{
-		result += texelFetch(inputTexture, ivec3(direction * ivec2(i) + position.xy, position.z), lod) *
-				  vec4(ratImplGaussianKernel19[i]);
+		ivec3 offsetPosition = clamp(ivec3(direction * ivec2(i) + position.xy, position.z), ivec3(0), size - ivec3(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel19[i]);
 	}
 	return result;
 }
@@ -227,9 +254,11 @@ vec4 ratGaussian21(sampler2D inputTexture, ivec2 direction, ivec2 position, int 
 {
 	position -= ivec2(10) * direction;
 	vec4 result = vec4(0.0);
+	ivec2 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 21; ++i)
 	{
-		result += texelFetch(inputTexture, direction * ivec2(i) + position, lod) * vec4(ratImplGaussianKernel21[i]);
+		ivec2 offsetPosition = clamp(direction * ivec2(i) + position, ivec2(0.0), size - ivec2(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel21[i]);
 	}
 	return result;
 }
@@ -237,10 +266,11 @@ vec4 ratGaussian21(sampler2DArray inputTexture, ivec2 direction, ivec3 position,
 {
 	position.xy -= ivec2(10) * direction;
 	vec4 result = vec4(0.0);
+	ivec3 size = textureSize(inputTexture, 0);
 	for (int i = 0; i < 21; ++i)
 	{
-		result += texelFetch(inputTexture, ivec3(direction * ivec2(i) + position.xy, position.z), lod) *
-				  vec4(ratImplGaussianKernel21[i]);
+		ivec3 offsetPosition = clamp(ivec3(direction * ivec2(i) + position.xy, position.z), ivec3(0), size - ivec3(1));
+		result += texelFetch(inputTexture, offsetPosition, lod) * vec4(ratImplGaussianKernel21[i]);
 	}
 	return result;
 }

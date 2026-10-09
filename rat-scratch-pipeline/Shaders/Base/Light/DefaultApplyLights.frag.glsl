@@ -3,6 +3,7 @@
 #include "@Pipeline/Common/PBR.common.glsl"
 #include "@Pipeline/Common/Types/Fragment.common.glsl"
 #include "@Pipeline/Common/Types/Lights.common.glsl"
+#include "@Pipeline/Common/Textures/Shadow.common.glsl"
 
 void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOutput,
 								  in RatScratchPipelineAmbientLight ambientLight,
@@ -36,10 +37,12 @@ void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOu
 	float lightToSurfaceDistance = length(lightToSurface);
 	vec3 L = -safeNormalize(lightToSurface, lightToSurfaceDistance);
 	float attenuation = clamp(1.0 - lightToSurfaceDistance / pointLight.attenuation, 0.0, 1.0);
-	float shadow = 1.0; // TODO: Implement actual shadow sampling
+	float shadow =
+		ratSampleCubeShadowTexture(pointLight.shadowTextureIndexCount, fragmentOutput.position, pointLight.position);
 	vec3 cameraPosition = rat_Cameras[fragmentOutput.cameraIndex].inverseViewTransform[3].xyz;
 	ratApplyPBR(fragmentOutput, L, pointLight.color.rgb * attenuation * shadow, cameraPosition, result);
-	result.fluorescence += fragmentOutput.fluorescence * vec3(attenuation * shadow * pointLight.ultraviolet);
+	// result.diffuse = vec3(shadow);
+	result.fluorescence += fragmentOutput.fluorescence * vec3(attenuation * pointLight.ultraviolet);
 }
 
 void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOutput,

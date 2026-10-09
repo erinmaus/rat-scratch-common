@@ -55,6 +55,7 @@ void ratVertexSkinnedDraw(in RatScratchPipelineDraw draw, inout RatScratchPipeli
 
 	mat3 normalTransform = transpose(inverse(mat3(boneWorldLocalTransform)));
 	vec4 transformedPosition = boneWorldLocalTransform * vec4(vertex.position, 1.0);
+	vec4 viewPosition = camera.viewTransform * transformedPosition;
 	vec3 transformedNormal = normalize(normalTransform * vertex.normal);
 	vec3 transformedTangent = normalize(normalTransform * vertex.tangent.xyz);
 
@@ -62,7 +63,8 @@ void ratVertexSkinnedDraw(in RatScratchPipelineDraw draw, inout RatScratchPipeli
 
 	fragment.localPosition = localPosition.xyz;
 	fragment.worldPosition = transformedPosition.xyz;
-	fragment.position = camera.projectionViewTransform * transformedPosition;
+	fragment.viewPosition = viewPosition.xyz;
+	fragment.position = camera.projectionTransform * viewPosition;
 	fragment.screenPosition = fragment.position.xyz / vec3(fragment.position.w);
 	fragment.screenPosition += vec3(1.0);
 	fragment.screenPosition *= vec3(0.5);
@@ -73,6 +75,7 @@ void ratVertexSkinnedDraw(in RatScratchPipelineDraw draw, inout RatScratchPipeli
 	fragment.textureCoordinate = vertex.textureCoordinate;
 	fragment.color = vertex.color;
 	fragment.materialInstance = rat_MeshInstances[draw.meshInstanceIndex].materialInstanceIndex;
+	fragment.cameraIndex = draw.cameraIndex;
 }
 
 void ratVertexStaticDraw(in RatScratchPipelineDraw draw, inout RatScratchPipelineFragmentInput fragment,
@@ -91,10 +94,12 @@ void ratVertexStaticDraw(in RatScratchPipelineDraw draw, inout RatScratchPipelin
 
 	vec4 localPosition = localTransform * vec4(vertex.position, 1.0);
 	vec4 worldPosition = worldTransform * localPosition;
+	vec4 viewPosition = camera.viewTransform * worldPosition;
 
 	fragment.localPosition = localPosition.xyz;
 	fragment.worldPosition = worldPosition.xyz;
-	fragment.position = camera.projectionViewTransform * worldPosition;
+	fragment.viewPosition = viewPosition.xyz;
+	fragment.position = camera.projectionTransform * viewPosition;
 	fragment.localNormal = normalize(mat3(localTransform) * vertex.normal);
 	fragment.normal = normalize(normalTransform * vertex.normal);
 	fragment.tangent = normalize(normalTransform * vertex.tangent.xyz);
@@ -105,6 +110,7 @@ void ratVertexStaticDraw(in RatScratchPipelineDraw draw, inout RatScratchPipelin
 	fragment.textureCoordinate = vertex.textureCoordinate;
 	fragment.color = vertex.color;
 	fragment.materialInstance = rat_MeshInstances[draw.meshInstanceIndex].materialInstanceIndex;
+	fragment.cameraIndex = draw.cameraIndex;
 }
 
 void ratVertexDraw(in RatScratchPipelineDraw draw, inout RatScratchPipelineFragmentInput fragmentInput,
