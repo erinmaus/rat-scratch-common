@@ -2,6 +2,7 @@ struct RatScratchPipelineFragmentInput
 {
 	vec3 localPosition;
 	vec3 worldPosition;
+	vec3 viewPosition;
 	vec4 position;
 	vec3 screenPosition;
 	// We currently sacrifice accuracy for non-uniform scale of the local transform

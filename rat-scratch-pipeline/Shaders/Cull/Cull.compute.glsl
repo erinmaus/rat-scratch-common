@@ -69,10 +69,10 @@ void computemain()
 
 			if (currentClusterCount >= RAT_SCRATCH_PIPELINE_CONFIG_LOD_MAX_PENDING_CLUSTER_DRAWS)
 			{
-				ratEmitClusterDraws(draw, cameraIndex, clusterGroup.lodDepth, selectedClusters, currentClusterCount);
+				ratEmitClusterDraws(draw, clusterGroup.lodDepth, selectedClusters, currentClusterCount);
 			}
 		}
 	}
 
-	ratEmitClusterDraws(draw, cameraIndex, clusterGroup.lodDepth, selectedClusters, currentClusterCount);
+	ratEmitClusterDraws(draw, clusterGroup.lodDepth, selectedClusters, currentClusterCount);
 }

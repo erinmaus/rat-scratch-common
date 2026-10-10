@@ -91,7 +91,7 @@ bool ratSelectClusterLOD(RatScratchPipelineCamera camera, RatScratchPipelineMesh
 	return false;
 }
 
-void ratEmitClusterDraws(RatScratchPipelineDraw baseDraw, uint cameraIndex, int lodDepth,
+void ratEmitClusterDraws(RatScratchPipelineDraw baseDraw, int lodDepth,
 						 uint selectedClusters[RAT_SCRATCH_PIPELINE_CONFIG_LOD_MAX_PENDING_CLUSTER_DRAWS],
 						 uint clusterCount)
 {
@@ -101,12 +101,11 @@ void ratEmitClusterDraws(RatScratchPipelineDraw baseDraw, uint cameraIndex, int 
 	}
 
 	uint baseIndexOffset = baseDraw.indexOffset;
-	uint drawStartIndex = atomicAdd(rat_IndirectDraws[cameraIndex].instanceCount, clusterCount);
+	uint drawStartIndex = atomicAdd(rat_IndirectDraws[0].instanceCount, clusterCount);
 	for (uint i = 0; i < clusterCount; ++i)
 	{
 		uint clusterIndex = selectedClusters[i];
 		baseDraw.clusterIndex = clusterIndex;
-		baseDraw.cameraIndex = cameraIndex;
 		baseDraw.lodIndex = lodDepth;
 		baseDraw.indexOffset = baseIndexOffset + rat_MeshClusters[clusterIndex].indexOffsetCount.x;
 		rat_OutputDraws[drawStartIndex + i] = baseDraw;

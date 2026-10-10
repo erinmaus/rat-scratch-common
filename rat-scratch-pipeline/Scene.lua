@@ -1,6 +1,7 @@
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
 local CameraFrame = require("rat-scratch-pipeline.CameraFrame")
+local CullResult = require("rat-scratch-pipeline.CullResult")
 local DrawPipeline = require("rat-scratch-pipeline.DrawPipeline")
 local LightClusterResult = require("rat-scratch-pipeline.LightClusterResult")
 local LightPipeline = require("rat-scratch-pipeline.LightPipeline")
@@ -36,6 +37,10 @@ function Scene:new(world)
 	self.camerasBuffer =
 		PipelineBuffer(CameraFrame.CAMERA_FORMAT, { shaderstorage = true }, 1)
 	self.lightClusterResults = LightClusterResult(self.camerasBuffer)
+end
+
+function Scene:newCullResult()
+	return CullResult(self.camerasBuffer)
 end
 
 --- @param shader love.Shader

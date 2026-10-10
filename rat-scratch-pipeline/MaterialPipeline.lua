@@ -26,6 +26,8 @@ local json = require("lib.json")
 --- | "forward"
 --- | "depth"
 --- | "depth-discard"
+--- | "shadow"
+--- | "shadow-discard"
 
 --- @alias RatScratch.Pipeline.MaterialPipeline.ShaderType
 --- | "draw"
@@ -828,6 +830,60 @@ end
 --- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
 --- @param virtualPaths table
+function MaterialPipeline:_rebuildShadowDepthShaders(
+	qualityPreset,
+	baseConfig,
+	virtualPaths
+)
+	--- @type RatScratch.Graphics.ShaderPreprocessOptions
+	local config = {
+		rootPath = baseConfig.rootPath,
+		rootPaths = baseConfig.rootPaths,
+		virtualPaths = virtualPaths,
+	}
+
+	-- TODO: layered rendering
+	return {
+		draw = self:getPipelineRuntime():loadShader(
+			"@Pipeline/Base/Shadow/Depth.frag.glsl",
+			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
+			qualityPreset,
+			config
+		),
+	}
+end
+
+--- @private
+--- @param qualityPreset string
+--- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
+--- @param virtualPaths table
+function MaterialPipeline:_rebuildShadowDepthDiscardShaders(
+	qualityPreset,
+	baseConfig,
+	virtualPaths
+)
+	--- @type RatScratch.Graphics.ShaderPreprocessOptions
+	local config = {
+		rootPath = baseConfig.rootPath,
+		rootPaths = baseConfig.rootPaths,
+		virtualPaths = virtualPaths,
+	}
+
+	-- TODO: layered rendering
+	return {
+		draw = self:getPipelineRuntime():loadShader(
+			"@Pipeline/Base/Shadow/DepthDiscard.frag.glsl",
+			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
+			qualityPreset,
+			config
+		),
+	}
+end
+
+--- @private
+--- @param qualityPreset string
+--- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
+--- @param virtualPaths table
 function MaterialPipeline:_rebuildShaders(
 	qualityPreset,
 	baseConfig,
@@ -850,6 +906,16 @@ function MaterialPipeline:_rebuildShaders(
 			virtualPaths.depth
 		),
 		depthDiscard = self:_rebuildDepthDiscardShaders(
+			qualityPreset,
+			baseConfig,
+			virtualPaths.depthDiscard
+		),
+		shadow = self:_rebuildShadowDepthShaders(
+			qualityPreset,
+			baseConfig,
+			virtualPaths.depth
+		),
+		shadowDiscard = self:_rebuildShadowDepthDiscardShaders(
 			qualityPreset,
 			baseConfig,
 			virtualPaths.depthDiscard

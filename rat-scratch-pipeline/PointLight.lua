@@ -98,7 +98,7 @@ do
 			self.cameras[index] = camera
 		end
 
-		camera:getProjection():setNear(0.1)
+		camera:getProjection():setNear(0.001)
 		camera:getProjection():setFar(math.max(self.attenuation, 1))
 		camera:getView():setTranslation(self.position)
 

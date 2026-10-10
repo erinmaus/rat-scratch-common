@@ -164,9 +164,10 @@ function PipelineRuntime:setCurrentProperties(currentProperties)
 	self:_loadConfigShaders()
 end
 
+--- @generic T
 --- @param qualityPreset string
 --- @param property string
---- @return (integer | number | boolean)[]? ...
+--- @return T? ...
 function PipelineRuntime:getCurrentProperty(qualityPreset, property)
 	local value = self.currentProperties[qualityPreset]
 		and self.currentProperties[qualityPreset][property]

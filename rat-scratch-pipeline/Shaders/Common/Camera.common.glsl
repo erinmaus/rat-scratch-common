@@ -14,13 +14,13 @@ float ratGetCameraErrorFactor(uint cameraIndex)
 float ratGetCameraZNear(uint cameraIndex)
 {
 	RatScratchPipelineCamera camera = rat_Cameras[cameraIndex];
-	return camera.projectionTransform[2][3] / (camera.projectionTransform[2][2] - 1.0);
+	return camera.projectionTransform[3][2] / (camera.projectionTransform[2][2] - 1.0);
 }
 
 float ratGetCameraZFar(uint cameraIndex)
 {
 	RatScratchPipelineCamera camera = rat_Cameras[cameraIndex];
-	return camera.projectionTransform[2][3] / (camera.projectionTransform[2][2] + 1.0);
+	return camera.projectionTransform[3][2] / (camera.projectionTransform[2][2] + 1.0);
 }
 
 vec3 ratGetCameraPosition(RatScratchPipelineCamera camera)
@@ -35,12 +35,12 @@ float ratGetCameraErrorFactor(RatScratchPipelineCamera camera)
 
 float ratGetCameraZNear(RatScratchPipelineCamera camera)
 {
-	return camera.projectionTransform[2][3] / (camera.projectionTransform[2][2] - 1.0);
+	return camera.projectionTransform[3][2] / (camera.projectionTransform[2][2] - 1.0);
 }
 
 float ratGetCameraZFar(RatScratchPipelineCamera camera)
 {
-	return camera.projectionTransform[2][3] / (camera.projectionTransform[2][2] + 1.0);
+	return camera.projectionTransform[3][2] / (camera.projectionTransform[2][2] + 1.0);
 }
 
 vec3 ratScreenPositionToWorldPosition(vec3 screenPosition, uint cameraIndex)

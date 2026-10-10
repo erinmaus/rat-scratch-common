@@ -1,7 +1,7 @@
 #include "@Pipeline/Common/Textures/Sample.common.glsl"
 
 void ratApplyFragmentMaterial(in RatScratchPipelineFragmentInput fragmentInput,
-							  out RatScratchPipelineFragmentOutput fragmentOutput)
+							  inout RatScratchPipelineFragmentOutput fragmentOutput)
 {
 	RatScratchBasicMaterialProperties materialProperties;
 	ratGetBasicMaterialProperties(fragmentInput.materialInstance, materialProperties);

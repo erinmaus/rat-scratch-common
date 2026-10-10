@@ -2,6 +2,7 @@ return {
 	BSP2D = require("rat-scratch-math.BSP2D"),
 	Common = require("rat-scratch-math.Common"),
 	DualContour = require("rat-scratch-math.DualContour"),
+	Gaussian = require("rat-scratch-math.Gaussian"),
 	Geometry2D = require("rat-scratch-math.Geometry2D"),
 	KDTreeNode = require("rat-scratch-math.KDTreeNode"),
 	MarchingSquares = require("rat-scratch-math.MarchingSquares"),
