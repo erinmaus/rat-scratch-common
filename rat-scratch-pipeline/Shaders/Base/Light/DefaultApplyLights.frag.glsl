@@ -41,7 +41,6 @@ void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOu
 		ratSampleCubeShadowTexture(pointLight.shadowTextureIndexCount, fragmentOutput.position, pointLight.position);
 	vec3 cameraPosition = rat_Cameras[fragmentOutput.cameraIndex].inverseViewTransform[3].xyz;
 	ratApplyPBR(fragmentOutput, L, pointLight.color.rgb * attenuation * shadow, cameraPosition, result);
-	// result.diffuse = vec3(shadow);
 	result.fluorescence += fragmentOutput.fluorescence * vec3(attenuation * pointLight.ultraviolet);
 }
 
