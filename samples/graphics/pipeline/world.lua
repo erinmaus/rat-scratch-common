@@ -6,7 +6,6 @@ local AmbientLight = require("rat-scratch-pipeline").AmbientLight
 local DirectionalLight = require("rat-scratch-pipeline").DirectionalLight
 local Vector3 = require("rat-scratch-math").Vector3
 local Quaternion = require("rat-scratch-math").Quaternion
-local ArcballCamera = require("rat-scratch-pipeline").ArcballCamera
 local LightPipeline = require("rat-scratch-pipeline").LightPipeline
 local GLTF = require("rat-scratch-gltf")
 local ExtendedScene = require("rat-scratch-pipeline-tools").Model.ExtendedScene
@@ -15,7 +14,8 @@ local GammaColor = require("rat-scratch-graphics").GammaColor
 local PointLight = require("rat-scratch-pipeline").PointLight
 local ResourceEvent = require("rat-scratch-resource").ResourceEvent
 local Camera = require("rat-scratch-pipeline").Camera
-local ArcballCameraView = require("rat-scratch-pipeline.ArcballCameraView")
+local ArcballCameraView = require("rat-scratch-pipeline").ArcballCameraView
+local ShadowRenderPass = require("rat-scratch-pipeline").ShadowRenderPass
 local PerspectiveFOVCameraProjection =
 	require("rat-scratch-pipeline.PerspectiveFOVCameraProjection")
 local PipelineSceneResourceType =
@@ -126,11 +126,17 @@ function demo.load()
 
 	demo.runtime = pipelineRuntime
 	demo.renderer = renderer
+	demo.world = world
 	demo.scene = scene
 	demo.directionalLight = directionalLight
 	demo.pointLights = pointLights
 	demo.cullResult = scene:newCullResult()
-	demo.lightCullResult = scene:getPipeline(LightPipeline):newCullResult()
+	demo.shadowRenderPass = ShadowRenderPass()
+	demo.shadowRenderPass:attach(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.world,
+		demo.scene
+	)
 
 	demo.colorCanvas = love.graphics.newTexture(
 		love.graphics.getWidth(),
@@ -231,13 +237,9 @@ function demo.draw()
 	demo.renderer:cull(
 		demo.runtime:getDefaultQualityPreset(),
 		demo.scene,
-		demo.lightCullResult
+		demo.shadowRenderPass:getCullResult()
 	)
-	demo.renderer:drawShadows(
-		demo.runtime:getDefaultQualityPreset(),
-		demo.scene,
-		demo.lightCullResult
-	)
+	demo.renderer:drawShadows(demo.shadowRenderPass)
 
 	love.graphics.setCanvas({
 		demo.colorCanvas,

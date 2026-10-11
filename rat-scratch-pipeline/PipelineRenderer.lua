@@ -173,24 +173,29 @@ end
 local BLUR_DIRECTION_X_AXIS = { 1, 0 }
 local BLUR_DIRECTION_Y_AXIS = { 0, 1 }
 
---- @param qualityPreset string
---- @param scene RatScratch.Pipeline.Scene
---- @param result RatScratch.Pipeline.CullResult
-function PipelineRenderer:drawShadows(qualityPreset, scene, result)
+--- @param shadowRenderPass RatScratch.Pipeline.ShadowRenderPass
+function PipelineRenderer:drawShadows(shadowRenderPass)
 	local material = self.world:getPipeline(MaterialPipeline)
 
-	local drawShader = material:getShader(qualityPreset, "shadow", "draw")
+	local drawShader = material:getShader(
+		shadowRenderPass:getQualityPreset(),
+		"shadow",
+		"draw"
+	)
 	self:_bindWorldUniforms(drawShader)
-	self:_bindSceneUniforms(drawShader, scene)
+	self:_bindSceneUniforms(drawShader, shadowRenderPass:getScene())
 
 	if drawShader:hasUniform("rat_DrawsBuffer") then
-		drawShader:send("rat_DrawsBuffer", result:getDrawsBuffer())
+		drawShader:send(
+			"rat_DrawsBuffer",
+			shadowRenderPass:getCullResult():getDrawsBuffer()
+		)
 	end
 
 	if drawShader:hasUniform("rat_CamerasBuffer") then
 		drawShader:send(
 			"rat_CamerasBuffer",
-			result:getCamerasBuffer():getBuffer()
+			shadowRenderPass:getCullResult():getCamerasBuffer():getBuffer()
 		)
 	end
 
@@ -199,52 +204,54 @@ function PipelineRenderer:drawShadows(qualityPreset, scene, result)
 		love.graphics.setShader(drawShader)
 		love.graphics.setBlendState("add", "one", "zero")
 
-		scene:getPipeline(LightPipeline):setCanvas()
+		shadowRenderPass:getShadowResult():getSourceBuffer():bind()
 		love.graphics.clear(0, 0, 0, 0)
 		love.graphics.drawFromShaderIndirect(
 			"triangles",
-			result:getIndirectBuffer()
+			shadowRenderPass:getCullResult():getIndirectBuffer()
 		)
-		love.graphics.pop()
 	end
+	love.graphics.pop()
 
-	local _, cameraCount = result:getCamerasBuffer():getIndexCount()
-	local blurResult = scene:getPipeline(LightPipeline):getShadowBlurResult()
+	local _, cameraCount =
+		shadowRenderPass:getCullResult():getCamerasBuffer():getIndexCount()
 
 	love.graphics.push("all")
 	do
 		love.graphics.setShader(self.shadowBlurShader)
 		love.graphics.setBlendState("add", "one", "zero")
 
-		blurResult:start()
+		shadowRenderPass:getShadowResult():start()
 		do
 			self.shadowBlurShader:send(
 				"rat_BlurDirection",
 				BLUR_DIRECTION_X_AXIS
 			)
-			blurResult:bindShaderInput(
-				self.shadowBlurShader,
-				"rat_ShadowTexture"
-			)
-			blurResult:bindShaderOutput()
+			shadowRenderPass
+				:getShadowResult()
+				:bindShaderInput(self.shadowBlurShader, "rat_ShadowTexture")
+			shadowRenderPass:getShadowResult():bindShaderOutput()
+
+			love.graphics.clear(0, 0, 0, 0)
 			PostProcess.drawInstanced(cameraCount)
 		end
 
-		blurResult:step()
+		shadowRenderPass:getShadowResult():step()
 		do
 			self.shadowBlurShader:send(
 				"rat_BlurDirection",
 				BLUR_DIRECTION_Y_AXIS
 			)
-			blurResult:bindShaderInput(
-				self.shadowBlurShader,
-				"rat_ShadowTexture"
-			)
-			blurResult:bindShaderOutput()
+			shadowRenderPass
+				:getShadowResult()
+				:bindShaderInput(self.shadowBlurShader, "rat_ShadowTexture")
+			shadowRenderPass:getShadowResult():bindShaderOutput()
+
+			love.graphics.clear(0, 0, 0, 0)
 			PostProcess.drawInstanced(cameraCount)
 		end
 
-		blurResult:stop()
+		shadowRenderPass:getShadowResult():stop()
 	end
 	love.graphics.pop()
 end
