@@ -16,6 +16,8 @@ local ResourceEvent = require("rat-scratch-resource").ResourceEvent
 local Camera = require("rat-scratch-pipeline").Camera
 local ArcballCameraView = require("rat-scratch-pipeline").ArcballCameraView
 local ShadowRenderPass = require("rat-scratch-pipeline").ShadowRenderPass
+local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
+local IndirectDraw = require("rat-scratch-pipeline.IndirectDraw")
 local PerspectiveFOVCameraProjection =
 	require("rat-scratch-pipeline.PerspectiveFOVCameraProjection")
 local PipelineSceneResourceType =
@@ -58,6 +60,7 @@ function demo.load()
 	ResourceLoader.toggleDebug(true)
 
 	local pipelineRuntime = PipelineRuntime.loadDefault()
+	demo.runtime = pipelineRuntime
 
 	local renderer = PipelineRenderer(pipelineRuntime)
 	local world = renderer:getWorld()
@@ -150,6 +153,8 @@ function demo.load()
 		1,
 		{ readable = true, canvas = true, format = "depth32f" }
 	)
+
+	demo.instancedDraws = { 0, 0, total = 0 }
 end
 
 demo.isPanning = false
@@ -228,6 +233,62 @@ function demo.update()
 	ResourceLoader.update()
 	demo.renderer:update()
 	demo.scene:flush()
+
+	if not demo.readbacks then
+		demo.readbacks = {
+			love.graphics.readbackBufferAsync(
+				demo.cullResult:getIndirectBuffer()
+			),
+			love.graphics.readbackBufferAsync(
+				demo.shadowRenderPass:getCullResult():getIndirectBuffer()
+			),
+		}
+	else
+		local allDone = true
+		for _, readback in ipairs(demo.readbacks) do
+			if not readback:isComplete() then
+				allDone = false
+				break
+			end
+		end
+
+		if allDone then
+			demo.instancedDraws = {}
+			local buffer = {}
+
+			local count = 0
+			for i, readback in ipairs(demo.readbacks) do
+				BufferFormat.copyFromByteDataToFlatTable(
+					IndirectDraw.INDIRECT_DRAW_FORMAT,
+					0,
+					1,
+					1,
+					readback:getBufferData(),
+					buffer
+				)
+
+				local c, o =
+					IndirectDraw.INDIRECT_DRAW_FORMAT_INSTANCE:getCountOffset(
+						"instanceCount"
+					)
+
+				local value = buffer[o]
+				demo.instancedDraws[i] = value
+				count = count + value
+			end
+
+			demo.readbacks = nil
+			demo.instancedDraws.total = count
+		end
+	end
+end
+
+local function prettyNumber(value)
+	local _, _, minus, int, fraction =
+		tostring(value):find("([-]?)(%d+)([.]?%d*)")
+	int = int:reverse():gsub("(%d%d%d)", "%1,")
+
+	return minus .. int:reverse():gsub("^,", "") .. fraction
 end
 
 local _position = Vector3()
@@ -286,8 +347,32 @@ function demo.draw()
 
 	local d = love.graphics.getStats()
 	love.graphics.print(
-		("draw calls = %d, canvas switches = %d, frame time = %f ms (%d FPS)"):format(
-			d.drawcalls,
+		("draw calls = %d (%s [%s triangles] scene, %s [%s triangles] lights, %s [%s triangles] total)\ncanvas switches = %d\nframe time = %f ms (%d FPS)"):format(
+			prettyNumber(d.drawcalls),
+			prettyNumber(demo.instancedDraws[1]),
+			prettyNumber(
+				demo.instancedDraws[1]
+					* demo.runtime
+						:getConfig()
+						:getMeshletFormat()
+						:getTriangleCount()
+			),
+			prettyNumber(demo.instancedDraws[2]),
+			prettyNumber(
+				demo.instancedDraws[2]
+					* demo.runtime
+						:getConfig()
+						:getMeshletFormat()
+						:getTriangleCount()
+			),
+			prettyNumber(demo.instancedDraws.total),
+			prettyNumber(
+				demo.instancedDraws.total
+					* demo.runtime
+						:getConfig()
+						:getMeshletFormat()
+						:getTriangleCount()
+			),
 			d.canvasswitches,
 			love.timer.getAverageDelta() * 1000,
 			love.timer.getFPS()

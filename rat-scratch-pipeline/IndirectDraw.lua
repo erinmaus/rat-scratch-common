@@ -1,3 +1,5 @@
+local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
+
 local IndirectDraw = {}
 
 IndirectDraw.INDIRECT_DRAW_FORMAT = {
@@ -6,5 +8,8 @@ IndirectDraw.INDIRECT_DRAW_FORMAT = {
 	{ location = 2, name = "firstVertex", format = "uint32" },
 	{ location = 3, name = "firstInstance", format = "uint32" },
 }
+
+IndirectDraw.INDIRECT_DRAW_FORMAT_INSTANCE =
+	BufferFormat.get(IndirectDraw.INDIRECT_DRAW_FORMAT)
 
 return IndirectDraw
