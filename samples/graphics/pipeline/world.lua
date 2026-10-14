@@ -247,7 +247,7 @@ function demo.update()
 	if not demo.readbacks then
 		demo.readbacks = {
 			love.graphics.readbackBufferAsync(
-				demo.cullResult:getIndirectBuffer()
+				demo.forwardRenderPass:getCullResult():getIndirectBuffer()
 			),
 			love.graphics.readbackBufferAsync(
 				demo.shadowRenderPass:getCullResult():getIndirectBuffer()
@@ -326,7 +326,10 @@ function demo.draw()
 	demo.renderer:drawForward(demo.forwardRenderPass)
 	love.graphics.pop()
 
-	love.graphics.drawLayer(demo.colorCanvas, 1)
+	love.graphics.drawLayer(
+		demo.forwardRenderPass:getRenderBuffer():getCanvas(1),
+		1
+	)
 	for i = 1, #demo.pointLights do
 		local position = demo.camera:project(
 			demo.pointLights[i].light:getPosition(),

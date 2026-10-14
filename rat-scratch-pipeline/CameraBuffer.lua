@@ -244,8 +244,6 @@ function CameraBuffer:update()
 			end
 		end
 	end
-
-	self.cameraBuffer:flush()
 end
 
 function CameraBuffer:flush()
@@ -267,6 +265,8 @@ function CameraBuffer:flush()
 
 		self.activeCamerasDirty = false
 	end
+
+	self.cameraBuffer:flush()
 end
 
 return CameraBuffer

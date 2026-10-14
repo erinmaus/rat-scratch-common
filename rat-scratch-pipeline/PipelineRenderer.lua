@@ -283,6 +283,7 @@ function PipelineRenderer:drawForward(forwardRenderPass)
 	love.graphics.push("all")
 	love.graphics.setShader(drawShader)
 	forwardRenderPass:getRenderBuffer():bind()
+	love.graphics.clear(0, 0, 0, 0)
 	love.graphics.drawFromShaderIndirect(
 		"triangles",
 		forwardRenderPass:getCullResult():getIndirectBuffer()
@@ -290,6 +291,8 @@ function PipelineRenderer:drawForward(forwardRenderPass)
 	love.graphics.pop()
 
 	forwardRenderPass:stop()
+
+	-- TODO: oit
 end
 
 --- @param scene RatScratch.Pipeline.Scene
