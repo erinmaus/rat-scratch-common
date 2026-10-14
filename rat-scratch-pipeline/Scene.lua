@@ -1,5 +1,6 @@
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
+local CameraBuffer = require("rat-scratch-pipeline.CameraBuffer")
 local CameraFrame = require("rat-scratch-pipeline.CameraFrame")
 local CullResult = require("rat-scratch-pipeline.CullResult")
 local DrawPipeline = require("rat-scratch-pipeline.DrawPipeline")
@@ -13,12 +14,11 @@ local Pipelines = require("rat-scratch-pipeline.Pipelines")
 --- @field private world RatScratch.Pipeline.World
 --- @field private camera RatScratch.Pipeline.Camera
 --- @field private cameraFrame RatScratch.Pipeline.CameraFrame
---- @field private camerasBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>
+--- @field private camerasBuffer RatScratch.Pipeline.CameraBuffer<RatScratch.Pipeline.Camera>
 --- @field private objectHandles table<RatScratch.Pipeline.ObjectHandle, true>
 --- @field private dirtyObjectHandles table<RatScratch.Pipeline.ObjectHandle, true>
 --- @field private lights table<RatScratch.Pipeline.Light, true>
 --- @field private lightsByIndex RatScratch.Pipeline.Light[]
---- @field private lightClusterResults RatScratch.Pipeline.LightClusterResult
 --- @overload fun(world: RatScratch.Pipeline.World): RatScratch.Pipeline.Scene
 local Scene = Object()
 
@@ -34,32 +34,21 @@ function Scene:new(world)
 
 	self.pipelines = Pipelines(world:getPipelineRuntime())
 
-	self.camerasBuffer =
-		PipelineBuffer(CameraFrame.CAMERA_FORMAT, { shaderstorage = true }, 1)
-	self.lightClusterResults = LightClusterResult(self.camerasBuffer)
+	self.camerasBuffer = CameraBuffer()
 end
 
 function Scene:newCullResult()
 	return CullResult(self.camerasBuffer)
 end
 
+function Scene:newLightClusterResult()
+	return LightClusterResult(self.camerasBuffer)
+end
+
 --- @param shader love.Shader
 --- @param qualityPreset string
 function Scene:bind(shader, qualityPreset)
-	if self.camera and shader:hasUniform("rat_CamerasBuffer") then
-		shader:send("rat_CamerasBuffer", self.camerasBuffer:getBuffer())
-
-		if
-			qualityPreset
-				== self.world:getPipelineRuntime():getDefaultQualityPreset()
-			and shader:hasUniform("rat_LightCountIndicesBuffer")
-		then
-			shader:send(
-				"rat_LightCountIndicesBuffer",
-				self.lightClusterResults:getLightIndicesBuffer()
-			)
-		end
-	end
+	self.camerasBuffer:bind(shader)
 end
 
 --- @param camera RatScratch.Pipeline.Camera
@@ -72,6 +61,8 @@ function Scene:setCamera(camera)
 	self.cameraFrame = CameraFrame(camera)
 
 	self.camerasBuffer:register(self.camera, 1)
+	self.camerasBuffer:set(self.camera, 1, self.camera)
+	self.camerasBuffer:activate(self.camera)
 end
 
 function Scene:getCamera()
@@ -162,6 +153,13 @@ function Scene:_updateDirtyObjectHandles()
 	end
 end
 
+function Scene:update()
+	self.pipelines:get(DrawPipeline):update()
+	self.pipelines:get(LightPipeline):update()
+
+	self.camerasBuffer:update()
+end
+
 function Scene:flush()
 	if next(self.dirtyObjectHandles) then
 		self:_updateDirtyObjectHandles()
@@ -170,22 +168,7 @@ function Scene:flush()
 	self.pipelines:get(DrawPipeline):flush()
 	self.pipelines:get(LightPipeline):flush()
 
-	if self.camera then
-		self.cameraFrame:update()
-
-		self.camerasBuffer:copyTable(
-			self.camera,
-			self.cameraFrame:getData(),
-			1,
-			1
-		)
-		self.camerasBuffer:flush()
-
-		self.pipelines:get(LightPipeline):clusterLights(
-			self.world:getPipelineRuntime():getDefaultQualityPreset(),
-			self.lightClusterResults
-		)
-	end
+	self.camerasBuffer:flush()
 end
 
 return Scene

@@ -16,10 +16,11 @@ local ResourceEvent = require("rat-scratch-resource").ResourceEvent
 local Camera = require("rat-scratch-pipeline").Camera
 local ArcballCameraView = require("rat-scratch-pipeline").ArcballCameraView
 local ShadowRenderPass = require("rat-scratch-pipeline").ShadowRenderPass
-local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
-local IndirectDraw = require("rat-scratch-pipeline.IndirectDraw")
+local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
+local IndirectDraw = require("rat-scratch-pipeline").IndirectDraw
+local ForwardRendererPass = require("rat-scratch-pipeline").ForwardRendererPass
 local PerspectiveFOVCameraProjection =
-	require("rat-scratch-pipeline.PerspectiveFOVCameraProjection")
+	require("rat-scratch-pipeline").PerspectiveFOVCameraProjection
 local PipelineSceneResourceType =
 	require("rat-scratch-pipeline").Resources.PipelineSceneResourceType
 local PipelineScenePointer =
@@ -141,6 +142,14 @@ function demo.load()
 		demo.scene
 	)
 
+	demo.forwardRenderPass = ForwardRendererPass()
+	demo.forwardRenderPass:addDependency(demo.shadowRenderPass)
+	demo.forwardRenderPass:attach(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.world,
+		demo.scene
+	)
+
 	demo.colorCanvas = love.graphics.newTexture(
 		love.graphics.getWidth(),
 		love.graphics.getHeight(),
@@ -232,6 +241,7 @@ function demo.update()
 
 	ResourceLoader.update()
 	demo.renderer:update()
+	demo.scene:update()
 	demo.scene:flush()
 
 	if not demo.readbacks then
@@ -311,13 +321,9 @@ function demo.draw()
 	demo.renderer:cull(
 		demo.runtime:getDefaultQualityPreset(),
 		demo.scene,
-		demo.cullResult
+		demo.forwardRenderPass:getCullResult()
 	)
-	demo.renderer:drawForward(
-		demo.runtime:getDefaultQualityPreset(),
-		demo.scene,
-		demo.cullResult
-	)
+	demo.renderer:drawForward(demo.forwardRenderPass)
 	love.graphics.pop()
 
 	love.graphics.drawLayer(demo.colorCanvas, 1)

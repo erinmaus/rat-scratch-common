@@ -24,8 +24,13 @@ restrict readonly buffer rat_WorldCellsBuffer
 	RatScratchPipelineCell rat_WorldCells[];
 };
 
+restrict readonly buffer rat_ActiveCamerasBuffer
+{
+	uint rat_ActiveCameras[];
+};
+
 uniform uint rat_LightCount;
-uniform uint rat_CameraCount;
+uniform uint rat_ActiveCameraCount;
 
 vec4 getSpotLightMinBoundingSphere(const in RatScratchPipelineSpotLight light)
 {
@@ -108,11 +113,13 @@ void computemain()
 		return;
 	}
 
-	uint cameraIndex = gl_GlobalInvocationID.z;
-	if (cameraIndex >= rat_CameraCount)
+	uint activeCameraIndex = gl_GlobalInvocationID.z;
+	if (activeCameraIndex >= rat_ActiveCameraCount)
 	{
 		return;
 	}
+
+	uint cameraIndex = rat_ActiveCameras[activeCameraIndex];
 
 	uint cellOffset = dimensions.x * dimensions.y * dimensions.z * cameraIndex;
 	RatScratchPipelineCell cell = rat_WorldCells[cellIndex + cellOffset];

@@ -2,6 +2,8 @@ local Object = require("rat-scratch-common").Object
 local assert = require("rat-scratch-common").Debug.assert
 local Table = require("rat-scratch-common").Table
 
+--- @alias RatScratch.Pipeline.RenderBuffer.CanvasPointer { renderBuffer: RatScratch.Pipeline.RenderBuffer, canvas: integer | "depth" }
+
 --- @class RatScratch.Pipeline.RenderBuffer : RatScratch.Common.BaseObject
 --- @field private width integer
 --- @field private height integer
@@ -70,12 +72,22 @@ function RenderBuffer:getCanvasCount()
 	return #self.canvases
 end
 
+--- @param index integer
+--- @return love.Texture
 function RenderBuffer:getCanvas(index)
 	return self.canvases[index]
 end
 
 function RenderBuffer:getDepthCanvas()
 	return self.depth
+end
+
+function RenderBuffer:newCanvasPointer(index)
+	return { renderBuffer = self, canvas = index }
+end
+
+function RenderBuffer:newDepthCanvasPointer()
+	return { renderBuffer = self, canvas = "depth" }
 end
 
 --- @param width? integer
@@ -168,6 +180,38 @@ function RenderBuffer:bind(canvases, depth)
 	end
 
 	love.graphics.setCanvas(binding)
+end
+
+do
+	local _binding = {}
+
+	--- @param ... RatScratch.Pipeline.RenderBuffer.CanvasPointer
+	function RenderBuffer.multibind(...)
+		local binding = _binding
+		Table.clear(binding)
+
+		for i = 1, select("#", ...) do
+			--- @type RatScratch.Pipeline.RenderBuffer.CanvasPointer
+			local pointer = select(i, ...)
+
+			if pointer.canvas == "depth" then
+				assert(
+					not _binding.depthstencil,
+					"cannot bind multiple depth/stencil buffers"
+				)
+
+				_binding.depthstencil = pointer.renderBuffer:getDepthCanvas()
+			else
+				local index = pointer.canvas
+
+				--- @cast index integer
+				binding[i] = pointer.renderBuffer:getCanvas(index)
+			end
+		end
+
+		binding.alllayers = true
+		love.graphics.setCanvas(binding)
+	end
 end
 
 return RenderBuffer

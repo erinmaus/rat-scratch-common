@@ -1,21 +1,21 @@
 local Object = require("rat-scratch-common").Object
 
 --- @class RatScratch.Pipeline.LightClusterResult : RatScratch.Common.BaseObject
---- @field private camerasBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>
+--- @field private camerasBuffer RatScratch.Pipeline.CameraBuffer
 --- @field private lightIndicesBuffer love.GraphicsBuffer
---- @overload fun(camerasBuffer: RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>): RatScratch.Pipeline.LightClusterResult
+--- @overload fun(camerasBuffer: RatScratch.Pipeline.CameraBuffer): RatScratch.Pipeline.LightClusterResult
 local LightClusterResult = Object()
 
 LightClusterResult.LIGHT_INDICES_FORMAT = {
 	{ location = 0, name = "index", format = "uint32" },
 }
 
---- @param camerasBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>
+--- @param camerasBuffer RatScratch.Pipeline.CameraBuffer
 function LightClusterResult:new(camerasBuffer)
 	self.camerasBuffer = camerasBuffer
 end
 
---- @return RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>
+--- @return RatScratch.Pipeline.CameraBuffer
 function LightClusterResult:getCamerasBuffer()
 	return self.camerasBuffer
 end

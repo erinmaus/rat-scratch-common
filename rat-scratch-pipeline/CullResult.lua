@@ -3,15 +3,15 @@ local Draw = require("rat-scratch-pipeline.Draw")
 local IndirectDraw = require("rat-scratch-pipeline.IndirectDraw")
 
 --- @class RatScratch.Pipeline.CullResult : RatScratch.Common.BaseObject
---- @field private camerasBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>
+--- @field private camerasBuffer RatScratch.Pipeline.CameraBuffer
 --- @field private drawsBuffer love.GraphicsBuffer
 --- @field private indirectDrawBuffer love.GraphicsBuffer
---- @overload fun(camerasBuffer: RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>): RatScratch.Pipeline.CullResult
+--- @overload fun(camerasBuffer: RatScratch.Pipeline.CameraBuffer): RatScratch.Pipeline.CullResult
 local CullResult = Object()
 
 CullResult.DEFAULT_DRAW_PADDING = 16
 
---- @param camerasBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>
+--- @param camerasBuffer RatScratch.Pipeline.CameraBuffer
 function CullResult:new(camerasBuffer)
 	self.camerasBuffer = camerasBuffer
 
@@ -22,7 +22,7 @@ function CullResult:new(camerasBuffer)
 	)
 end
 
---- @return RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>
+--- @return RatScratch.Pipeline.CameraBuffer
 function CullResult:getCamerasBuffer()
 	return self.camerasBuffer
 end
@@ -43,7 +43,7 @@ end
 
 --- @param drawCount integer
 function CullResult:reserveDraws(drawCount)
-	local _, cameraCount = self.camerasBuffer:getIndexCount()
+	local cameraCount = self.camerasBuffer:getActiveCameraCount()
 	local count = drawCount * cameraCount * CullResult.DEFAULT_DRAW_PADDING
 
 	if not self.drawsBuffer or count > self.drawsBuffer:getElementCount() then

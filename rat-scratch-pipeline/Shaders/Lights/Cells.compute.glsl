@@ -15,8 +15,13 @@ restrict buffer rat_WorldCellsBuffer
 	RatScratchPipelineCell rat_WorldCells[];
 };
 
+restrict readonly buffer rat_ActiveCamerasBuffer
+{
+	uint rat_ActiveCameras[];
+};
+
 uniform uint rat_LightCount;
-uniform uint rat_CameraCount;
+uniform uint rat_ActiveCameraCount;
 
 void screenSpaceToNDC(inout vec3 value)
 {
@@ -69,11 +74,13 @@ void computemain()
 		return;
 	}
 
-	uint cameraIndex = gl_GlobalInvocationID.y;
-	if (cameraIndex >= rat_CameraCount)
+	uint activeCameraIndex = gl_GlobalInvocationID.z;
+	if (activeCameraIndex >= rat_ActiveCameraCount)
 	{
 		return;
 	}
+
+	uint cameraIndex = rat_ActiveCameras[activeCameraIndex];
 
 	vec3 cellMin = vec3(coordinate) / vec3(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS);
 	vec3 cellMax = cellMin + vec3(1.0) / vec3(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS);

@@ -4,6 +4,7 @@ local Table = require("rat-scratch-common").Table
 local Pipeline = require("rat-scratch-pipeline.impl.Pipeline")
 local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
+local CameraBuffer = require("rat-scratch-pipeline.CameraBuffer")
 local CameraFrame = require("rat-scratch-pipeline.CameraFrame")
 local CullResult = require("rat-scratch-pipeline.CullResult")
 local DoubleBufferResult = require("rat-scratch-pipeline.DoubleBufferResult")
@@ -25,7 +26,7 @@ local Transform = require("rat-scratch-math").Transform
 --- @field private dirtyLights table<RatScratch.Pipeline.Light, true>
 --- @field private lightsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Light>
 --- @field private lightData number[]
---- @field private camerasBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>
+--- @field private camerasBuffer RatScratch.Pipeline.CameraBuffer
 --- @field private cameras table<RatScratch.Pipeline.Camera, RatScratch.Pipeline.CameraFrame>
 --- @field private _CELLS_BUFFER love.GraphicsBuffer
 --- @field private clusterShaders table<string, love.Shader>
@@ -104,13 +105,7 @@ function LightPipeline:new(pipelineRuntime)
 		{ shaderstorage = true }
 	)
 
-	self.camerasBuffer = PipelineBuffer(
-		CameraFrame.CAMERA_FORMAT,
-		{ shaderstorage = true },
-		LightPipeline.DEFAULT_CAMERA_COUNT
-	)
-
-	self.cameras = setmetatable({}, { __mode = "k" })
+	self.camerasBuffer = CameraBuffer()
 
 	self.clusterShaders = {}
 	self.cellShaders = {}
@@ -124,7 +119,10 @@ function LightPipeline:bind(shader, qualityPreset)
 	end
 
 	if shader:hasUniform("rat_ShadowCamerasBuffer") then
-		shader:send("rat_ShadowCamerasBuffer", self.camerasBuffer:getBuffer())
+		shader:send(
+			"rat_ShadowCamerasBuffer",
+			self.camerasBuffer:getCameraBuffer():getBuffer()
+		)
 	end
 
 	if shader:hasUniform("rat_PipelineShadowTextureAtlasView") then
@@ -193,24 +191,14 @@ end
 function LightPipeline:_addShadowCastingLight(light)
 	self.camerasBuffer:registerOrResize(light, light:getCameraCount())
 	self.shadowCastingLights[light] = true
-end
 
---- @private
---- @param light RatScratch.Pipeline.Light
-function LightPipeline:_flushShadowCastingLight(light)
 	local count = light:getCameraCount()
-
 	for i = 1, count do
 		local camera = light:getCamera(i)
-		local cameraFrame = self.cameras[camera]
-		if not cameraFrame then
-			cameraFrame = CameraFrame(camera)
-			self.cameras[camera] = cameraFrame
-		end
-
-		cameraFrame:update()
-		self.camerasBuffer:copyTable(light, cameraFrame:getData(), i, 1)
+		self.camerasBuffer:set(light, i, camera)
 	end
+
+	self.camerasBuffer:activate(light)
 end
 
 --- @private
@@ -220,7 +208,8 @@ function LightPipeline:_flushLight(light)
 
 	local cameraIndex, cameraCount = 0, 0
 	if self.camerasBuffer:has(light) then
-		cameraIndex, cameraCount = self.camerasBuffer:getIndexCount(light)
+		cameraIndex, cameraCount =
+			self.camerasBuffer:getCameraBuffer():getIndexCount(light)
 	end
 
 	BufferFormat.setValue(
@@ -233,10 +222,6 @@ function LightPipeline:_flushLight(light)
 	)
 
 	self.lightsBuffer:copyTable(light, self.lightData, 1, 1)
-
-	if self.shadowCastingLights[light] then
-		self:_flushShadowCastingLight(light)
-	end
 
 	light:update()
 end
@@ -251,7 +236,7 @@ end
 
 --- @private
 function LightPipeline:_flushShadowAtlas()
-	local _, cameraCount = self.camerasBuffer:getIndexCount()
+	local cameraCount = self.camerasBuffer:getCameraCount()
 	if self.currentCameraCount < cameraCount then
 		self.currentCameraCount = cameraCount
 
@@ -305,7 +290,6 @@ end
 
 function LightPipeline:flush()
 	if next(self.dirtyLights) then
-		self.camerasBuffer:compact()
 		self.lightsBuffer:compact()
 
 		self:_flushLights()
@@ -315,6 +299,12 @@ function LightPipeline:flush()
 
 		self:_flushShadowAtlas()
 	end
+
+	self.camerasBuffer:flush()
+end
+
+function LightPipeline:update()
+	self.camerasBuffer:update()
 end
 
 function LightPipeline:newCullResult()
@@ -378,8 +368,7 @@ function LightPipeline:_dispatchCluster(qualityPreset, shader, result)
 	shader:send("rat_WorldCellsBuffer", cellsBuffer)
 
 	local camerasBuffer = result:getCamerasBuffer()
-	local _, cameraCount = camerasBuffer:getIndexCount()
-	shader:send("rat_CameraCount", cameraCount)
+	camerasBuffer:bind(shader)
 
 	local cellsX, cellsY, cellsZ = self.pipelineRuntime:getCurrentProperty(
 		qualityPreset,
@@ -397,7 +386,7 @@ function LightPipeline:_dispatchCluster(qualityPreset, shader, result)
 
 	local minLightIndicesElementCount = cellsCount
 		* (maxLightsPerCell + 1)
-		* cameraCount
+		* camerasBuffer:getCameraCount()
 	local lightsIndicesBuffer =
 		result:reserveLightIndices(minLightIndicesElementCount)
 	lightsIndicesBuffer:clear()
@@ -409,7 +398,10 @@ function LightPipeline:_dispatchCluster(qualityPreset, shader, result)
 		shader,
 		math.max(math.ceil(cellsCount / localSizeX), 1),
 		math.max(math.ceil(lightsCount / maxLightsPerThread / localSizeY), 1),
-		math.max(math.ceil(cameraCount / localSizeZ), 1)
+		math.max(
+			math.ceil(camerasBuffer:getActiveCameraCount() / localSizeZ),
+			1
+		)
 	)
 end
 
@@ -419,10 +411,9 @@ end
 --- @param result RatScratch.Pipeline.LightClusterResult
 function LightPipeline:_dispatchCells(qualityPreset, shader, result)
 	local camerasBuffer = result:getCamerasBuffer()
-	shader:send("rat_CamerasBuffer", camerasBuffer:getBuffer())
+	local cameraCount = camerasBuffer:getCameraCount()
 
-	local _, cameraCount = camerasBuffer:getIndexCount()
-	shader:send("rat_CameraCount", cameraCount)
+	camerasBuffer:bind(shader)
 
 	local cellsX, cellsY, cellsZ = self.pipelineRuntime:getCurrentProperty(
 		qualityPreset,

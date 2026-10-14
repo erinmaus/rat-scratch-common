@@ -20,10 +20,15 @@ restrict buffer rat_IndirectDrawsBuffer
 	RatScratchPipelineIndirectDraw rat_IndirectDraws[];
 };
 
+restrict readonly buffer rat_ActiveCamerasBuffer
+{
+	uint rat_ActiveCameras[];
+};
+
 #include "./Cull.common.glsl"
 
 uniform uint rat_DrawCount;
-uniform uint rat_CameraCount;
+uniform uint rat_ActiveCameraCount;
 
 void computemain()
 {
@@ -33,11 +38,13 @@ void computemain()
 		return;
 	}
 
-	uint cameraIndex = gl_GlobalInvocationID.y;
-	if (cameraIndex >= rat_CameraCount)
+	uint activeCameraIndex = gl_GlobalInvocationID.y;
+	if (activeCameraIndex >= rat_ActiveCameraCount)
 	{
 		return;
 	}
+
+	uint cameraIndex = rat_ActiveCameras[activeCameraIndex];
 
 	RatScratchPipelineDraw draw = rat_Draws[drawIndex];
 	draw.cameraIndex = cameraIndex;
