@@ -310,20 +310,14 @@ function demo.draw()
 		demo.scene,
 		demo.shadowRenderPass:getCullResult()
 	)
-	demo.renderer:drawShadows(demo.shadowRenderPass)
+	demo.renderer:draw(demo.shadowRenderPass)
 
-	love.graphics.setCanvas({
-		demo.colorCanvas,
-		depthstencil = demo.depthCanvas,
-		alllayers = true,
-	})
-	love.graphics.clear(0, 0, 0, 0)
 	demo.renderer:cull(
 		demo.runtime:getDefaultQualityPreset(),
 		demo.scene,
 		demo.forwardRenderPass:getCullResult()
 	)
-	demo.renderer:drawForward(demo.forwardRenderPass)
+	demo.renderer:draw(demo.forwardRenderPass)
 	love.graphics.pop()
 
 	love.graphics.drawLayer(

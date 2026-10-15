@@ -120,8 +120,14 @@ end
 --- @param scene RatScratch.Pipeline.Scene
 --- @param result RatScratch.Pipeline.CullResult
 function PipelineRenderer:cull(qualityPreset, scene, result)
-	self:_bindWorldUniforms(self.cullShader)
-	self:_bindSceneUniforms(self.cullShader, scene)
+	if not self.cullShader:getIsReady() then
+		return
+	end
+
+	local cullShader = self.cullShader:get()
+
+	self:_bindWorldUniforms(cullShader)
+	self:_bindSceneUniforms(cullShader, scene)
 
 	result:getIndirectBuffer():setArrayData(self.indirectDrawBufferData)
 
@@ -132,30 +138,27 @@ function PipelineRenderer:cull(qualityPreset, scene, result)
 
 	local cameraCount = result:getCamerasBuffer():getActiveCameraCount()
 
-	if self.cullShader:hasUniform("rat_DrawsBuffer") then
-		self.cullShader:send("rat_DrawsBuffer", inputDrawsBuffer:getBuffer())
+	if cullShader:hasUniform("rat_DrawsBuffer") then
+		cullShader:send("rat_DrawsBuffer", inputDrawsBuffer:getBuffer())
 	end
 
-	if self.cullShader:hasUniform("rat_OutputDrawsBuffer") then
-		self.cullShader:send("rat_OutputDrawsBuffer", result:getDrawsBuffer())
+	if cullShader:hasUniform("rat_OutputDrawsBuffer") then
+		cullShader:send("rat_OutputDrawsBuffer", result:getDrawsBuffer())
 	end
 
-	if self.cullShader:hasUniform("rat_IndirectDrawsBuffer") then
-		self.cullShader:send(
-			"rat_IndirectDrawsBuffer",
-			result:getIndirectBuffer()
-		)
+	if cullShader:hasUniform("rat_IndirectDrawsBuffer") then
+		cullShader:send("rat_IndirectDrawsBuffer", result:getIndirectBuffer())
 	end
 
-	if self.cullShader:hasUniform("rat_DrawCount") then
-		self.cullShader:send("rat_DrawCount", inputDrawCount)
+	if cullShader:hasUniform("rat_DrawCount") then
+		cullShader:send("rat_DrawCount", inputDrawCount)
 	end
 
-	result:getCamerasBuffer():bind(self.cullShader)
+	result:getCamerasBuffer():bind(cullShader)
 
-	local localX, localY = self.cullShader:getLocalThreadgroupSize()
+	local localX, localY = cullShader:getLocalThreadgroupSize()
 	love.graphics.dispatchThreadgroups(
-		self.cullShader,
+		cullShader,
 		math.max(math.ceil(inputDrawCount / localX), 1),
 		math.max(math.ceil(cameraCount / localY), 1)
 	)
@@ -164,108 +167,19 @@ end
 local BLUR_DIRECTION_X_AXIS = { 1, 0 }
 local BLUR_DIRECTION_Y_AXIS = { 0, 1 }
 
---- @param shadowRenderPass RatScratch.Pipeline.ShadowRenderPass
-function PipelineRenderer:drawShadows(shadowRenderPass)
-	shadowRenderPass:start()
-
-	local material = self.world:getPipeline(MaterialPipeline)
-
-	local drawShader = material:getShader(
-		shadowRenderPass:getQualityPreset(),
-		"shadow",
-		"draw"
-	)
-	self:_bindWorldUniforms(drawShader)
-	self:_bindSceneUniforms(drawShader, shadowRenderPass:getScene())
-
-	shadowRenderPass:bind(drawShader)
-
-	love.graphics.push("all")
-	do
-		love.graphics.setShader(drawShader)
-		love.graphics.setBlendState("add", "one", "zero")
-
-		shadowRenderPass:getShadowResult():getSourceBuffer():bind()
-		love.graphics.clear(0, 0, 0, 0)
-		love.graphics.drawFromShaderIndirect(
-			"triangles",
-			shadowRenderPass:getCullResult():getIndirectBuffer()
-		)
-	end
-	love.graphics.pop()
-
-	local cameraCount =
-		shadowRenderPass:getCullResult():getCamerasBuffer():getCameraCount()
-
-	love.graphics.push("all")
-	do
-		love.graphics.setShader(self.shadowBlurShader)
-		love.graphics.setBlendState("add", "one", "zero")
-
-		shadowRenderPass:getShadowResult():start()
-		do
-			self.shadowBlurShader:send(
-				"rat_BlurDirection",
-				BLUR_DIRECTION_X_AXIS
-			)
-			shadowRenderPass
-				:getShadowResult()
-				:bindShaderInput(self.shadowBlurShader, "rat_ShadowTexture")
-			shadowRenderPass:getShadowResult():bindShaderOutput()
-
-			love.graphics.clear(0, 0, 0, 0)
-			PostProcess.drawInstanced(cameraCount)
-		end
-
-		shadowRenderPass:getShadowResult():step()
-		do
-			self.shadowBlurShader:send(
-				"rat_BlurDirection",
-				BLUR_DIRECTION_Y_AXIS
-			)
-			shadowRenderPass
-				:getShadowResult()
-				:bindShaderInput(self.shadowBlurShader, "rat_ShadowTexture")
-			shadowRenderPass:getShadowResult():bindShaderOutput()
-
-			love.graphics.clear(0, 0, 0, 0)
-			PostProcess.drawInstanced(cameraCount)
-		end
-
-		shadowRenderPass:getShadowResult():stop()
-	end
-	love.graphics.pop()
-
-	shadowRenderPass:stop()
+--- @param shader love.Shader
+--- @param rendererPass RatScratch.Pipeline.RenderPass
+function PipelineRenderer:bind(shader, rendererPass)
+	self:_bindWorldUniforms(shader)
+	self:_bindSceneUniforms(shader, rendererPass:getScene())
 end
-
---- @param qualityPreset string
---- @param scene RatScratch.Pipeline.Scene
---- @param result RatScratch.Pipeline.CullResult
--- function PipelineRenderer:drawForward(qualityPreset, scene, result)
--- 	local material = self.world:getPipeline(MaterialPipeline)
-
--- 	local drawShader = material:getShader(qualityPreset, "forward", "draw")
--- 	self:_bindWorldUniforms(drawShader)
--- 	self:_bindSceneUniforms(drawShader, scene)
-
--- 	if drawShader:hasUniform("rat_DrawsBuffer") then
--- 		drawShader:send("rat_DrawsBuffer", result:getDrawsBuffer())
--- 	end
-
--- 	love.graphics.push("all")
--- 	love.graphics.setShader(drawShader)
--- 	love.graphics.drawFromShaderIndirect(
--- 		"triangles",
--- 		result:getIndirectBuffer()
--- 	)
--- 	love.graphics.pop()
-
--- 	-- TODO: OIT
--- end
 
 --- @param forwardRenderPass RatScratch.Pipeline.ForwardRenderPass
 function PipelineRenderer:drawForward(forwardRenderPass)
+	if true then
+		return
+	end
+
 	forwardRenderPass:start()
 
 	local material = self.world:getPipeline(MaterialPipeline)
@@ -295,9 +209,11 @@ function PipelineRenderer:drawForward(forwardRenderPass)
 	-- TODO: oit
 end
 
---- @param scene RatScratch.Pipeline.Scene
-function PipelineRenderer:draw(scene)
-	self:_drawForward(scene)
+--- @param rendererPass RatScratch.Pipeline.RenderPass
+function PipelineRenderer:draw(rendererPass)
+	rendererPass:start()
+	rendererPass:draw(self)
+	rendererPass:stop()
 end
 
 return PipelineRenderer

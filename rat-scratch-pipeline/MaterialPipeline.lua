@@ -34,7 +34,7 @@ local json = require("lib.json")
 --- | "light"
 
 --- @class RatScratch.Pipeline.MaterialPipeline : RatScratch.Pipeline.impl.Pipeline
---- @field private shaders table<string, table<RatScratch.Pipeline.MaterialPipeline.ShaderPass, table<RatScratch.Pipeline.MaterialPipeline.ShaderType, love.Shader>> table<RatScratch.Pipeline.MaterialPipeline.ShaderPass, table<RatScratch.Pipeline.MaterialPipeline.ShaderType, love.Shader>>>
+--- @field private shaders table<string, table<RatScratch.Pipeline.MaterialPipeline.ShaderPass, table<RatScratch.Pipeline.MaterialPipeline.ShaderType, RatScratch.Resource.Resource<love.Shader>>>>
 --- @field private stagingMaterialData love.ByteData
 --- @field private maxMaterialIntegerComponents integer
 --- @field private maxMaterialFloatComponents integer
@@ -970,7 +970,7 @@ end
 --- @param qualityPreset string
 --- @param pass RatScratch.Pipeline.MaterialPipeline.ShaderPass
 --- @param name RatScratch.Pipeline.MaterialPipeline.ShaderType
---- @return love.Shader
+--- @return RatScratch.Resource.Resource<love.Shader>
 function MaterialPipeline:getShader(qualityPreset, pass, name)
 	return self.shaders[qualityPreset][pass][name]
 end

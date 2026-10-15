@@ -7,7 +7,10 @@ local PipelineConfig = require("rat-scratch-pipeline.PipelineConfig")
 local PipelineProperty = require("rat-scratch-pipeline.PipelineProperty")
 local PipelineSetting = require("rat-scratch-pipeline.PipelineSetting")
 local RatScratchModule = require("lib.rat-scratch-module")
+local ResourceArguments = require("rat-scratch-resource.ResourceArguments")
+local ResourceLoader = require("rat-scratch-resource.ResourceLoader")
 local ShaderPreprocessor = require("rat-scratch-graphics.ShaderPreprocessor")
+local ShaderResourceType = require("rat-scratch-pipeline.ShaderResourceType")
 local json = require("lib.json")
 
 --- @alias RatScratch.Pipeline.PipelineProperties table<string, table<string, (number | integer | boolean)[]>>
@@ -394,7 +397,7 @@ do
 	--- @param filename string
 	--- @param qualityPreset? string
 	--- @param options? RatScratch.Graphics.ShaderPreprocessOptions
-	--- @return love.Shader
+	--- @return RatScratch.Resource.Resource<love.Shader>
 	function PipelineRuntime:loadComputeShader(filename, qualityPreset, options)
 		local resultOptions = _getMergedOptions(
 			options,
@@ -403,14 +406,20 @@ do
 			)
 		)
 
-		return ShaderPreprocessor.newComputeShader(filename, resultOptions)
+		return ResourceLoader.load(
+			ShaderResourceType,
+			ResourceArguments.get({
+				computeFilename = filename,
+				options = resultOptions,
+			})
+		)
 	end
 
 	--- @param pixelFilename string
 	--- @param vertexFilename? string
 	--- @param qualityPreset? string
 	--- @param options? RatScratch.Graphics.ShaderPreprocessOptions
-	--- @return love.Shader
+	--- @return RatScratch.Resource.Resource<love.Shader>
 	function PipelineRuntime:loadShader(
 		pixelFilename,
 		vertexFilename,
@@ -424,10 +433,13 @@ do
 			)
 		)
 
-		return ShaderPreprocessor.newShader(
-			pixelFilename,
-			vertexFilename,
-			resultOptions
+		return ResourceLoader.load(
+			ShaderResourceType,
+			ResourceArguments.get({
+				pixelFilename = pixelFilename,
+				vertexFilename = vertexFilename,
+				options = resultOptions,
+			})
 		)
 	end
 end

@@ -29,8 +29,8 @@ local Transform = require("rat-scratch-math").Transform
 --- @field private camerasBuffer RatScratch.Pipeline.CameraBuffer
 --- @field private cameras table<RatScratch.Pipeline.Camera, RatScratch.Pipeline.CameraFrame>
 --- @field private _CELLS_BUFFER love.GraphicsBuffer
---- @field private clusterShaders table<string, love.Shader>
---- @field private cellShaders table<string, love.Shader>
+--- @field private clusterShaders table<string, RatScratch.Resource.Resource<love.Shader>>
+--- @field private cellShaders table<string, RatScratch.Resource.Resource<love.Shader>>
 --- @overload fun(pipelineRuntime: RatScratch.Pipeline.PipelineRuntime): RatScratch.Pipeline.LightPipeline
 local LightPipeline = Object(Pipeline)
 
@@ -163,6 +163,8 @@ function LightPipeline:removeLight(light)
 	self.lights[light] = nil
 	self.shadowCastingLights[light] = nil
 	self.dirtyLights[light] = nil
+
+	light:silence(LightEvent.UPDATE, self._onLightUpdate, self)
 end
 
 --- @private
@@ -438,12 +440,15 @@ end
 function LightPipeline:clusterLights(qualityPreset, result)
 	local clusterShader = self.clusterShaders[qualityPreset]
 	local cellShader = self.cellShaders[qualityPreset]
-	if not (clusterShader and cellShader) then
+	if
+		not (clusterShader and clusterShader:getIsReady())
+		or not (cellShader and cellShader:getIsReady())
+	then
 		return false, result
 	end
 
-	self:_dispatchCells(qualityPreset, cellShader, result)
-	self:_dispatchCluster(qualityPreset, clusterShader, result)
+	self:_dispatchCells(qualityPreset, cellShader:get(), result)
+	self:_dispatchCluster(qualityPreset, clusterShader:get(), result)
 
 	return true, result
 end

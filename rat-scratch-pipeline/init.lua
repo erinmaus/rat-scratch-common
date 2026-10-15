@@ -47,6 +47,11 @@ return {
 	),
 	PointLight = require("rat-scratch-pipeline.PointLight"),
 	PostProcess = require("rat-scratch-pipeline.PostProcess"),
+	ReflectionProbe = require("rat-scratch-pipeline.ReflectionProbe"),
+	ReflectionProbeEvent = require("rat-scratch-pipeline.ReflectionProbeEvent"),
+	ReflectionProbePipeline = require(
+		"rat-scratch-pipeline.ReflectionProbePipeline"
+	),
 	RenderBuffer = require("rat-scratch-pipeline.RenderBuffer"),
 	RenderPass = require("rat-scratch-pipeline.RenderPass"),
 	Resources = require("rat-scratch-pipeline.Resources"),

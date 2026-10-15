@@ -2,6 +2,7 @@ local Object = require("rat-scratch-common").Object
 local assert = require("rat-scratch-common").Debug.assert
 local LightClusterResult = require("rat-scratch-pipeline.LightClusterResult")
 local LightPipeline = require("rat-scratch-pipeline.LightPipeline")
+local MaterialPipeline = require("rat-scratch-pipeline.MaterialPipeline")
 local RenderBuffer = require("rat-scratch-pipeline.RenderBuffer")
 local RenderPass = require("rat-scratch-pipeline.RenderPass")
 local ShadowRenderPass = require("rat-scratch-pipeline.ShadowRenderPass")
@@ -51,7 +52,7 @@ end
 
 --- @private
 function ForwardRenderPass:_updateRenderBuffer()
-	local _, cameraCount = self.cullResult:getCamerasBuffer():getCameraCount()
+	local cameraCount = self.cullResult:getCamerasBuffer():getCameraCount()
 	if
 		self.isRenderBufferDirty
 		or (self.renderBuffer and self.renderBuffer:getLayers() ~= cameraCount)
@@ -102,6 +103,8 @@ function ForwardRenderPass:getLightClusterResult()
 end
 
 function ForwardRenderPass:start()
+	RenderPass.start(self)
+
 	self:_updateRenderBuffer()
 
 	self:getScene()
@@ -109,19 +112,60 @@ function ForwardRenderPass:start()
 		:clusterLights(self:getQualityPreset(), self.lightClusterResult)
 end
 
-function ForwardRenderPass:bind(shader)
-	self.cullResult:getCamerasBuffer():bind(shader)
+--- @private
+--- @param drawShader love.Shader
+--- @param pipelineRenderer RatScratch.Pipeline.PipelineRenderer
+function ForwardRenderPass:_bindDrawShader(drawShader, pipelineRenderer)
+	pipelineRenderer:bind(drawShader, self)
 
-	if shader:hasUniform("rat_DrawsBuffer") then
-		shader:send("rat_DrawsBuffer", self.cullResult:getDrawsBuffer())
+	self.cullResult:getCamerasBuffer():bind(drawShader)
+
+	if drawShader:hasUniform("rat_DrawsBuffer") then
+		drawShader:send("rat_DrawsBuffer", self.cullResult:getDrawsBuffer())
 	end
 
-	if shader:hasUniform("rat_LightCountIndicesBuffer") then
-		shader:send(
+	if drawShader:hasUniform("rat_LightCountIndicesBuffer") then
+		drawShader:send(
 			"rat_LightCountIndicesBuffer",
 			self.lightClusterResult:getLightIndicesBuffer()
 		)
 	end
+
+	if self:hasDependency(ShadowRenderPass) then
+		self:getDependency(ShadowRenderPass):bind(drawShader)
+	end
+end
+
+--- @private
+--- @param drawShader love.Shader
+function ForwardRenderPass:_drawForward(drawShader)
+	love.graphics.setBlendMode("alpha", "alphamultiply")
+	love.graphics.setShader(drawShader)
+
+	self:getRenderBuffer():bind()
+	love.graphics.clear(0, 0, 0, 0)
+
+	love.graphics.drawFromShaderIndirect(
+		"triangles",
+		self.cullResult:getIndirectBuffer()
+	)
+end
+
+--- @param pipelineRenderer RatScratch.Pipeline.PipelineRenderer
+function ForwardRenderPass:draw(pipelineRenderer)
+	local material = self:getWorld():getPipeline(MaterialPipeline)
+	local drawShaderResource =
+		material:getShader(self:getQualityPreset(), "forward", "draw")
+
+	if not drawShaderResource:getIsReady() then
+		return
+	end
+
+	local drawShader = drawShaderResource:get()
+	self:_bindDrawShader(drawShader, pipelineRenderer)
+	self:_drawForward(drawShader)
+
+	-- TODO: OIT
 end
 
 return ForwardRenderPass

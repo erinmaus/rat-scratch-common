@@ -126,16 +126,30 @@ function RenderPass:getScene()
 	return self.scene
 end
 
-function RenderPass:start()
-	-- Nothing.
+function RenderPass:getPipelineRuntime()
+	assert(self.isReady, "render pass was not attached")
+	return self.world:getPipelineRuntime()
 end
 
-function RenderPass:stop()
-	-- Nothing.
+function RenderPass:getPipelineConfig()
+	assert(self.isReady, "render pass was not attached")
+	return self.world:getPipelineConfig()
 end
 
 --- @param shader love.Shader
 function RenderPass:bind(shader)
+	-- Nothing.
+end
+
+function RenderPass:start()
+	love.graphics.push()
+end
+
+function RenderPass:stop()
+	love.graphics.pop()
+end
+
+function RenderPass:draw(pipelineRenderer)
 	-- Nothing.
 end
 
