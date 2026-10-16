@@ -154,11 +154,18 @@ end
 --- @param drawShader love.Shader
 --- @param pipelineRenderer RatScratch.Pipeline.PipelineRenderer
 function ShadowRenderPass:_drawShadows(drawShader, pipelineRenderer)
+	pipelineRenderer:bind(drawShader, self)
+
 	if drawShader:hasUniform("rat_DrawsBuffer") then
 		drawShader:send("rat_DrawsBuffer", self.cullResult:getDrawsBuffer())
 	end
 
-	pipelineRenderer:bind(drawShader, self)
+	if drawShader:hasUniform("rat_CamerasBuffer") then
+		drawShader:send(
+			"rat_CamerasBuffer",
+			self.cullResult:getCamerasBuffer():getCameraBuffer():getBuffer()
+		)
+	end
 
 	love.graphics.push("all")
 	do
@@ -184,6 +191,8 @@ function ShadowRenderPass:_blurShadows()
 	local cameraCount = self.cullResult:getCamerasBuffer():getCameraCount()
 	love.graphics.push("all")
 	do
+		love.graphics.setBlendState("add", "one", "zero")
+
 		local blurShader = self.blurShaderResource:get()
 		love.graphics.setShader(blurShader)
 
