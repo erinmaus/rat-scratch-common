@@ -9,6 +9,9 @@ local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
 local VertexBufferInfo = require("rat-scratch-pipeline.VertexBufferInfo")
 local json = require("lib.json")
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
+local ResourceLoader = require("rat-scratch-resource.ResourceLoader")
+local ShaderFragmentResourceType =
+	require("rat-scratch-pipeline.ShaderFragmentResourceType")
 
 --- @class RatScratch.Pipeline.PipelineConfig : RatScratch.Common.BaseObject
 --- @overload fun(definition: RatScratch.Pipeline.PipelineDefinitionConfig): RatScratch.Pipeline.PipelineConfig
@@ -18,7 +21,7 @@ local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 --- @field private indexFormat RatScratch.Pipeline.IndexBufferInfo
 --- @field private meshletFormat RatScratch.Pipeline.MeshletFormat
 --- @field private definition RatScratch.Pipeline.PipelineDefinitionConfig
---- @field private virtualShaders table<string, string>
+--- @field private virtualShaders table<string, RatScratch.Resource.Resource<RatScratch.Pipeline.ShaderFragment>>
 local PipelineConfig = Object()
 
 --- @param definition RatScratch.Pipeline.PipelineDefinitionConfig
@@ -110,7 +113,7 @@ function PipelineConfig:serialize()
 	return { pipeline = Table.deepClone(self.definition) }
 end
 
---- @return table<string, string>
+--- @return table<string, RatScratch.Resource.Resource<RatScratch.Pipeline.ShaderFragment>>
 function PipelineConfig:getVirtualShaders()
 	return self.virtualShaders
 end
@@ -221,7 +224,7 @@ function PipelineConfig.loadDefault()
 end
 
 --- @private
---- @return string
+--- @return RatScratch.Resource.Resource<RatScratch.Pipeline.ShaderFragment>
 function PipelineConfig:_loadBaseVertexShader()
 	local variables = {
 		RAT_SCRATCH_VERTEX = { RAT_SCRATCH_VERTICES = {} },
@@ -298,9 +301,9 @@ function PipelineConfig:_loadBaseVertexShader()
 		end
 	end
 
-	local source, result = ShaderPreprocessor.preprocess(
-		"@Pipeline/Base/Vertex/Vertex.template.glsl",
-		{
+	return ResourceLoader.load(ShaderFragmentResourceType, {
+		filename = "@Pipeline/Base/Vertex/Vertex.template.glsl",
+		options = {
 			variables = variables,
 			rootPath = ("%s/Shaders"):format(
 				RatScratchModule.getSelfPath("rat-scratch-graphics")
@@ -310,15 +313,8 @@ function PipelineConfig:_loadBaseVertexShader()
 					RatScratchModule.getSelfPath(PATH)
 				),
 			},
-		}
-	)
-
-	local message = result and ShaderPreprocessor.validateResult(source, result)
-	if message then
-		error(message)
-	end
-
-	return source
+		},
+	})
 end
 
 return PipelineConfig

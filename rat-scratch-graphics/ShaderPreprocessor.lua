@@ -1,14 +1,19 @@
 local Debug = require("rat-scratch-common").Debug
 local Path = require("rat-scratch-common").Path
 
+--- @alias RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies {
+---   source: string,
+---   dependencies: string[],
+--- }
+
 --- @alias RatScratch.Graphics.ShaderPreprocessOptions {
 ---   warnings?: boolean,
 ---   errors?: boolean,
 ---   safe?: boolean,
----   dependencies?: boolean,
+---   dependencies?: boolean | string[],
 ---   rootPath?: string | false,
 ---   rootPaths?: table<string, string> | false,
----   virtualPaths?: table<string, string> | false,
+---   virtualPaths?: table<string, string | RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies> | false,
 ---   variables?: table,
 --- }
 
@@ -58,7 +63,7 @@ local DEFAULT_OPTIONS = {
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
 --- @param parent? RatScratch.Graphics.impl.ShaderProcessFile
 --- @param filename string
---- @return RatScratch.Graphics.impl.ShaderProcessFile
+--- @return RatScratch.Graphics.impl.ShaderProcessFile?
 local function beginVisit(state, parent, filename)
 	if state.visited[filename] then
 		local errorMessage = string.format(
@@ -77,8 +82,6 @@ local function beginVisit(state, parent, filename)
 	end
 
 	state.visited[filename] = true
-	state.dependencies[filename] = true
-
 	return {
 		parent = parent,
 		filename = filename,
@@ -88,11 +91,19 @@ end
 
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
 --- @param currentFile RatScratch.Graphics.impl.ShaderProcessFile
-local function endVisit(state, currentFile)
+--- @param dependencies? string[]
+local function endVisit(state, currentFile, dependencies)
 	Debug.assert(
 		state.visited[currentFile.filename] ~= nil,
 		"ending visit, but current file not in visit table"
 	)
+
+	if dependencies then
+		for _, v in ipairs(dependencies) do
+			state.dependencies[v] = true
+		end
+	end
+
 	state.visited[currentFile.filename] = nil
 end
 
@@ -108,20 +119,38 @@ local TEMPLATE_VARIABLE = "%$([%w_]+)%$"
 
 --- @param state RatScratch.Graphics.impl.ShaderProcessState
 --- @param currentFile RatScratch.Graphics.impl.ShaderProcessFile
+--- @return string, string[]
 local function readContent(state, currentFile)
-	local content = (
-		state.options.virtualPaths
-		and state.options.virtualPaths[currentFile.filename]
-	) or love.filesystem.read(currentFile.filename)
-	if content then
-		return content
+	local content, dependencies
+	if state.options.virtualPaths then
+		local virtualPathType =
+			type(state.options.virtualPaths[currentFile.filename])
+		if virtualPathType == "table" then
+			local p = state.options.virtualPaths[currentFile.filename]
+			content = p.source
+			dependencies = p.dependencies
+		elseif virtualPathType == "string" then
+			content = state.options.virtualPaths[currentFile.filename]
+			dependencies = {}
+		end
+	end
+
+	if not (content and dependencies) then
+		content = love.filesystem.read(currentFile.filename)
+		dependencies = content and { currentFile.filename } or nil
+	end
+
+	--- @cast content string?
+	if content and dependencies then
+		return content, dependencies
 	end
 
 	local errorMessage =
 		string.format("%s:0: failed to read file", currentFile.filename)
 	if state.options.safe then
 		table.insert(state.result.errors, errorMessage)
-		return string.format('// file "%s" not found', currentFile.filename)
+		return string.format('// file "%s" not found', currentFile.filename),
+			{ currentFile.filename }
 	else
 		error(errorMessage)
 	end
@@ -156,7 +185,7 @@ local function process(state, parent, filename, variables)
 		return string.format('// file "%s" is included previously', filename)
 	end
 
-	local content = readContent(state, currentFile)
+	local content, dependencies = readContent(state, currentFile)
 	local lines = {}
 	for line in content:gmatch(LINE_PATTERN) do
 		local trimmedLine = line:gsub(TRIMMED_LINE_PATTERN, "%1")
@@ -300,7 +329,7 @@ local function process(state, parent, filename, variables)
 		end
 	end
 
-	endVisit(state, currentFile)
+	endVisit(state, currentFile, dependencies)
 
 	return table.concat(lines, "\n")
 end
@@ -377,7 +406,14 @@ function ShaderPreprocessor.preprocess(filename, options)
 
 	local hoistedOptions = { keys = {}, order = {} }
 	local visited = {}
+
 	local dependencies = {}
+	if type(options.dependencies) == "table" then
+		--- @diagnostic disable-next-line: param-type-mismatch
+		for _, v in ipairs(options.dependencies) do
+			dependencies[v] = true
+		end
+	end
 
 	local processedState = {
 		hoistedOptions = hoistedOptions,

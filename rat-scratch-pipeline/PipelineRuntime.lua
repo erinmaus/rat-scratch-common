@@ -25,7 +25,7 @@ local json = require("lib.json")
 --- @field settings RatScratch.Pipeline.PipelineSetting[]
 --- @field settingsByKey table<string, RatScratch.Pipeline.PipelineSetting>
 --- @field propertyToSetting table<string, RatScratch.Pipeline.PipelineSetting>
---- @field virtualPaths table<string, table<string, string>>
+--- @field virtualPaths table<string, table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>>
 --- @overload fun(runtime: RatScratch.Pipeline.PipelineRuntimeConfig, config: RatScratch.Pipeline.PipelineConfig, currentProperties?: RatScratch.Pipeline.PipelineProperties): RatScratch.Pipeline.PipelineRuntime
 local PipelineRuntime = Object()
 
@@ -186,7 +186,7 @@ do
 	local _defaultShaderOptions
 
 	--- @private
-	--- @param virtualPaths table<string, string>?
+	--- @param virtualPaths table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>?
 	--- @return RatScratch.Graphics.ShaderPreprocessOptions
 	function PipelineRuntime._getDefaultShaderOptions(virtualPaths)
 		if not _defaultShaderOptions then
@@ -261,7 +261,10 @@ function PipelineRuntime:_loadConfigShaderForPreset(qualityPreset)
 	end
 
 	self.virtualPaths[qualityPreset] = {
-		["generated:/Pipeline/Config.common.glsl"] = source,
+		["generated:/Pipeline/Config.common.glsl"] = {
+			source = source,
+			dependencies = result and result.dependencies or {},
+		},
 	}
 end
 
@@ -341,7 +344,7 @@ do
 		--- @type table<string, string>?
 		local rootPaths = destination.rootPaths or {}
 
-		--- @type table<string, string>?
+		--- @type table<string, string | RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies> | false
 		local virtualPaths = destination.virtualPaths or {}
 
 		for k, v in pairs(source) do
@@ -358,10 +361,13 @@ do
 
 		if source.virtualPaths then
 			for k, v in pairs(source.virtualPaths) do
-				virtualPaths[k] = v
+				virtualPaths[k] = {
+					source = v.source,
+					dependencies = v.dependencies,
+				}
 			end
 		elseif source.virtualPaths == false then
-			virtualPaths = nil
+			virtualPaths = false
 		end
 
 		destination.rootPaths = rootPaths

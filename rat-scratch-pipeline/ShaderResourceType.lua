@@ -1,8 +1,8 @@
-local PATH = ...
 local Object = require("rat-scratch-common").Object
 local ResourceType = require("rat-scratch-resource").ResourceType
-local RatScratchModule = require("lib.rat-scratch-module")
 local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
+local ShaderResourceTypeCommon =
+	require("rat-scratch-pipeline.impl.ShaderResourceTypeCommon")
 
 --- @class RatScratch.Pipeline.ShaderResourceType.ResourceArguments
 --- @field public vertexFilename? string
@@ -17,51 +17,13 @@ local ShaderResourceTypeResourceArguments = {}
 --- @field public vertex? string
 local ShaderResourceTypeData = {}
 
-local REQUIRED_OPTIONS = {
-	warnings = true,
-	errors = true,
-	safe = true,
-	dependencies = true,
-}
-
---- @param options? RatScratch.Graphics.ShaderPreprocessOptions
---- @return RatScratch.Graphics.ShaderPreprocessOptions
-local function _mergePreprocessOptions(options)
-	local result = {}
-
-	if options then
-		for k, v in pairs(options) do
-			result[k] = v
-		end
-	end
-
-	for k, v in pairs(REQUIRED_OPTIONS) do
-		result[k] = v
-	end
-
-	if not result.rootPath then
-		result.rootPath = ("%s/Shaders"):format(
-			RatScratchModule.getSelfPath("rat-scratch-graphics")
-		)
-	end
-
-	if not result.rootPaths or not result.rootPaths["Pipeline"] then
-		result.rootPaths = result.rootPaths or {}
-		result.rootPaths["Pipeline"] = ("%s/Shaders"):format(
-			("%s/"):format(RatScratchModule.getSelfPath(PATH))
-		)
-	end
-
-	return result
-end
-
 --- @param args RatScratch.Pipeline.ShaderResourceType.ResourceArguments
 --- @return RatScratch.Pipeline.ShaderResourceType.ResourceArguments
 local function _getResourceArguments(args)
 	if type(args) == "string" then
 		return {
 			pixelFilename = args,
-			options = _mergePreprocessOptions(),
+			options = ShaderResourceTypeCommon.mergePreprocessOptions(),
 		}
 	end
 
@@ -69,7 +31,7 @@ local function _getResourceArguments(args)
 		pixelFilename = args.pixelFilename,
 		vertexFilename = args.vertexFilename,
 		computeFilename = args.computeFilename,
-		options = _mergePreprocessOptions(args.options),
+		options = ShaderResourceTypeCommon.mergePreprocessOptions(args.options),
 	}
 end
 
@@ -88,9 +50,9 @@ function ShaderResourceType:resolvePath(args, parentPath)
 		return ResourceType.resolvePath(self, args.pixelFilename, parentPath),
 			ResourceType.resolvePath(self, args.vertexFilename, parentPath)
 	elseif args.pixelFilename or args.vertexFilename then
-		--- @diagnostic disable-next-line: param-type-mismatch
 		return ResourceType.resolvePath(
 			self,
+			--- @diagnostic disable-next-line: param-type-mismatch
 			args.pixelFilename or args.vertexFilename,
 			parentPath
 		)
@@ -193,7 +155,7 @@ end
 
 --- @param resource RatScratch.Resource.Resource<love.Shader>
 --- @param data RatScratch.Pipeline.ShaderResourceType.Data
-function ResourceType:updateFromData(resource, data)
+function ShaderResourceType:updateFromData(resource, data)
 	if data.compute then
 		resource:set(love.graphics.newComputeShader(data.compute))
 	else
