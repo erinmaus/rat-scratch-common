@@ -9,16 +9,19 @@
 #include "@Generated/Pipeline/Light/Lights.common.glsl"
 #include "@Generated/Pipeline/Light/ApplyLights.common.glsl"
 
+uniform uvec2 rat_ScreenSize;
+
 uint ratApplyLightsImplGetIndex(vec3 position, uint i, uint layer)
 {
+	uvec2 dimensions = uvec2(ceil(vec2(rat_ScreenSize) / vec2(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELL_SIZE_IN_PIXELS)));
 	vec3 clampedPosition = clamp(position, vec3(0.0), vec3(1.0));
-	uvec3 coordinate = uvec3(floor(clampedPosition * vec3(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS)));
-	coordinate = min(coordinate, RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS - uvec3(1));
+	uvec2 coordinate = uvec2(floor(clampedPosition.xy * vec2(dimensions)));
+	coordinate = min(coordinate, dimensions - uvec2(1));
 
-	uvec4 dimensions =
-		uvec4(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS, RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL + 1);
-	uint offset = dimensions.x * dimensions.y * dimensions.z * dimensions.w * layer;
-	return coordinateToIndex(uvec4(coordinate, i), dimensions) + offset;
+	uint offset = dimensions.x * dimensions.y * (RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL + 1) * layer;
+	return coordinateToIndex(uvec3(coordinate, i),
+							 uvec3(dimensions, RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL + 1)) +
+		   offset;
 }
 
 void ratApplyLights(in RatScratchPipelineFragmentOutput fragmentOutput, inout RatScratchPipelineLightResult result)

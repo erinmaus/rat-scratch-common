@@ -30,7 +30,6 @@ local Transform = require("rat-scratch-math").Transform
 --- @field private cameras table<RatScratch.Pipeline.Camera, RatScratch.Pipeline.CameraFrame>
 --- @field private _CELLS_BUFFER love.GraphicsBuffer
 --- @field private clusterShaders table<string, RatScratch.Resource.Resource<love.Shader>>
---- @field private cellShaders table<string, RatScratch.Resource.Resource<love.Shader>>
 --- @overload fun(pipelineRuntime: RatScratch.Pipeline.PipelineRuntime): RatScratch.Pipeline.LightPipeline
 local LightPipeline = Object(Pipeline)
 
@@ -41,11 +40,6 @@ LightPipeline.SHADOW_TEXTURE_ATLAS_FORMAT = {
 	{ location = 3, name = "cameraIndex", format = "uint32" },
 }
 
-LightPipeline.CELLS_FORMAT = {
-	{ location = 0, name = "worldMin", format = "floatvec3" },
-	{ location = 1, name = "worldMax", format = "floatvec3" },
-}
-
 LightPipeline.DEFAULT_LIGHTS_COUNT = 1024
 LightPipeline.DEFAULT_CAMERA_COUNT = 64
 
@@ -54,9 +48,6 @@ LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_FORMATS = {
 }
 
 LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_DEPTH_FORMAT = "depth32f"
-
---- @type love.GraphicsBuffer | false
-LightPipeline._CELLS_BUFFER = false
 
 --- @param pipelineRuntime RatScratch.Pipeline.PipelineRuntime
 function LightPipeline:new(pipelineRuntime)
@@ -108,7 +99,6 @@ function LightPipeline:new(pipelineRuntime)
 	self.camerasBuffer = CameraBuffer()
 
 	self.clusterShaders = {}
-	self.cellShaders = {}
 end
 
 --- @param shader love.Shader
@@ -330,81 +320,76 @@ function LightPipeline:loadDefaultShaders()
 		self.clusterShaders[qualityPreset] =
 			runtime:loadComputeShader("@Pipeline/Lights/Cluster.compute.glsl")
 	end
-
-	Table.clear(self.cellShaders)
-	for i = 1, runtime:getQualityPresetCount() do
-		local qualityPreset = runtime:getQualityPreset(i)
-		self.cellShaders[qualityPreset] =
-			runtime:loadComputeShader("@Pipeline/Lights/Cells.compute.glsl")
-	end
 end
 
---- @private
---- @param count integer
-function LightPipeline._reserveCells(count)
-	if
-		not LightPipeline._CELLS_BUFFER
-		or count > LightPipeline._CELLS_BUFFER:getElementCount()
-	then
-		LightPipeline._CELLS_BUFFER = love.graphics.newBuffer(
-			LightPipeline.CELLS_FORMAT,
-			math.max(count, 1),
-			{ shaderstorage = true }
-		)
-	end
+do
+	local _screenSize = { 0, 0 }
 
-	return LightPipeline._CELLS_BUFFER
-end
-
---- @private
---- @param qualityPreset string
---- @param shader love.Shader
---- @param result RatScratch.Pipeline.LightClusterResult
-function LightPipeline:_dispatchCluster(qualityPreset, shader, result)
-	shader:send("rat_LightsBuffer", self.lightsBuffer:getBuffer())
-
-	local _, lightsCount = self.lightsBuffer:getIndexCount()
-	shader:send("rat_LightCount", lightsCount)
-
-	local cellsBuffer = LightPipeline._CELLS_BUFFER
-	shader:send("rat_WorldCellsBuffer", cellsBuffer)
-
-	local camerasBuffer = result:getCamerasBuffer()
-	camerasBuffer:bind(shader)
-
-	local cellsX, cellsY, cellsZ = self.pipelineRuntime:getCurrentProperty(
+	--- @private
+	--- @param qualityPreset string
+	--- @param shader love.Shader
+	--- @param screenWidth integer
+	--- @param screenHeight integer
+	--- @param result RatScratch.Pipeline.LightClusterResult
+	function LightPipeline:_dispatchCluster(
 		qualityPreset,
-		"pipeline.properties.lighting.cells"
-	)
-	local maxLightsPerCell = self.pipelineRuntime:getCurrentProperty(
-		qualityPreset,
-		"pipeline.properties.lighting.maxLightsPerCell"
-	) or 0
-	local maxLightsPerThread = self.pipelineRuntime:getCurrentProperty(
-		qualityPreset,
-		"pipeline.properties.lighting.maxLightsPerThread"
-	) or 1
-	local cellsCount = (cellsX or 0) * (cellsY or 0) * (cellsZ or 0)
-
-	local minLightIndicesElementCount = cellsCount
-		* (maxLightsPerCell + 1)
-		* camerasBuffer:getCameraCount()
-	local lightsIndicesBuffer =
-		result:reserveLightIndices(minLightIndicesElementCount)
-	lightsIndicesBuffer:clear()
-
-	shader:send("rat_LightCountIndicesBuffer", lightsIndicesBuffer)
-
-	local localSizeX, localSizeY, localSizeZ = shader:getLocalThreadgroupSize()
-	love.graphics.dispatchThreadgroups(
+		screenWidth,
+		screenHeight,
 		shader,
-		math.max(math.ceil(cellsCount / localSizeX), 1),
-		math.max(math.ceil(lightsCount / maxLightsPerThread / localSizeY), 1),
-		math.max(
-			math.ceil(camerasBuffer:getActiveCameraCount() / localSizeZ),
-			1
-		)
+		result
 	)
+		shader:send("rat_LightsBuffer", self.lightsBuffer:getBuffer())
+
+		local screenSize = _screenSize
+		screenSize[1], screenSize[2] = screenWidth, screenHeight
+		shader:send("rat_ScreenSize", screenSize)
+
+		local _, lightsCount = self.lightsBuffer:getIndexCount()
+		shader:send("rat_LightCount", lightsCount)
+
+		local camerasBuffer = result:getCamerasBuffer()
+		camerasBuffer:bind(shader)
+
+		local cellSizeX, cellSizeY = self.pipelineRuntime:getCurrentProperty(
+			qualityPreset,
+			"pipeline.properties.lighting.cellsSizeInPixels"
+		)
+		local maxLightsPerCell = self.pipelineRuntime:getCurrentProperty(
+			qualityPreset,
+			"pipeline.properties.lighting.maxLightsPerCell"
+		) or 0
+		local maxLightsPerThread = self.pipelineRuntime:getCurrentProperty(
+			qualityPreset,
+			"pipeline.properties.lighting.maxLightsPerThread"
+		) or 1
+
+		local cellsCount = math.ceil(screenWidth / (cellSizeX or 1))
+			* math.ceil(screenHeight / (cellSizeY or 1))
+
+		local minLightIndicesElementCount = cellsCount
+			* (maxLightsPerCell + 1)
+			* camerasBuffer:getCameraCount()
+		local lightsIndicesBuffer =
+			result:reserveLightIndices(minLightIndicesElementCount)
+		lightsIndicesBuffer:clear()
+
+		shader:send("rat_LightCountIndicesBuffer", lightsIndicesBuffer)
+
+		local localSizeX, localSizeY, localSizeZ =
+			shader:getLocalThreadgroupSize()
+		love.graphics.dispatchThreadgroups(
+			shader,
+			math.max(math.ceil(cellsCount / localSizeX), 1),
+			math.max(
+				math.ceil(lightsCount / maxLightsPerThread / localSizeY),
+				1
+			),
+			math.max(
+				math.ceil(camerasBuffer:getActiveCameraCount() / localSizeZ),
+				1
+			)
+		)
+	end
 end
 
 --- @private
@@ -436,19 +421,27 @@ end
 
 --- @param qualityPreset string
 --- @param result RatScratch.Pipeline.LightClusterResult
+--- @param screenWidth integer
+--- @param screenHeight integer
 --- @return boolean, RatScratch.Pipeline.LightClusterResult
-function LightPipeline:clusterLights(qualityPreset, result)
+function LightPipeline:clusterLights(
+	qualityPreset,
+	screenWidth,
+	screenHeight,
+	result
+)
 	local clusterShader = self.clusterShaders[qualityPreset]
-	local cellShader = self.cellShaders[qualityPreset]
-	if
-		not (clusterShader and clusterShader:getIsReady())
-		or not (cellShader and cellShader:getIsReady())
-	then
+	if not (clusterShader and clusterShader:getIsReady()) then
 		return false, result
 	end
 
-	self:_dispatchCells(qualityPreset, cellShader:get(), result)
-	self:_dispatchCluster(qualityPreset, clusterShader:get(), result)
+	self:_dispatchCluster(
+		qualityPreset,
+		screenWidth,
+		screenHeight,
+		clusterShader:get(),
+		result
+	)
 
 	return true, result
 end
