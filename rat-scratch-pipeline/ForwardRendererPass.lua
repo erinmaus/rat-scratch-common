@@ -107,32 +107,44 @@ function ForwardRenderPass:start()
 
 	self:_updateRenderBuffer()
 
-	self:getScene()
-		:getPipeline(LightPipeline)
-		:clusterLights(self:getQualityPreset(), self.lightClusterResult)
+	self:getScene():getPipeline(LightPipeline):clusterLights(
+		self:getQualityPreset(),
+		self.renderBuffer:getWidth(),
+		self.renderBuffer:getHeight(),
+		self.lightClusterResult
+	)
 end
 
---- @private
---- @param drawShader love.Shader
---- @param pipelineRenderer RatScratch.Pipeline.PipelineRenderer
-function ForwardRenderPass:_bindDrawShader(drawShader, pipelineRenderer)
-	pipelineRenderer:bind(drawShader, self)
+do
+	local _screenSize = { 0, 0 }
 
-	self.cullResult:getCamerasBuffer():bind(drawShader)
+	--- @private
+	--- @param drawShader love.Shader
+	--- @param pipelineRenderer RatScratch.Pipeline.PipelineRenderer
+	function ForwardRenderPass:_bindDrawShader(drawShader, pipelineRenderer)
+		pipelineRenderer:bind(drawShader, self)
 
-	if drawShader:hasUniform("rat_DrawsBuffer") then
-		drawShader:send("rat_DrawsBuffer", self.cullResult:getDrawsBuffer())
-	end
+		self.cullResult:getCamerasBuffer():bind(drawShader)
 
-	if drawShader:hasUniform("rat_LightCountIndicesBuffer") then
-		drawShader:send(
-			"rat_LightCountIndicesBuffer",
-			self.lightClusterResult:getLightIndicesBuffer()
-		)
-	end
+		if drawShader:hasUniform("rat_DrawsBuffer") then
+			drawShader:send("rat_DrawsBuffer", self.cullResult:getDrawsBuffer())
+		end
 
-	if self:hasDependency(ShadowRenderPass) then
-		self:getDependency(ShadowRenderPass):bind(drawShader)
+		if drawShader:hasUniform("rat_LightCountIndicesBuffer") then
+			drawShader:send(
+				"rat_LightCountIndicesBuffer",
+				self.lightClusterResult:getLightIndicesBuffer()
+			)
+		end
+
+		local screenSize = _screenSize
+		screenSize[1], screenSize[2] =
+			self.renderBuffer:getWidth(), self.renderBuffer:getHeight()
+		drawShader:send("rat_ScreenSize", screenSize)
+
+		if self:hasDependency(ShadowRenderPass) then
+			self:getDependency(ShadowRenderPass):bind(drawShader)
+		end
 	end
 end
 
