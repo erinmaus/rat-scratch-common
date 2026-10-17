@@ -6,6 +6,14 @@ local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
 local Atlas = require("rat-scratch-graphics").Atlas.Atlas
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local Pipeline = require("rat-scratch-pipeline.impl.Pipeline")
+local ResourceLoader = require("rat-scratch-resource").ResourceLoader
+local ShaderFragmentResourceType =
+	require("rat-scratch-pipeline.ShaderFragmentResourceType")
+local ResourceEvent = require("rat-scratch-resource").ResourceEvent
+local Resource = require("rat-scratch-resource").Resource
+local Color = require("rat-scratch-graphics").Color
+local LinearColor = require("rat-scratch-graphics").LinearColor
+local GammaColor = require("rat-scratch-graphics").GammaColor
 local PipelineMaterial =
 	require("rat-scratch-pipeline.Graphics3D.PipelineMaterial")
 local PipelineMaterialInstance =
@@ -14,7 +22,6 @@ local PipelineMaterialInstanceEvent =
 	require("rat-scratch-pipeline.Graphics3D.PipelineMaterialInstanceEvent")
 local PipelineMultiBuffer =
 	require("rat-scratch-pipeline.Buffer.PipelineMultiBuffer")
-local ShaderPreprocessor = require("rat-scratch-graphics").ShaderPreprocessor
 local ffi = require("ffi")
 local ImageDataAtlasHandle =
 	require("rat-scratch-graphics").Atlas.ImageDataAtlasHandle
@@ -25,9 +32,9 @@ local json = require("lib.json")
 --- | "deferred"
 --- | "forward"
 --- | "depth"
---- | "depth-discard"
+--- | "depthDiscard"
 --- | "shadow"
---- | "shadow-discard"
+--- | "shadowDiscard"
 
 --- @alias RatScratch.Pipeline.MaterialPipeline.ShaderType
 --- | "draw"
@@ -35,6 +42,8 @@ local json = require("lib.json")
 
 --- @class RatScratch.Pipeline.MaterialPipeline : RatScratch.Pipeline.impl.Pipeline
 --- @field private shaders table<string, table<RatScratch.Pipeline.MaterialPipeline.ShaderPass, table<RatScratch.Pipeline.MaterialPipeline.ShaderType, RatScratch.Resource.Resource<love.Shader>>>>
+--- @field private virtualShaders table<RatScratch.Pipeline.MaterialPipeline.ShaderPass, table<string, RatScratch.Resource.Resource<RatScratch.Pipeline.ShaderFragment>>>
+--- @field private virtualShadersDirty boolean
 --- @field private stagingMaterialData love.ByteData
 --- @field private maxMaterialIntegerComponents integer
 --- @field private maxMaterialFloatComponents integer
@@ -54,6 +63,7 @@ local json = require("lib.json")
 --- @field private dirtyTextures table<love.ImageData, true>
 --- @field private texturesBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<love.ImageData>
 --- @field private srgbAtlasTextureView love.Texture
+--- @field private defaultImageData table<RatScratch.Pipeline.MaterialPipeline.StandardPBRTextureName, love.ImageData>
 --- @overload fun(pipelineRuntime: RatScratch.Pipeline.PipelineRuntime): RatScratch.Pipeline.MaterialPipeline
 local MaterialPipeline = Object(Pipeline)
 
@@ -88,6 +98,68 @@ MaterialPipeline.MAX_TEXTURE_SIZE = 8192
 MaterialPipeline.DEFAULT_TEXTURE_LAYERS = 8
 MaterialPipeline.DEFAULT_TEXTURES_COUNT = 128
 MaterialPipeline.DEFAULT_MATERIAL_INSTANCES_COUNT = 1024
+
+MaterialPipeline.DEFAULT_ALBEDO_COLOR = GammaColor(1)
+MaterialPipeline.DEFAULT_NORMAL_COLOR = LinearColor(0, 0, 1)
+MaterialPipeline.DEFAULT_METAL_ROUGHNESS_COLOR = LinearColor(1)
+MaterialPipeline.DEFAULT_OCCLUSION_COLOR = LinearColor(1)
+MaterialPipeline.DEFAULT_EMISSIVE_COLOR = GammaColor(0)
+MaterialPipeline.DEFAULT_FLUORESCENCE_COLOR = GammaColor(0)
+MaterialPipeline.DEFAULT_TEXTURE_WIDTH = 256
+MaterialPipeline.DEFAULT_TEXTURE_HEIGHT = 256
+
+--- @alias RatScratch.Pipeline.MaterialPipeline.StandardPBRTextureName
+--- | "albedo"
+--- | "normal"
+--- | "metalRoughness"
+--- | "occlusion"
+--- | "emissive"
+--- | "fluorescence"
+
+--- @alias RatScratch.Pipeline.MaterialPipeline.StandardPBRTextureInfo {
+---   color: RatScratch.Graphics.GammaColor | RatScratch.Graphics.LinearColor,
+---   width: integer,
+---   height: integer,
+--- }
+
+--- @type table<RatScratch.Pipeline.MaterialPipeline.StandardPBRTextureName, RatScratch.Pipeline.MaterialPipeline.StandardPBRTextureInfo>
+MaterialPipeline.DEFAULT_PBR_TEXTURE_INFO = {
+	albedo = {
+		color = MaterialPipeline.DEFAULT_ALBEDO_COLOR,
+		width = MaterialPipeline.DEFAULT_TEXTURE_WIDTH,
+		height = MaterialPipeline.DEFAULT_TEXTURE_HEIGHT,
+	},
+
+	normal = {
+		color = MaterialPipeline.DEFAULT_NORMAL_COLOR,
+		width = MaterialPipeline.DEFAULT_TEXTURE_WIDTH,
+		height = MaterialPipeline.DEFAULT_TEXTURE_HEIGHT,
+	},
+
+	metalRoughness = {
+		color = MaterialPipeline.DEFAULT_METAL_ROUGHNESS_COLOR,
+		width = MaterialPipeline.DEFAULT_TEXTURE_WIDTH,
+		height = MaterialPipeline.DEFAULT_TEXTURE_HEIGHT,
+	},
+
+	occlusion = {
+		color = MaterialPipeline.DEFAULT_OCCLUSION_COLOR,
+		width = MaterialPipeline.DEFAULT_TEXTURE_WIDTH,
+		height = MaterialPipeline.DEFAULT_TEXTURE_HEIGHT,
+	},
+
+	emissive = {
+		color = MaterialPipeline.DEFAULT_EMISSIVE_COLOR,
+		width = MaterialPipeline.DEFAULT_TEXTURE_WIDTH,
+		height = MaterialPipeline.DEFAULT_TEXTURE_HEIGHT,
+	},
+
+	fluorescence = {
+		color = MaterialPipeline.DEFAULT_FLUORESCENCE_COLOR,
+		width = MaterialPipeline.DEFAULT_TEXTURE_WIDTH,
+		height = MaterialPipeline.DEFAULT_TEXTURE_HEIGHT,
+	},
+}
 
 --- @param pipelineRuntime RatScratch.Pipeline.PipelineRuntime
 function MaterialPipeline:new(pipelineRuntime)
@@ -143,6 +215,48 @@ function MaterialPipeline:new(pipelineRuntime)
 	self.defaultMaterial =
 		PipelineMaterial.fromDefinition(defaultMaterialJSON.material)
 	self:addMaterial(self.defaultMaterial)
+
+	self.virtualShadersDirty = true
+
+	self.defaultImageData = {}
+	for name, textureInfo in pairs(MaterialPipeline.DEFAULT_PBR_TEXTURE_INFO) do
+		self.defaultImageData[name] = MaterialPipeline._newImageData(
+			textureInfo.width,
+			textureInfo.height,
+			textureInfo.color
+		)
+	end
+
+	self:addTexture(self.defaultImageData.albedo)
+	self:addTexture(self.defaultImageData.normal)
+	self:addTexture(self.defaultImageData.metalRoughness)
+	self:addTexture(self.defaultImageData.occlusion)
+	self:addTexture(self.defaultImageData.emissive)
+	self:addTexture(self.defaultImageData.fluorescence)
+end
+
+function MaterialPipeline:getDefaultPBRTexture(name)
+	return self.defaultImageData[name]
+end
+
+do
+	local _linear = LinearColor()
+	--- @private
+	--- @param w integer
+	--- @param h integer
+	--- @param color RatScratch.Graphics.GammaColor | RatScratch.Graphics.LinearColor
+	--- @return love.ImageData
+	function MaterialPipeline._newImageData(w, h, color)
+		local linear = Color.asLinear(color, _linear)
+		local r, g, b, a = linear:get()
+
+		local imageData = love.image.newImageData(w, h)
+		imageData:mapPixel(function()
+			return r, g, b, a
+		end)
+
+		return imageData
+	end
 end
 
 function MaterialPipeline:bind(shader, qualityPreset)
@@ -211,6 +325,7 @@ function MaterialPipeline:addMaterial(material)
 	table.insert(self.materialsByIndex, material)
 	self.materialsByName[material:getName()] = material
 
+	self.virtualShadersDirty = true
 	self.materialsDirty = true
 end
 
@@ -654,17 +769,47 @@ end
 --- @private
 --- @param path string
 --- @param config RatScratch.Graphics.ShaderPreprocessOptions
---- @return string
+--- @return RatScratch.Resource.Resource<RatScratch.Pipeline.ShaderFragment>
 function MaterialPipeline:_rebuildMaterialTemplateShader(path, config)
-	local shaderSource, result = ShaderPreprocessor.preprocess(path, config)
+	local resource = ResourceLoader.load(
+		ShaderFragmentResourceType,
+		{ filename = path, options = config }
+	)
+	resource:listen(
+		ResourceEvent.MODIFY,
+		self._onMaterialTemplateShaderModify,
+		self
+	)
+	resource:listen(
+		ResourceEvent.FREE,
+		self._onMaterialTemplateShaderFree,
+		self
+	)
 
-	local message =
-		ShaderPreprocessor.validateResult(shaderSource, result, true)
-	if message then
-		error(message)
-	end
+	return resource
+end
 
-	return shaderSource
+--- @private
+--- @param event RatScratch.Resource.ResourceEvent
+--- @param resource RatScratch.Resource.Resource<RatScratch.Pipeline.ShaderFragment>
+function MaterialPipeline:_onMaterialTemplateShaderModify(event, resource)
+	self.materialsDirty = true
+end
+
+--- @private
+--- @param event RatScratch.Resource.ResourceEvent
+--- @param resource RatScratch.Resource.Resource<RatScratch.Pipeline.ShaderFragment>
+function MaterialPipeline:_onMaterialTemplateShaderFree(event, resource)
+	resource:silence(
+		ResourceEvent.MODIFY,
+		self._onMaterialTemplateShaderModify,
+		self
+	)
+	resource:silence(
+		ResourceEvent.FREE,
+		self._onMaterialTemplateShaderFree,
+		self
+	)
 end
 
 --- @private
@@ -679,6 +824,7 @@ function MaterialPipeline:_rebuildMaterialTemplateShadersPass(
 		rootPath = baseConfig.rootPath,
 		rootPaths = baseConfig.rootPaths,
 		variables = variables,
+		dependencies = true,
 	}
 
 	local result = {
@@ -712,10 +858,28 @@ function MaterialPipeline:_rebuildMaterialTemplateShadersPass(
 	return result
 end
 
+--- @param virtualPaths table<string, RatScratch.Resource.Resource<RatScratch.Pipeline.ShaderFragment>>
+--- @return table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>
+function MaterialPipeline:_getVirtualPaths(virtualPaths)
+	local result = {}
+
+	for filename, shaderFragmentResource in pairs(virtualPaths) do
+		local dependencies =
+			ResourceLoader.getDependencies(shaderFragmentResource:getID())
+
+		result[filename] = {
+			source = shaderFragmentResource:get().source,
+			dependencies = dependencies or {},
+		}
+	end
+
+	return result
+end
+
 --- @private
 --- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
---- @param virtualPaths table
+--- @param virtualPaths table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>
 function MaterialPipeline:_rebuildDeferredShaders(
 	qualityPreset,
 	baseConfig,
@@ -728,7 +892,6 @@ function MaterialPipeline:_rebuildDeferredShaders(
 		virtualPaths = virtualPaths,
 	}
 
-	-- TODO: layered rendering
 	return {
 		draw = self:getPipelineRuntime():loadShader(
 			"@Pipeline/Base/Deferred/Fragment.frag.glsl",
@@ -748,7 +911,7 @@ end
 --- @private
 --- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
---- @param virtualPaths table
+--- @param virtualPaths table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>
 function MaterialPipeline:_rebuildForwardShaders(
 	qualityPreset,
 	baseConfig,
@@ -761,7 +924,6 @@ function MaterialPipeline:_rebuildForwardShaders(
 		virtualPaths = virtualPaths,
 	}
 
-	-- TODO: layered rendering
 	return {
 		draw = self:getPipelineRuntime():loadShader(
 			"@Pipeline/Base/Forward/Fragment.frag.glsl",
@@ -775,7 +937,7 @@ end
 --- @private
 --- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
---- @param virtualPaths table
+--- @param virtualPaths table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>
 function MaterialPipeline:_rebuildDepthShaders(
 	qualityPreset,
 	baseConfig,
@@ -788,7 +950,6 @@ function MaterialPipeline:_rebuildDepthShaders(
 		virtualPaths = virtualPaths,
 	}
 
-	-- TODO: layered rendering
 	return {
 		draw = self:getPipelineRuntime():loadShader(
 			"@Pipeline/Base/Deferred/Depth.frag.glsl",
@@ -802,7 +963,7 @@ end
 --- @private
 --- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
---- @param virtualPaths table
+--- @param virtualPaths table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>
 function MaterialPipeline:_rebuildDepthDiscardShaders(
 	qualityPreset,
 	baseConfig,
@@ -815,7 +976,6 @@ function MaterialPipeline:_rebuildDepthDiscardShaders(
 		virtualPaths = virtualPaths,
 	}
 
-	-- TODO: layered rendering
 	return {
 		draw = self:getPipelineRuntime():loadShader(
 			"@Pipeline/Base/Deferred/DepthDiscard.frag.glsl",
@@ -829,7 +989,7 @@ end
 --- @private
 --- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
---- @param virtualPaths table
+--- @param virtualPaths table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>
 function MaterialPipeline:_rebuildShadowDepthShaders(
 	qualityPreset,
 	baseConfig,
@@ -842,7 +1002,6 @@ function MaterialPipeline:_rebuildShadowDepthShaders(
 		virtualPaths = virtualPaths,
 	}
 
-	-- TODO: layered rendering
 	return {
 		draw = self:getPipelineRuntime():loadShader(
 			"@Pipeline/Base/Shadow/Depth.frag.glsl",
@@ -856,7 +1015,7 @@ end
 --- @private
 --- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
---- @param virtualPaths table
+--- @param virtualPaths table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>
 function MaterialPipeline:_rebuildShadowDepthDiscardShaders(
 	qualityPreset,
 	baseConfig,
@@ -869,7 +1028,6 @@ function MaterialPipeline:_rebuildShadowDepthDiscardShaders(
 		virtualPaths = virtualPaths,
 	}
 
-	-- TODO: layered rendering
 	return {
 		draw = self:getPipelineRuntime():loadShader(
 			"@Pipeline/Base/Shadow/DepthDiscard.frag.glsl",
@@ -883,62 +1041,65 @@ end
 --- @private
 --- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
---- @param virtualPaths table
-function MaterialPipeline:_rebuildShaders(
-	qualityPreset,
-	baseConfig,
-	virtualPaths
-)
+function MaterialPipeline:_rebuildShaders(qualityPreset, baseConfig)
 	self.shaders[qualityPreset] = {
 		deferred = self:_rebuildDeferredShaders(
 			qualityPreset,
 			baseConfig,
-			virtualPaths.deferred
+			self:_getVirtualPaths(self.virtualShaders.deferred)
 		),
 		forward = self:_rebuildForwardShaders(
 			qualityPreset,
 			baseConfig,
-			virtualPaths.forward
+			self:_getVirtualPaths(self.virtualShaders.forward)
 		),
 		depth = self:_rebuildDepthShaders(
 			qualityPreset,
 			baseConfig,
-			virtualPaths.depth
+			self:_getVirtualPaths(self.virtualShaders.depth)
 		),
 		depthDiscard = self:_rebuildDepthDiscardShaders(
 			qualityPreset,
 			baseConfig,
-			virtualPaths.depthDiscard
+			self:_getVirtualPaths(self.virtualShaders.depthDiscard)
 		),
 		shadow = self:_rebuildShadowDepthShaders(
 			qualityPreset,
 			baseConfig,
-			virtualPaths.depth
+			self:_getVirtualPaths(self.virtualShaders.depth)
 		),
 		shadowDiscard = self:_rebuildShadowDepthDiscardShaders(
 			qualityPreset,
 			baseConfig,
-			virtualPaths.depthDiscard
+			self:_getVirtualPaths(self.virtualShaders.depthDiscard)
 		),
 	}
 end
 
 --- @private
-function MaterialPipeline:_rebuildMaterialShaders()
-	local variables = self:_getMaterialVariables()
-	local baseConfig = {
-		rootPath = ("%s/Shaders"):format(
-			RatScratchModule.getSelfPath("rat-scratch-graphics")
-		),
-		rootPaths = {
-			Pipeline = ("%s/Shaders"):format(
-				RatScratchModule.getSelfPath(PATH)
+function MaterialPipeline:_getShaderPreprocessorBaseConfig()
+	self.baseConfig = self.baseConfig
+		or {
+			rootPath = ("%s/Shaders"):format(
+				RatScratchModule.getSelfPath("rat-scratch-graphics")
 			),
-			Generated = "generated:/",
-		},
-	}
+			rootPaths = {
+				Pipeline = ("%s/Shaders"):format(
+					RatScratchModule.getSelfPath(PATH)
+				),
+				Generated = "generated:/",
+			},
+		}
 
-	local baseVirtualShaders = {
+	return self.baseConfig
+end
+
+--- @private
+function MaterialPipeline:_buildVirtualShaders()
+	local variables = self:_getMaterialVariables()
+	local baseConfig = self:_getShaderPreprocessorBaseConfig()
+
+	self.virtualShaders = {
 		deferred = self:_rebuildMaterialTemplateShadersPass(
 			baseConfig,
 			variables.deferred
@@ -956,23 +1117,30 @@ function MaterialPipeline:_rebuildMaterialShaders()
 			variables.depthDiscard
 		),
 	}
+end
+
+--- @private
+function MaterialPipeline:_rebuildMaterialShaders()
+	local baseConfig = self:_getShaderPreprocessorBaseConfig()
 
 	local runtime = self:getPipelineRuntime()
 	for i = 1, runtime:getQualityPresetCount() do
-		self:_rebuildShaders(
-			runtime:getQualityPreset(i),
-			baseConfig,
-			baseVirtualShaders
-		)
+		self:_rebuildShaders(runtime:getQualityPreset(i), baseConfig)
 	end
 end
+
+MaterialPipeline.DUMMY_SHADER_RESOURCE = Resource(-1)
 
 --- @param qualityPreset string
 --- @param pass RatScratch.Pipeline.MaterialPipeline.ShaderPass
 --- @param name RatScratch.Pipeline.MaterialPipeline.ShaderType
 --- @return RatScratch.Resource.Resource<love.Shader>
 function MaterialPipeline:getShader(qualityPreset, pass, name)
-	return self.shaders[qualityPreset][pass][name]
+	return (
+		self.shaders[qualityPreset]
+		and self.shaders[qualityPreset][pass]
+		and self.shaders[qualityPreset][pass][name]
+	) or MaterialPipeline.DUMMY_SHADER_RESOURCE
 end
 
 --- @private
@@ -1126,14 +1294,32 @@ function MaterialPipeline:_flushMaterialInstances()
 	self.materialInstanceValuesBuffer:flush()
 end
 
+--- @private
+function MaterialPipeline:_getIsVirtualShaderPoolReady()
+	for _, shaderFragmentResources in pairs(self.virtualShaders) do
+		for _, shaderFragmentResource in pairs(shaderFragmentResources) do
+			if not shaderFragmentResource:getIsReady() then
+				return false
+			end
+		end
+	end
+
+	return true
+end
+
 function MaterialPipeline:flush()
 	if next(self.dirtyTextures) then
 		self:_flushTextures()
 		self.texturesBuffer:flush()
 	end
 
-	if self.materialsDirty then
+	if self.virtualShadersDirty then
 		self:_rebuildMaterials()
+		self:_buildVirtualShaders()
+		self.virtualShadersDirty = false
+	end
+
+	if self.materialsDirty and self:_getIsVirtualShaderPoolReady() then
 		self:_rebuildMaterialShaders()
 		self:_flushMaterials()
 		self.materialsDirty = false

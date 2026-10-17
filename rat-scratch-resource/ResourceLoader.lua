@@ -378,10 +378,11 @@ end
 --- @param filename string | table
 --- @return RatScratch.Resource.Resource
 function ResourceLoader.load(resourceType, filename)
-	local resource =
-		ResourceLoader._tryLoad(resourceType, ResourceArguments.get(filename))
+	local args = ResourceArguments.get(filename)
+
+	local resource = ResourceLoader._tryLoad(resourceType, args)
 	if not resource then
-		resource = ResourceLoader._newLoad(resourceType, filename)
+		resource = ResourceLoader._newLoad(resourceType, args)
 	end
 
 	return resource.resource
@@ -393,6 +394,27 @@ function ResourceLoader.get(id)
 	local resource = ResourceLoader.RESOURCE_ID_TO_RESOURCE[id]
 		or ResourceLoader.DEPENDENCY_ID_TO_RESOURCE[id]
 	return resource and resource.resource or nil
+end
+
+--- @param id integer
+--- @param result? string[]
+--- @return string[]?
+function ResourceLoader.getDependencies(id, result)
+	local resource = ResourceLoader.RESOURCE_ID_TO_RESOURCE[id]
+
+	if resource then
+		result = result or {}
+		Table.clear(result)
+
+		for filename in pairs(resource.modifiedTimes) do
+			table.insert(result, filename)
+		end
+		table.sort(result)
+
+		return result
+	end
+
+	return nil
 end
 
 function ResourceLoader.ready(id)

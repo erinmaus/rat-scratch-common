@@ -138,7 +138,7 @@ function PipelineMaterialUniformsBuffer:setUniformByArguments(uniformKey, ...)
 
 		local v = self.materialPipeline:getTextureIndex(t)
 		if value[offset] ~= v then
-			value[offset] = v
+			value[offset] = v - 1
 			isDirty = true
 		end
 	else

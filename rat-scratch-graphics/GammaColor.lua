@@ -41,6 +41,11 @@ function GammaColor:from(c1, c2, c3, c4)
 		g = c1
 		b = c1
 		a = c2
+	elseif c1 then
+		r = c1
+		g = c1
+		b = c1
+		a = 1
 	else
 		r = 1
 		g = 1

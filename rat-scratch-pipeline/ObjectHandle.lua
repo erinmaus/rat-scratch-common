@@ -534,6 +534,12 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 			"albedoTexture",
 			meshResource:getTexturePointer("albedo")
 		)
+	else
+		self:setModelMeshMaterialUniformByArguments(
+			meshResource,
+			"albedoTexture",
+			materialPipeline:getDefaultPBRTexture("albedo")
+		)
 	end
 
 	self:setModelMeshMaterialUniformByArguments(
@@ -553,6 +559,12 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 			"metallicRoughnessTexture",
 			meshResource:getTexturePointer("metalRoughness")
 		)
+	else
+		self:setModelMeshMaterialUniformByArguments(
+			meshResource,
+			"metallicRoughnessTexture",
+			materialPipeline:getDefaultPBRTexture("metallicRoughness")
+		)
 	end
 
 	self:setModelMeshMaterialUniformByArguments(
@@ -566,6 +578,12 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 			meshResource,
 			"occlusionTexture",
 			meshResource:getTexturePointer("occlusion")
+		)
+	else
+		self:setModelMeshMaterialUniformByArguments(
+			meshResource,
+			"occlusionTexture",
+			materialPipeline:getDefaultPBRTexture("occlusion")
 		)
 	end
 
@@ -581,6 +599,12 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 			"normalTexture",
 			meshResource:getTexturePointer("normal")
 		)
+	else
+		self:setModelMeshMaterialUniformByArguments(
+			meshResource,
+			"normalTexture",
+			materialPipeline:getDefaultPBRTexture("normal")
+		)
 	end
 
 	self:setModelMeshMaterialUniformByArguments(
@@ -594,6 +618,12 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 			meshResource,
 			"emissiveTexture",
 			meshResource:getTexturePointer("emissive")
+		)
+	else
+		self:setModelMeshMaterialUniformByArguments(
+			meshResource,
+			"emissiveTexture",
+			materialPipeline:getDefaultPBRTexture("emissive")
 		)
 	end
 
@@ -840,7 +870,7 @@ end
 
 --- @param mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>
 --- @param uniformKey string | integer
---- @param ... number | RatScratch.Resource.Resource<love.ImageData>
+--- @param ... number | RatScratch.Resource.Resource<love.ImageData> | love.ImageData
 function ObjectHandle:setModelMeshMaterialUniformByArguments(
 	mesh,
 	uniformKey,
@@ -860,14 +890,24 @@ function ObjectHandle:setModelMeshMaterialUniformByArguments(
 
 		local value = ...
 		if value ~= nil then
-			--- @cast value RatScratch.Resource.Resource<love.ImageData>
-			assert(
-				Object.isDerived(Resource, Object.getType(value)),
-				"value is not resource"
-			)
-			self:addResource(value, "love.ImageData")
+			if type(value) == "userdata" then
+				--- @cast value love.ImageData
+				assert(
+					value:typeOf("ImageData"),
+					"expected ImageData, got %s",
+					value:type()
+				)
+				materialInstance:setUniformByArguments(uniformKey, value)
+			else
+				--- @cast value RatScratch.Resource.Resource<love.ImageData>
+				assert(
+					Object.isDerived(Resource, Object.getType(value)),
+					"value is not resource"
+				)
+				self:addResource(value, "love.ImageData")
 
-			self:_bindResourceToUniform(mesh, uniform, value)
+				self:_bindResourceToUniform(mesh, uniform, value)
+			end
 		end
 	else
 		--- @diagnostic disable-next-line: param-type-mismatch
@@ -896,14 +936,24 @@ function ObjectHandle:setModelMeshMaterialUniformByValue(
 		self:_unbindUniformResource(mesh, uniform)
 
 		if value ~= nil then
-			--- @cast value RatScratch.Resource.Resource<love.ImageData>
-			assert(
-				Object.isDerived(Resource, Object.getType(value)),
-				"value is not resource"
-			)
-			self:addResource(value, "love.ImageData")
+			if type(value) == "userdata" then
+				--- @cast value love.ImageData
+				assert(
+					value:typeOf("ImageData"),
+					"expected ImageData, got %s",
+					value:type()
+				)
+				materialInstance:setUniformByArguments(uniformKey, value)
+			else
+				--- @cast value RatScratch.Resource.Resource<love.ImageData>
+				assert(
+					Object.isDerived(Resource, Object.getType(value)),
+					"value is not resource"
+				)
+				self:addResource(value, "love.ImageData")
 
-			self:_bindResourceToUniform(mesh, uniform, value)
+				self:_bindResourceToUniform(mesh, uniform, value)
+			end
 		end
 	else
 		materialInstance:setUniformByValue(uniformKey, value)
