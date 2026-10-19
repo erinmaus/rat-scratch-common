@@ -19,6 +19,12 @@ local ShadowRenderPass = require("rat-scratch-pipeline").ShadowRenderPass
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local IndirectDraw = require("rat-scratch-pipeline").IndirectDraw
 local ForwardRendererPass = require("rat-scratch-pipeline").ForwardRendererPass
+local Table = require("rat-scratch-common").Table
+local ReflectionRenderPass =
+	require("rat-scratch-pipeline").ReflectionRenderPass
+local ReflectionProbe = require("rat-scratch-pipeline").ReflectionProbe
+local ReflectionProbePipeline =
+	require("rat-scratch-pipeline.ReflectionProbePipeline")
 local PerspectiveFOVCameraProjection =
 	require("rat-scratch-pipeline").PerspectiveFOVCameraProjection
 local PipelineSceneResourceType =
@@ -81,6 +87,9 @@ function demo.load()
 			object:attachModel(modelResource)
 		end
 	end)
+
+	demo.reflectionProbes = {}
+	demo.minBounds, demo.maxBounds = Vector3(), Vector3()
 
 	world:getPipeline(AnimationPipeline):loadDefaultShaders()
 
@@ -145,6 +154,14 @@ function demo.load()
 	demo.forwardRenderPass = ForwardRendererPass()
 	demo.forwardRenderPass:addDependency(demo.shadowRenderPass)
 	demo.forwardRenderPass:attach(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.world,
+		demo.scene
+	)
+
+	demo.reflectionRenderPass = ReflectionRenderPass()
+	demo.reflectionRenderPass:addDependency(demo.shadowRenderPass)
+	demo.reflectionRenderPass:attach(
 		demo.runtime:getDefaultQualityPreset(),
 		demo.world,
 		demo.scene
@@ -291,6 +308,43 @@ function demo.update()
 			demo.instancedDraws.total = count
 		end
 	end
+
+	local minBounds, maxBounds = demo.scene:getStaticBounds()
+	if
+		not (
+			minBounds:equal(demo.minBounds) and maxBounds:equal(demo.maxBounds)
+		)
+	then
+		for _, probe in ipairs(demo.reflectionProbes) do
+			demo.scene:getPipeline(ReflectionProbePipeline):remove(probe)
+		end
+		Table.clear(demo.reflectionProbes)
+
+		local GRID_SIZE = 20
+		for x = math.min(minBounds.x, -GRID_SIZE), math.max(maxBounds.x, GRID_SIZE), GRID_SIZE do
+			for z = math.min(minBounds.z, -GRID_SIZE), math.max(maxBounds.z, GRID_SIZE), GRID_SIZE do
+				local probe = ReflectionProbe()
+				probe:setDistance(25)
+				probe:setPosition(Vector3(x, 10, z))
+				probe:setIsRealtime(true)
+
+				demo.scene:getPipeline(ReflectionProbePipeline):add(probe)
+
+				table.insert(demo.reflectionProbes, probe)
+			end
+		end
+
+		print(
+			"size xy",
+			maxBounds.x - minBounds.z,
+			maxBounds.z - minBounds.z,
+			"probes",
+			#demo.reflectionProbes
+		)
+
+		demo.minBounds:from(minBounds:get())
+		demo.maxBounds:from(maxBounds:get())
+	end
 end
 
 local function prettyNumber(value)
@@ -305,6 +359,14 @@ local _position = Vector3()
 function demo.draw()
 	love.graphics.push("all")
 	love.graphics.setDepthMode("lequal", true)
+
+	demo.renderer:cull(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.scene,
+		demo.reflectionRenderPass:getCullResult()
+	)
+	demo.renderer:draw(demo.reflectionRenderPass)
+
 	demo.renderer:cull(
 		demo.runtime:getDefaultQualityPreset(),
 		demo.scene,

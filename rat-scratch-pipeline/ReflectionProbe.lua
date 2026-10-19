@@ -24,8 +24,7 @@ local ReflectionProbe = Object()
 
 ReflectionProbe.REFLECTION_PROBE_FORMAT = {
 	{ location = 0, name = "atlasImageIndexCount", format = "uint32vec2" },
-	{ location = 1, name = "position", format = "floatvec3" },
-	{ location = 2, name = "distance", format = "float" },
+	{ location = 1, name = "positionDistance", format = "floatvec4" },
 }
 
 ReflectionProbe.REFLECTION_PROBE_FORMAT_INSTANCE =
@@ -100,6 +99,12 @@ function ReflectionProbe:setIsStatic(value)
 	self:dirty()
 end
 
+--- @param value boolean
+function ReflectionProbe:setIsRealtime(value)
+	self.isStatic = not value
+	self:dirty()
+end
+
 function ReflectionProbe:getDistance()
 	return self.distance
 end
@@ -114,20 +119,18 @@ end
 
 function ReflectionProbe:update()
 	if self.isDirty then
-		BufferFormat.setValue(
-			ReflectionProbe.REFLECTION_PROBE_FORMAT_INSTANCE,
-			self.data,
-			"position",
-			0,
-			self.position:get()
-		)
+		local x, y, z = self.position:get()
+		local d = self.distance
 
 		BufferFormat.setValue(
 			ReflectionProbe.REFLECTION_PROBE_FORMAT_INSTANCE,
 			self.data,
-			"distance",
+			"positionDistance",
 			0,
-			self.distance
+			x,
+			y,
+			z,
+			d
 		)
 
 		self.isDirty = false

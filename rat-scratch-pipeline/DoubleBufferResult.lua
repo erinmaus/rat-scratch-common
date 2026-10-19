@@ -3,10 +3,11 @@ local Object = require("rat-scratch-common").Object
 --- @class RatScratch.Pipeline.DoubleBufferResult : RatScratch.Common.BaseObject
 --- @field private sourceBuffer RatScratch.Pipeline.RenderBuffer
 --- @field private otherBuffer RatScratch.Pipeline.RenderBuffer
+--- @field private originalBuffer RatScratch.Pipeline.RenderBuffer
 --- @field private attachment integer[]
 --- @field private currentBuffer? RatScratch.Pipeline.RenderBuffer
 --- @field private nextBuffer? RatScratch.Pipeline.RenderBuffer
---- @overload fun(sourceBuffer: RatScratch.Pipeline.RenderBuffer, otherBuffer: RatScratch.Pipeline.RenderBuffer, attachment: integer): RatScratch.Pipeline.DoubleBufferResult
+--- @overload fun(sourceBuffer: RatScratch.Pipeline.RenderBuffer, otherBuffer: RatScratch.Pipeline.RenderBuffer, attachment: integer, originalBuffer?: RatScratch.Pipeline.RenderBuffer): RatScratch.Pipeline.DoubleBufferResult
 local DoubleBufferResult = Object()
 
 DoubleBufferResult.DEFAULT_DRAW_PADDING = 16
@@ -14,9 +15,16 @@ DoubleBufferResult.DEFAULT_DRAW_PADDING = 16
 --- @param sourceBuffer RatScratch.Pipeline.RenderBuffer
 --- @param otherBuffer RatScratch.Pipeline.RenderBuffer
 --- @param attachment integer
-function DoubleBufferResult:new(sourceBuffer, otherBuffer, attachment)
+--- @param originalBuffer? RatScratch.Pipeline.RenderBuffer
+function DoubleBufferResult:new(
+	sourceBuffer,
+	otherBuffer,
+	attachment,
+	originalBuffer
+)
 	self.sourceBuffer = sourceBuffer
 	self.otherBuffer = otherBuffer
+	self.originalBuffer = originalBuffer or self.sourceBuffer
 	self.attachment = { attachment }
 	self.isProcessing = false
 end
@@ -33,13 +41,26 @@ function DoubleBufferResult:start()
 	assert(not self.isProcessing, "double buffer result is already started")
 
 	self.isProcessing = true
-	self.currentBuffer = self.sourceBuffer
-	self.nextBuffer = self.otherBuffer
+
+	self.currentBuffer = self.originalBuffer
+	if self.originalBuffer == self.sourceBuffer then
+		self.nextBuffer = self.otherBuffer
+	else
+		self.nextBuffer = self.sourceBuffer
+	end
 end
 
 function DoubleBufferResult:step()
 	assert(self.isProcessing, "double buffer result is not started")
-	self.currentBuffer, self.nextBuffer = self.nextBuffer, self.currentBuffer
+	if
+		self.currentBuffer == self.originalBuffer
+		and self.originalBuffer ~= self.sourceBuffer
+	then
+		self.currentBuffer, self.nextBuffer = self.nextBuffer, self.otherBuffer
+	else
+		self.currentBuffer, self.nextBuffer =
+			self.nextBuffer, self.currentBuffer
+	end
 end
 
 function DoubleBufferResult:stop()

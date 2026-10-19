@@ -104,7 +104,7 @@ function RenderBuffer:resize(width, height, layers)
 	if
 		width == self.width
 		and height == self.height
-		and layers == self.layers
+		and layers <= self.layers
 	then
 		return false
 	end
