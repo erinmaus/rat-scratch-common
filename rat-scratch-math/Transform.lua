@@ -586,4 +586,103 @@ function Transform.compose(translation, rotation, scale, transform)
 	return transform
 end
 
+do
+	local _corners = {
+		Vector3(),
+		Vector3(),
+		Vector3(),
+		Vector3(),
+		Vector3(),
+		Vector3(),
+		Vector3(),
+		Vector3(),
+	}
+
+	local _corner = Vector3()
+
+	--- @param resultMinBounds? RatScratch.Math.Vector3
+	--- @param resultMaxBounds? RatScratch.Math.Vector3
+	--- @return RatScratch.Math.Vector3, RatScratch.Math.Vector3
+	local function _initResultBounds(resultMinBounds, resultMaxBounds)
+		resultMinBounds = resultMinBounds or Vector3()
+		resultMinBounds:from(math.huge)
+		resultMaxBounds = resultMaxBounds or Vector3()
+		resultMaxBounds:from(-math.huge)
+
+		return resultMinBounds, resultMaxBounds
+	end
+
+	--- @param minBounds RatScratch.Math.Vector3
+	--- @param maxBounds RatScratch.Math.Vector3
+	local function _initCorners(minBounds, maxBounds)
+		local corners = _corners
+		corners[1]:from(minBounds.x, minBounds.y, minBounds.z)
+		corners[2]:from(maxBounds.x, minBounds.y, minBounds.z)
+		corners[3]:from(minBounds.x, maxBounds.y, minBounds.z)
+		corners[4]:from(minBounds.x, minBounds.y, maxBounds.z)
+		corners[5]:from(maxBounds.x, maxBounds.y, minBounds.z)
+		corners[6]:from(maxBounds.x, minBounds.y, maxBounds.z)
+		corners[7]:from(minBounds.x, maxBounds.y, maxBounds.z)
+		corners[8]:from(maxBounds.x, maxBounds.y, maxBounds.z)
+
+		return corners
+	end
+
+	--- @param transform love.Transform
+	--- @param minBounds RatScratch.Math.Vector3
+	--- @param maxBounds RatScratch.Math.Vector3
+	--- @param resultMinBounds? RatScratch.Math.Vector3
+	--- @param resultMaxBounds? RatScratch.Math.Vector3
+	function Transform.transformBounds(
+		transform,
+		minBounds,
+		maxBounds,
+		resultMinBounds,
+		resultMaxBounds
+	)
+		resultMinBounds, resultMaxBounds =
+			_initResultBounds(resultMinBounds, resultMaxBounds)
+
+		local corners = _initCorners(minBounds, maxBounds)
+
+		local corner = _corner
+		for i = 1, #corners do
+			corners[i]:transform(transform, corner)
+
+			resultMinBounds:min(corner, resultMinBounds)
+			resultMaxBounds:max(corner, resultMaxBounds)
+		end
+
+		return resultMinBounds, resultMaxBounds
+	end
+
+	--- @param transform love.Transform
+	--- @param minBounds RatScratch.Math.Vector3
+	--- @param maxBounds RatScratch.Math.Vector3
+	--- @param resultMinBounds? RatScratch.Math.Vector3
+	--- @param resultMaxBounds? RatScratch.Math.Vector3
+	function Transform.perspectiveTransformBounds(
+		transform,
+		minBounds,
+		maxBounds,
+		resultMinBounds,
+		resultMaxBounds
+	)
+		resultMinBounds, resultMaxBounds =
+			_initResultBounds(resultMinBounds, resultMaxBounds)
+
+		local corners = _initCorners(minBounds, maxBounds)
+
+		local corner = _corner
+		for i = 1, #corners do
+			corners[i]:perspectiveTransform(transform, 1, corner)
+
+			resultMinBounds:min(corner, resultMinBounds)
+			resultMaxBounds:min(corner, resultMaxBounds)
+		end
+
+		return resultMinBounds, resultMaxBounds
+	end
+end
+
 return Transform
