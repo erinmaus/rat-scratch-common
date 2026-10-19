@@ -66,7 +66,7 @@ function demo.load()
 	local renderer = PipelineRenderer(pipelineRuntime)
 	local world = renderer:getWorld()
 	local scene = Scene(world)
-	local object = world:newObject()
+	local object = world:newStaticObject()
 	object:move(scene)
 
 	local sceneResource =
