@@ -5,7 +5,7 @@ restrict readonly buffer rat_ReflectionProbesBuffer
 	RatScratchPipelineReflectionProbe rat_ReflectionProbes[];
 };
 
-restrict readonly buffer rat_ReflectionProbeIndicesBuffer
+restrict readonly buffer rat_ReflectionProbeCountIndicesBuffer
 {
-	uint rat_ReflectionProbeIndices[];
+	uint rat_ReflectionProbeCountIndices[];
 };

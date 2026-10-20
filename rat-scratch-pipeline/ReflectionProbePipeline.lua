@@ -83,7 +83,10 @@ function ReflectionProbePipeline:add(probe)
 	assert(not self.probesByInstance[probe], "probe exists in pipeline")
 
 	self.probesByInstance[probe] = true
+	self.dirtyProbes[probe] = true
+
 	self.camerasBuffer:register(probe, probe:getCameraCount())
+	self.reflectionProbesBuffer:register(probe, 1)
 
 	probe:listen(ReflectionProbeEvent.UPDATE, self._onProbeUpdate, self)
 
@@ -108,6 +111,7 @@ function ReflectionProbePipeline:remove(probe)
 	self.realtimeProbes[probe] = nil
 
 	self.camerasBuffer:unregister(probe)
+	self.reflectionProbesBuffer:unregister(probe)
 
 	probe:silence(ReflectionProbeEvent.UPDATE, self._onProbeUpdate, self)
 end

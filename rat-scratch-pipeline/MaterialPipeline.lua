@@ -100,7 +100,7 @@ MaterialPipeline.DEFAULT_TEXTURES_COUNT = 128
 MaterialPipeline.DEFAULT_MATERIAL_INSTANCES_COUNT = 1024
 
 MaterialPipeline.DEFAULT_ALBEDO_COLOR = GammaColor(1)
-MaterialPipeline.DEFAULT_NORMAL_COLOR = LinearColor(0, 0, 1)
+MaterialPipeline.DEFAULT_NORMAL_COLOR = LinearColor(0.5, 0.5, 1)
 MaterialPipeline.DEFAULT_METAL_ROUGHNESS_COLOR = LinearColor(1)
 MaterialPipeline.DEFAULT_OCCLUSION_COLOR = LinearColor(1)
 MaterialPipeline.DEFAULT_EMISSIVE_COLOR = GammaColor(0)

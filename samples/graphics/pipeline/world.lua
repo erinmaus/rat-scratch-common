@@ -136,6 +136,7 @@ function demo.load()
 
 	scene:setCamera(camera)
 	scene:getPipeline(LightPipeline):loadDefaultShaders()
+	scene:getPipeline(ReflectionProbePipeline):loadDefaultShaders()
 
 	demo.runtime = pipelineRuntime
 	demo.renderer = renderer
@@ -151,17 +152,18 @@ function demo.load()
 		demo.scene
 	)
 
-	demo.forwardRenderPass = ForwardRendererPass()
-	demo.forwardRenderPass:addDependency(demo.shadowRenderPass)
-	demo.forwardRenderPass:attach(
+	demo.reflectionRenderPass = ReflectionRenderPass()
+	demo.reflectionRenderPass:addDependency(demo.shadowRenderPass)
+	demo.reflectionRenderPass:attach(
 		demo.runtime:getDefaultQualityPreset(),
 		demo.world,
 		demo.scene
 	)
 
-	demo.reflectionRenderPass = ReflectionRenderPass()
-	demo.reflectionRenderPass:addDependency(demo.shadowRenderPass)
-	demo.reflectionRenderPass:attach(
+	demo.forwardRenderPass = ForwardRendererPass()
+	demo.forwardRenderPass:addDependency(demo.shadowRenderPass)
+	demo.forwardRenderPass:addDependency(demo.reflectionRenderPass)
+	demo.forwardRenderPass:attach(
 		demo.runtime:getDefaultQualityPreset(),
 		demo.world,
 		demo.scene
@@ -181,6 +183,11 @@ function demo.load()
 	)
 
 	demo.instancedDraws = { 0, 0, total = 0 }
+
+	demo.centerProbe = ReflectionProbe()
+	demo.centerProbe:setDistance(50)
+	demo.centerProbe:setIsRealtime(true)
+	demo.scene:getPipeline(ReflectionProbePipeline):add(demo.centerProbe)
 end
 
 demo.isPanning = false
@@ -320,12 +327,12 @@ function demo.update()
 		end
 		Table.clear(demo.reflectionProbes)
 
-		local GRID_SIZE = 20
+		local GRID_SIZE = 10
 		for x = math.min(minBounds.x, -GRID_SIZE), math.max(maxBounds.x, GRID_SIZE), GRID_SIZE do
 			for z = math.min(minBounds.z, -GRID_SIZE), math.max(maxBounds.z, GRID_SIZE), GRID_SIZE do
 				local probe = ReflectionProbe()
-				probe:setDistance(25)
-				probe:setPosition(Vector3(x, 10, z))
+				probe:setDistance(50)
+				probe:setPosition(Vector3(x, 2, z))
 				probe:setIsRealtime(true)
 
 				demo.scene:getPipeline(ReflectionProbePipeline):add(probe)
@@ -334,17 +341,11 @@ function demo.update()
 			end
 		end
 
-		print(
-			"size xy",
-			maxBounds.x - minBounds.z,
-			maxBounds.z - minBounds.z,
-			"probes",
-			#demo.reflectionProbes
-		)
-
 		demo.minBounds:from(minBounds:get())
 		demo.maxBounds:from(maxBounds:get())
 	end
+
+	demo.centerProbe:setPosition(demo.view:getTranslation())
 end
 
 local function prettyNumber(value)
@@ -363,16 +364,16 @@ function demo.draw()
 	demo.renderer:cull(
 		demo.runtime:getDefaultQualityPreset(),
 		demo.scene,
-		demo.reflectionRenderPass:getCullResult()
+		demo.shadowRenderPass:getCullResult()
 	)
-	demo.renderer:draw(demo.reflectionRenderPass)
+	demo.renderer:draw(demo.shadowRenderPass)
 
 	demo.renderer:cull(
 		demo.runtime:getDefaultQualityPreset(),
 		demo.scene,
-		demo.shadowRenderPass:getCullResult()
+		demo.reflectionRenderPass:getCullResult()
 	)
-	demo.renderer:draw(demo.shadowRenderPass)
+	demo.renderer:draw(demo.reflectionRenderPass)
 
 	demo.renderer:cull(
 		demo.runtime:getDefaultQualityPreset(),

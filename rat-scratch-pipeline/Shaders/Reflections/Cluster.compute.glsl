@@ -13,9 +13,9 @@ restrict readonly buffer rat_ReflectionProbesBuffer
 	RatScratchPipelineReflectionProbe rat_ReflectionProbes[];
 };
 
-restrict buffer rat_ReflectionProbeIndicesBuffer
+restrict buffer rat_ReflectionProbeCountIndicesBuffer
 {
-	uint rat_ReflectionProbeIndices[];
+	uint rat_ReflectionProbeCountIndices[];
 };
 
 restrict readonly buffer rat_ActiveCamerasBuffer
@@ -27,7 +27,7 @@ uniform uint rat_ReflectionProbeCount;
 uniform uint rat_ActiveCameraCount;
 uniform uvec2 rat_ScreenSize;
 
-bool boundsInsideCell(RatScratchPipelineCamera camera, vec4 boundsMin, vec4 boundsMax, vec2 cellMin, vec2 cellMax)
+bool boundsInsideCell(RatScratchPipelineCamera camera, vec3 boundsMin, vec3 boundsMax, vec2 cellMin, vec2 cellMax)
 {
 	vec4[RAT_SCRATCH_PIPELINE_CAMERA_PLANE_COUNT] planes;
 	getCameraPlanes(camera, planes, cellMin, cellMax);
@@ -44,12 +44,12 @@ void tryAddReflectinProbeToCell(uvec2 cellCoordinate, uint probeIndex, uint came
 	uint offset = dimensions.x * dimensions.y * dimensions.z * cameraIndex;
 	uint index = coordinateToIndex(coordinate, dimensions);
 
-	uint previousCount = atomicAdd(rat_ReflectionProbeIndices[index + offset], 1);
+	uint previousCount = atomicAdd(rat_ReflectionProbeCountIndices[index + offset], 1);
 	if (previousCount < RAT_SCRATCH_PIPELINE_CONFIG_MAX_REFLECTION_PROBES_PER_CELL)
 	{
 		uvec3 probeCellCoordinate = uvec3(cellCoordinate, previousCount + 1);
 		uint probeCellIndex = coordinateToIndex(probeCellCoordinate, dimensions);
-		rat_ReflectionProbeIndices[probeCellIndex + offset] = probeIndex;
+		rat_ReflectionProbeCountIndices[probeCellIndex + offset] = probeIndex;
 	}
 }
 
@@ -60,7 +60,7 @@ void testReflectionProbe(RatScratchPipelineCamera camera, vec2 cellMin, vec2 cel
 	vec3 boundsMin = reflectionProbe.positionDistance.xyz - vec3(reflectionProbe.positionDistance.w);
 	vec3 boundsMax = reflectionProbe.positionDistance.xyz + vec3(reflectionProbe.positionDistance.w);
 
-	if (boundsInsideCell(camera, sphere, boundsMin, boundsMax, cellMin, cellMax))
+	if (boundsInsideCell(camera, boundsMin, boundsMax, cellMin, cellMax))
 	{
 		tryAddReflectinProbeToCell(cellCoordinate, probeIndex, cameraIndex);
 	}
@@ -94,6 +94,6 @@ void computemain()
 
 	for (uint k = i; k < j; ++k)
 	{
-		testReflectionProbe(camera, cellMin, cellMax, cellCoordinate, probeIndex, cameraIndex);
+		testReflectionProbe(camera, cellMin, cellMax, coordinate, k, cameraIndex);
 	}
 }

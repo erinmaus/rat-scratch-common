@@ -8,6 +8,8 @@ local LightClusterResult = require("rat-scratch-pipeline.LightClusterResult")
 local LightPipeline = require("rat-scratch-pipeline.LightPipeline")
 local ObjectHandleEvent = require("rat-scratch-pipeline.ObjectHandleEvent")
 local Pipelines = require("rat-scratch-pipeline.Pipelines")
+local ReflectionProbePipeline =
+	require("rat-scratch-pipeline.ReflectionProbePipeline")
 local Vector3 = require("rat-scratch-math").Vector3
 
 --- @class RatScratch.Pipeline.Scene : RatScratch.Common.BaseObject
@@ -290,6 +292,7 @@ end
 function Scene:update()
 	self.pipelines:get(DrawPipeline):update()
 	self.pipelines:get(LightPipeline):update()
+	self.pipelines:get(ReflectionProbePipeline):update()
 
 	self.camerasBuffer:update()
 end
@@ -301,6 +304,7 @@ function Scene:flush()
 
 	self.pipelines:get(DrawPipeline):flush()
 	self.pipelines:get(LightPipeline):flush()
+	self.pipelines:get(ReflectionProbePipeline):flush()
 
 	self.camerasBuffer:flush()
 end
