@@ -227,12 +227,12 @@ function MaterialPipeline:new(pipelineRuntime)
 		)
 	end
 
-	self:addTexture(self.defaultImageData.albedo)
-	self:addTexture(self.defaultImageData.normal)
-	self:addTexture(self.defaultImageData.metalRoughness)
-	self:addTexture(self.defaultImageData.occlusion)
-	self:addTexture(self.defaultImageData.emissive)
-	self:addTexture(self.defaultImageData.fluorescence)
+	self:addTexture(self.defaultImageData.albedo, 16)
+	self:addTexture(self.defaultImageData.normal, 16)
+	self:addTexture(self.defaultImageData.metalRoughness, 16)
+	self:addTexture(self.defaultImageData.occlusion, 16)
+	self:addTexture(self.defaultImageData.emissive, 16)
+	self:addTexture(self.defaultImageData.fluorescence, 16)
 end
 
 function MaterialPipeline:getDefaultPBRTexture(name)
@@ -373,13 +373,14 @@ function MaterialPipeline:hasTexture(texture)
 end
 
 --- @param texture love.ImageData
-function MaterialPipeline:addTexture(texture)
+--- @param padding? integer
+function MaterialPipeline:addTexture(texture, padding)
 	assert(
 		not self.textures[texture],
 		"texture already exists in material pipeline"
 	)
 
-	local handle = ImageDataAtlasHandle(texture)
+	local handle = ImageDataAtlasHandle(texture, padding)
 	local success = self.atlas:add(handle)
 	assert(success, "texture could not be added to atlas")
 

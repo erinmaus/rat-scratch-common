@@ -78,6 +78,11 @@ function ReflectionProbePipeline:newLightClusterResult()
 	return LightClusterResult(self.camerasBuffer)
 end
 
+function ReflectionProbePipeline:getProbeCount()
+	local _, count = self.reflectionProbesBuffer:getIndexCount()
+	return count
+end
+
 --- @param probe RatScratch.Pipeline.ReflectionProbe
 function ReflectionProbePipeline:add(probe)
 	assert(not self.probesByInstance[probe], "probe exists in pipeline")

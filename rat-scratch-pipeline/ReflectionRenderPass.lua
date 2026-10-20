@@ -21,10 +21,12 @@ local ShadowRenderPass = require("rat-scratch-pipeline.ShadowRenderPass")
 local ReflectionRenderPass = Object(RenderPass)
 
 ReflectionRenderPass.RENDER_BUFFER_FORMAT = {
-	"srgba8",
+	"rgba32f",
 }
 
-ReflectionRenderPass.RENDER_BUFFER_DEPTH_FORMAT = "depth16"
+ReflectionRenderPass.RENDER_BUFFER_DEPTH_FORMAT = "depth32f"
+
+ReflectionRenderPass.NIL_TEXTURE = love.graphics.newTexture(1, 1, 1, { canvas = true, readable = true })
 
 function ReflectionRenderPass:new()
 	RenderPass.new(self)
@@ -120,9 +122,13 @@ function ReflectionRenderPass:bind(shader)
 
 	if shader:hasUniform("rat_PipelineReflectionAtlasView") then
 		shader:send(
-			"rat_PipelineGlobalIlluminationAtlasView",
+			"rat_PipelineReflectionAtlasView",
 			self.renderBuffer:getCanvas(1)
 		)
+	end
+
+	if shader:hasUniform("rat_ReflectionProbeCount") then
+		shader:send("rat_ReflectionProbeCount", self:getScene():getPipeline(ReflectionProbePipeline):getProbeCount())
 	end
 end
 
@@ -159,6 +165,18 @@ do
 				"rat_LightCountIndicesBuffer",
 				self.lightClusterResult:getLightIndicesBuffer()
 			)
+		end
+
+		if drawShader:hasUniform("rat_ReflectionProbeCount") then
+			drawShader:send("rat_ReflectionProbeCount", 0)
+		end
+
+		if drawShader:hasUniform("rat_PipelineGlobalIlluminationAtlasView") then
+			drawShader:send("rat_PipelineGlobalIlluminationAtlasView", ReflectionRenderPass.NIL_TEXTURE)
+		end
+
+		if drawShader:hasUniform("rat_PipelineReflectionAtlasView") then
+			drawShader:send("rat_PipelineReflectionAtlasView", ReflectionRenderPass.NIL_TEXTURE)
 		end
 
 		local screenSize = _screenSize

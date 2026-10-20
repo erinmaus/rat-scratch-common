@@ -172,6 +172,10 @@ do
 
 		if self:hasDependency(ReflectionRenderPass) then
 			self:getDependency(ReflectionRenderPass):bind(drawShader)
+		else
+			if drawShader:hasUniform("rat_ReflectionProbeCount") then
+				drawShader:send("rat_ReflectionProbeCount", 0)
+			end
 		end
 
 		if self.reflectionProbeClusterResult then

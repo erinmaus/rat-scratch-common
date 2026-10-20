@@ -3,14 +3,15 @@ local EventSource = require("rat-scratch-common").EventSource
 local AtlasHandle = require("rat-scratch-graphics.Atlas.AtlasHandle")
 
 --- @class RatScratch.Graphics.Atlas.ImageDataAtlasHandle : RatScratch.Graphics.Atlas.AtlasHandle
---- @overload fun(imageData?: love.ImageData): RatScratch.Graphics.Atlas.ImageDataAtlasHandle
+--- @overload fun(imageData?: love.ImageData, padding?: integer): RatScratch.Graphics.Atlas.ImageDataAtlasHandle
 --- @field private imageData? love.ImageData
 local ImageDataAtlasHandle = Object(AtlasHandle)
 
-function ImageDataAtlasHandle:new(imageData)
+function ImageDataAtlasHandle:new(imageData, padding)
 	AtlasHandle.new(self)
 
 	self.imageData = imageData
+	self.padding = math.max(padding or 0, 0)
 end
 
 function ImageDataAtlasHandle:getWidth()
@@ -24,6 +25,10 @@ end
 function ImageDataAtlasHandle:setImageData(value)
 	self.imageData = value
 	self:fireModify()
+end
+
+function ImageDataAtlasHandle:getPadding()
+	return self.padding
 end
 
 --- @param texture love.Texture

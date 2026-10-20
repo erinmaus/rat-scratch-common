@@ -82,7 +82,7 @@ void ratApplyEnvironmentProbes(in RatScratchPipelineFragmentOutput fragmentOutpu
 			continue;
 		}
 
-		float w = 1.0; // 1.0 - clamp(distanceFromThreshold / threshold, 0.0, 1.0);
+		float w = 1.0;//1.0 - clamp(distanceFromThreshold / threshold, 0.0, 1.0);
 
 		weight += w;
 		radiance += vec3(w) * ratSampleReflectionProbe(probe, fragmentOutput.position, fragmentOutput.roughness, R).rgb;
@@ -102,10 +102,8 @@ void ratApplyEnvironmentProbes(in RatScratchPipelineFragmentOutput fragmentOutpu
 	float nDotV = max(dot(V, N), 0.0);
 	vec3 F = ratPBRFresnelSchlick(nDotV, mix(vec3(0.04), fragmentOutput.albedo.rgb, vec3(fragmentOutput.metal)));
 
-	// result.specular += F * radiance * vec3(result.occlusion);
-	result.specular = vec3(0.0);
-	// result.diffuse += irradiance * vec3(result.occlusion);
-	result.diffuse = radiance;
+	//result.specular += F * radiance * vec3(result.occlusion);
+	result.diffuse = irradiance * vec3(result.occlusion);
 }
 
 void ratApplyLights(in RatScratchPipelineFragmentOutput fragmentOutput, inout RatScratchPipelineLightResult result)
@@ -122,6 +120,12 @@ void ratApplyLights(in RatScratchPipelineFragmentOutput fragmentOutput, inout Ra
 	uint lightsCount = rat_LightCountIndices[ratApplyLightsImplGetIndex(uvec3(lightCoordinate.xy, 0), lightDimensions,
 																		fragmentOutput.cameraIndex)];
 	lightsCount = min(lightsCount, RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL);
+
+	result.diffuse = vec3(lightsCount);
+	if (true)
+	{
+		return;
+	}
 
 	for (uint i = 0; i < lightsCount; ++i)
 	{
@@ -150,5 +154,8 @@ void ratApplyLights(in RatScratchPipelineFragmentOutput fragmentOutput, inout Ra
 		}
 	}
 
-	ratApplyEnvironmentProbes(fragmentOutput, result);
+	if (rat_ReflectionProbeCount > 0)
+	{
+		ratApplyEnvironmentProbes(fragmentOutput, result);
+	}
 }

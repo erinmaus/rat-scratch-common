@@ -129,7 +129,7 @@ function demo.load()
 	demo.projection:setFOV(math.rad(65.3))
 
 	demo.view = ArcballCameraView()
-	demo.view:setTranslation(Vector3(0, 2, 0))
+	demo.view:setTranslation(Vector3(0, 4, 0))
 
 	local camera = Camera(demo.projection, demo.view)
 	demo.camera = camera
@@ -187,6 +187,7 @@ function demo.load()
 	demo.centerProbe = ReflectionProbe()
 	demo.centerProbe:setFar(50)
 	demo.centerProbe:setDistance(10)
+	demo.centerProbe:setDistanceFalloff(15)
 	demo.centerProbe:setIsRealtime(true)
 	demo.scene:getPipeline(ReflectionProbePipeline):add(demo.centerProbe)
 end
@@ -321,7 +322,7 @@ function demo.update()
 	if
 		not (
 			minBounds:equal(demo.minBounds) and maxBounds:equal(demo.maxBounds)
-		)
+		) and false
 	then
 		for _, probe in ipairs(demo.reflectionProbes) do
 			demo.scene:getPipeline(ReflectionProbePipeline):remove(probe)

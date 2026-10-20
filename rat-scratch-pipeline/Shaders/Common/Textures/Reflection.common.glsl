@@ -50,20 +50,18 @@ void ratSampleProbeCorrectParallaxImpl(RatScratchPipelineReflectionProbe probe, 
 
 vec4 ratSampleGlobalIlluminationProbe(RatScratchPipelineReflectionProbe probe, vec3 position, vec3 direction)
 {
-	// ratSampleProbeCorrectParallaxImpl(probe, position, direction);
+	//ratSampleProbeCorrectParallaxImpl(probe, position, direction);
 	return ratSampleProbeImpl(rat_PipelineGlobalIlluminationAtlasView, probe.atlasImageIndexCount.x, direction);
 }
 
 vec4 ratSampleReflectionProbe(RatScratchPipelineReflectionProbe probe, vec3 position, float roughness, vec3 direction)
 {
-	ratSampleProbeCorrectParallaxImpl(probe, position, direction);
+	//ratSampleProbeCorrectParallaxImpl(probe, position, direction);
 
 	roughness = max(roughness, 0.01);
 	float s = 2.0 / (roughness * roughness) - 2.0;
 	float mipLevel = clamp(RAT_SCRATCH_PIPELINE_PROBE_IMPL_MIP_OFFSET - 0.5 * log2(s + 1.0), 0.0,
 						   RAT_SCRATCH_PIPELINE_PROBE_IMPL_MAX_MIP_LEVEL);
 
-	// return ratSampleProbeImpl(rat_PipelineReflectionAtlasView, probe.atlasImageIndexCount.x, direction, mipLevel);
-	// return vec4(vec3(mipLevel / float(RAT_SCRATCH_PIPELINE_PROBE_IMPL_MAX_MIP_LEVEL + 1.0)), 1.0);
-	return vec4(vec3(s, RAT_SCRATCH_PIPELINE_PROBE_IMPL_MIP_OFFSET - 0.5 * log2(s + 1.0), mipLevel), 1.0);
+	return ratSampleProbeImpl(rat_PipelineReflectionAtlasView, probe.atlasImageIndexCount.x, direction, mipLevel);
 }

@@ -278,10 +278,11 @@ function Atlas:getTextureCoordinates(handle)
 		return nil, nil, nil, nil, nil
 	end
 
-	local left = entry:getX() / self.width
-	local right = (entry:getX() + entry:getWidth()) / self.width
-	local top = entry:getY() / self.height
-	local bottom = (entry:getY() + entry:getHeight()) / self.height
+	local padding = handle:getPadding()
+	local left = (entry:getX() + padding) / self.width
+	local right = (entry:getX() + entry:getWidth() - padding * 2) / self.width
+	local top = (entry:getY() + padding) / self.height
+	local bottom = (entry:getY() + entry:getHeight() - padding * 2) / self.height
 
 	return left, right, top, bottom, entry:getLayer()
 end
