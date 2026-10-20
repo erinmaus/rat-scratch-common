@@ -33,10 +33,14 @@ function ReflectionRenderPass:new()
 		ReflectionRenderPass.RENDER_BUFFER_FORMAT,
 		ReflectionRenderPass.RENDER_BUFFER_DEPTH_FORMAT
 	)
-	self.sourceRenderBuffer =
-		RenderBuffer(ReflectionRenderPass.RENDER_BUFFER_FORMAT)
-	self.otherRenderBuffer =
-		RenderBuffer(ReflectionRenderPass.RENDER_BUFFER_FORMAT)
+	self.sourceRenderBuffer = RenderBuffer(
+		ReflectionRenderPass.RENDER_BUFFER_FORMAT,
+		ReflectionRenderPass.RENDER_BUFFER_DEPTH_FORMAT
+	)
+	self.otherRenderBuffer = RenderBuffer(
+		ReflectionRenderPass.RENDER_BUFFER_FORMAT,
+		ReflectionRenderPass.RENDER_BUFFER_DEPTH_FORMAT
+	)
 	self.blurDoubleBufferResult = DoubleBufferResult(
 		self.sourceRenderBuffer,
 		self.otherRenderBuffer,
@@ -175,6 +179,7 @@ function ReflectionRenderPass:_blurGI()
 	love.graphics.push("all")
 	do
 		love.graphics.setBlendState("add", "one", "zero")
+		love.graphics.setDepthMode()
 
 		local blurShader = self.blurShaderResource:get()
 		love.graphics.setShader(blurShader)

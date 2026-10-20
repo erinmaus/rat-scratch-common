@@ -246,30 +246,30 @@ do
 		screenSize[1], screenSize[2] = screenWidth, screenHeight
 		shader:send("rat_ScreenSize", screenSize)
 
-		local _, lightsCount = self.reflectionProbesBuffer:getIndexCount()
-		shader:send("rat_ReflectionProbeCount", lightsCount)
+		local _, probesCount = self.reflectionProbesBuffer:getIndexCount()
+		shader:send("rat_ReflectionProbeCount", probesCount)
 
 		local camerasBuffer = result:getCamerasBuffer()
 		camerasBuffer:bind(shader)
 
 		local cellSizeX, cellSizeY = self.pipelineRuntime:getCurrentProperty(
 			qualityPreset,
-			"pipeline.properties.lighting.cellsSizeInPixels"
+			"pipeline.properties.reflection.cellsSizeInPixels"
 		)
-		local maxReflectionProbesPerCell = self.pipelineRuntime:getCurrentProperty(
+		local maxProbesPerCell = self.pipelineRuntime:getCurrentProperty(
 			qualityPreset,
-			"pipeline.properties.lighting.maxReflectionProbesPerCell"
+			"pipeline.properties.reflection.maxProbesPerCell"
 		) or 0
-		local maxReflectionProbesPerThread = self.pipelineRuntime:getCurrentProperty(
+		local maxProbesPerThread = self.pipelineRuntime:getCurrentProperty(
 			qualityPreset,
-			"pipeline.properties.lighting.maxReflectionProbesPerThread"
+			"pipeline.properties.reflection.maxProbesPerThread"
 		) or 1
 
 		local cellsCount = math.ceil(screenWidth / (cellSizeX or 1))
 			* math.ceil(screenHeight / (cellSizeY or 1))
 
 		local minReflectionProbeIndicesElementCount = cellsCount
-			* (maxReflectionProbesPerCell + 1)
+			* (maxProbesPerCell + 1)
 			* camerasBuffer:getCameraCount()
 		local reflectionProbeIndicesBuffer =
 			result:reserveReflectionProbeIndices(
@@ -288,9 +288,7 @@ do
 			shader,
 			math.max(math.ceil(cellsCount / localSizeX), 1),
 			math.max(
-				math.ceil(
-					lightsCount / maxReflectionProbesPerThread / localSizeY
-				),
+				math.ceil(probesCount / maxProbesPerThread / localSizeY),
 				1
 			),
 			math.max(
