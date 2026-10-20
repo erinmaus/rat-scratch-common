@@ -66,4 +66,5 @@ void ratClearLightResult(out RatScratchPipelineLightResult result)
 	result.diffuse = vec3(0.0);
 	result.specular = vec3(0.0);
 	result.fluorescence = vec3(0.0);
+	result.occlusion = 0.0;
 }

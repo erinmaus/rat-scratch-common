@@ -12,6 +12,8 @@ local ShadowRenderPass = require("rat-scratch-pipeline.ShadowRenderPass")
 
 --- @class RatScratch.Pipeline.ReflectionRenderPass : RatScratch.Pipeline.RenderPass
 --- @field private renderBuffer RatScratch.Pipeline.RenderBuffer
+--- @field private sourceRenderBuffer RatScratch.Pipeline.RenderBuffer
+--- @field private otherRenderBuffer RatScratch.Pipeline.RenderBuffer
 --- @field private cullResult RatScratch.Pipeline.CullResult
 --- @field private lightClusterResult RatScratch.Pipeline.LightClusterResult
 --- @field private blurDoubleBufferResult RatScratch.Pipeline.DoubleBufferResult
@@ -105,6 +107,23 @@ end
 
 function ReflectionRenderPass:getLightClusterResult()
 	return self.lightClusterResult
+end
+
+--- @param shader love.Shader
+function ReflectionRenderPass:bind(shader)
+	if shader:hasUniform("rat_PipelineGlobalIlluminationAtlasView") then
+		shader:send(
+			"rat_PipelineGlobalIlluminationAtlasView",
+			self.blurDoubleBufferResult:getResult()
+		)
+	end
+
+	if shader:hasUniform("rat_PipelineReflectionAtlasView") then
+		shader:send(
+			"rat_PipelineGlobalIlluminationAtlasView",
+			self.renderBuffer:getCanvas(1)
+		)
+	end
 end
 
 function ReflectionRenderPass:start()

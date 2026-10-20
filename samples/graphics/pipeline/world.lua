@@ -64,7 +64,7 @@ function demo.load()
 		makeGLB()
 	end
 
-	ResourceLoader.toggleDebug(true)
+	--ResourceLoader.toggleDebug(true)
 
 	local pipelineRuntime = PipelineRuntime.loadDefault()
 	demo.runtime = pipelineRuntime
@@ -185,7 +185,8 @@ function demo.load()
 	demo.instancedDraws = { 0, 0, total = 0 }
 
 	demo.centerProbe = ReflectionProbe()
-	demo.centerProbe:setDistance(50)
+	demo.centerProbe:setFar(50)
+	demo.centerProbe:setDistance(10)
 	demo.centerProbe:setIsRealtime(true)
 	demo.scene:getPipeline(ReflectionProbePipeline):add(demo.centerProbe)
 end
@@ -331,7 +332,9 @@ function demo.update()
 		for x = math.min(minBounds.x, -GRID_SIZE), math.max(maxBounds.x, GRID_SIZE), GRID_SIZE do
 			for z = math.min(minBounds.z, -GRID_SIZE), math.max(maxBounds.z, GRID_SIZE), GRID_SIZE do
 				local probe = ReflectionProbe()
-				probe:setDistance(50)
+				probe:setDistance(GRID_SIZE)
+				probe:setDistanceFalloff(GRID_SIZE * 1.25)
+				probe:setFar(50)
 				probe:setPosition(Vector3(x, 2, z))
 				probe:setIsRealtime(true)
 

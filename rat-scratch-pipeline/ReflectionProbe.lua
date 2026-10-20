@@ -6,6 +6,7 @@ local CubeMap = require("rat-scratch-graphics").CubeMap
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local ArcballCameraView = require("rat-scratch-pipeline.ArcballCameraView")
 local Camera = require("rat-scratch-pipeline.Camera")
+local MathCommon = require("rat-scratch-math.Common")
 local PerspectiveFOVCameraProjection =
 	require("rat-scratch-pipeline.PerspectiveFOVCameraProjection")
 local ReflectionProbeEvent =
@@ -24,7 +25,8 @@ local ReflectionProbe = Object()
 
 ReflectionProbe.REFLECTION_PROBE_FORMAT = {
 	{ location = 0, name = "atlasImageIndexCount", format = "uint32vec2" },
-	{ location = 1, name = "positionDistance", format = "floatvec4" },
+	{ location = 1, name = "position", format = "floatvec3" },
+	{ location = 2, name = "radius", format = "floatvec2" },
 }
 
 ReflectionProbe.REFLECTION_PROBE_FORMAT_INSTANCE =
@@ -42,6 +44,7 @@ function ReflectionProbe:new()
 	self:_initCameras()
 
 	self.distance = 1
+	self.distanceFalloff = 1.25
 	self.position = Vector3()
 
 	self.isStatic = true
@@ -111,26 +114,47 @@ end
 
 --- @param value number
 function ReflectionProbe:setDistance(value)
-	self.distance = math.max(value, 1)
-	self.perspective:setFar(self.distance)
-
+	self.distance = math.max(value, MathCommon.EPSILON)
+	self.distanceFalloff = math.max(self.distance, self.distanceFalloff)
 	self:dirty()
+end
+
+--- @param value number
+function ReflectionProbe:setDistanceFalloff(value)
+	self.distanceFalloff = math.max(value, self.distance)
+end
+
+function ReflectionProbe:getDistanceFalloff()
+	return self.distanceFalloff
+end
+
+--- @param value number
+function ReflectionProbe:setFar(value)
+	self.perspective:setFar(math.max(value, 1))
+	self:dirty()
+end
+
+function ReflectionProbe:getFar()
+	return self.perspective:getFar()
 end
 
 function ReflectionProbe:update()
 	if self.isDirty then
-		local x, y, z = self.position:get()
-		local d = self.distance
+		BufferFormat.setValue(
+			ReflectionProbe.REFLECTION_PROBE_FORMAT_INSTANCE,
+			self.data,
+			"position",
+			0,
+			self.position:get()
+		)
 
 		BufferFormat.setValue(
 			ReflectionProbe.REFLECTION_PROBE_FORMAT_INSTANCE,
 			self.data,
-			"positionDistance",
+			"radius",
 			0,
-			x,
-			y,
-			z,
-			d
+			self.distance,
+			self.distanceFalloff
 		)
 
 		self.isDirty = false

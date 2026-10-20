@@ -38,9 +38,9 @@ bool boundsInsideCell(RatScratchPipelineCamera camera, vec3 boundsMin, vec3 boun
 void tryAddReflectinProbeToCell(uvec2 cellCoordinate, uint probeIndex, uint cameraIndex)
 {
 	uvec3 coordinate = uvec3(cellCoordinate, 0);
-	uvec3 dimensions =
-		uvec3(uvec2(ceil(vec2(rat_ScreenSize) / vec2(RAT_SCRATCH_PIPELINE_CONFIG_REFLECTION_PROBE_SIZE_IN_PIXELS))),
-			  RAT_SCRATCH_PIPELINE_CONFIG_MAX_REFLECTION_PROBES_PER_CELL + 1);
+	uvec3 dimensions = uvec3(
+		uvec2(ceil(vec2(rat_ScreenSize) / vec2(RAT_SCRATCH_PIPELINE_CONFIG_REFLECTION_PROBE_CELL_SIZE_IN_PIXELS))),
+		RAT_SCRATCH_PIPELINE_CONFIG_MAX_REFLECTION_PROBES_PER_CELL + 1);
 	uint offset = dimensions.x * dimensions.y * dimensions.z * cameraIndex;
 	uint index = coordinateToIndex(coordinate, dimensions);
 
@@ -57,8 +57,8 @@ void testReflectionProbe(RatScratchPipelineCamera camera, vec2 cellMin, vec2 cel
 						 uint probeIndex, uint cameraIndex)
 {
 	RatScratchPipelineReflectionProbe reflectionProbe = rat_ReflectionProbes[probeIndex];
-	vec3 boundsMin = reflectionProbe.positionDistance.xyz - vec3(reflectionProbe.positionDistance.w);
-	vec3 boundsMax = reflectionProbe.positionDistance.xyz + vec3(reflectionProbe.positionDistance.w);
+	vec3 boundsMin = reflectionProbe.position - vec3(reflectionProbe.radius.y);
+	vec3 boundsMax = reflectionProbe.position + vec3(reflectionProbe.radius.y);
 
 	if (boundsInsideCell(camera, boundsMin, boundsMax, cellMin, cellMax))
 	{
@@ -70,7 +70,7 @@ void computemain()
 {
 	uint cellIndex = gl_GlobalInvocationID.x;
 	uvec2 dimensions =
-		uvec2(ceil(vec2(rat_ScreenSize) / vec2(RAT_SCRATCH_PIPELINE_CONFIG_REFLECTION_PROBE_SIZE_IN_PIXELS)));
+		uvec2(ceil(vec2(rat_ScreenSize) / vec2(RAT_SCRATCH_PIPELINE_CONFIG_REFLECTION_PROBE_CELL_SIZE_IN_PIXELS)));
 	uvec2 coordinate = indexToCoordinate(cellIndex, dimensions);
 	if (coordinate.x >= dimensions.x || coordinate.y >= dimensions.y)
 	{

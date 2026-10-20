@@ -44,6 +44,7 @@ void pixelmain()
 
 	RatScratchPipelineLightResult result;
 	ratClearLightResult(result);
+	result.occlusion = fragmentOutput.occlusion;
 
 	ratApplyLights(fragmentOutput, result);
 	rat_Result = vec4(albedo.rgb * result.diffuse + result.specular + result.fluorescence + emissive, albedo.a);

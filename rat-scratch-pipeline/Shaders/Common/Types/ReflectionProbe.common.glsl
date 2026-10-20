@@ -1,5 +1,6 @@
 struct RatScratchPipelineReflectionProbe
 {
 	uvec2 atlasImageIndexCount;
-	vec4 positionDistance;
+	vec3 position;
+	vec2 radius;
 };

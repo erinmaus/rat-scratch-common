@@ -221,6 +221,17 @@ function ReflectionProbePipeline:loadDefaultShaders()
 	end
 end
 
+--- @param shader love.Shader
+--- @param qualityPreset string
+function ReflectionProbePipeline:bind(shader, qualityPreset)
+	if shader:hasUniform("rat_ReflectionProbesBuffer") then
+		shader:send(
+			"rat_ReflectionProbesBuffer",
+			self.reflectionProbesBuffer:getBuffer()
+		)
+	end
+end
+
 do
 	local _screenSize = { 0, 0 }
 

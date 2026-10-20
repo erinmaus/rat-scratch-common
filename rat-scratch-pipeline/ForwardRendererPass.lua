@@ -24,7 +24,7 @@ local ShadowRenderPass = require("rat-scratch-pipeline.ShadowRenderPass")
 local ForwardRenderPass = Object(RenderPass)
 
 ForwardRenderPass.RENDER_BUFFER_FORMAT = {
-	"srgba8",
+	"rgba32f",
 }
 
 ForwardRenderPass.RENDER_BUFFER_DEPTH_FORMAT = "depth32f"
@@ -168,6 +168,21 @@ do
 
 		if self:hasDependency(ShadowRenderPass) then
 			self:getDependency(ShadowRenderPass):bind(drawShader)
+		end
+
+		if self:hasDependency(ReflectionRenderPass) then
+			self:getDependency(ReflectionRenderPass):bind(drawShader)
+		end
+
+		if self.reflectionProbeClusterResult then
+			if
+				drawShader:hasUniform("rat_ReflectionProbeCountIndicesBuffer")
+			then
+				drawShader:send(
+					"rat_ReflectionProbeCountIndicesBuffer",
+					self.reflectionProbeClusterResult:getReflectionProbeIndicesBuffer()
+				)
+			end
 		end
 	end
 end

@@ -23,7 +23,6 @@ end
 
 local _call = call
 
---- comment
 --- @param enabled boolean
 function ResourceLoader.toggleDebug(enabled)
 	if enabled then
