@@ -193,17 +193,56 @@ function demo.load()
 	--demo.scene:getPipeline(ReflectionProbePipeline):add(demo.centerProbe)
 end
 
+demo.isKeyboard = false
+demo.isMouse = false
 demo.isPanning = false
 demo.isRotating = false
 demo.isElevating = false
 
-function demo.mousepressed(x, y, button)
-	if button == 1 then
+function demo.keypressed(key)
+	if demo.isMouse or demo.isKeyboard then
+		return
+	end
+
+	if key == "1" then
 		demo.isPanning = true
-	elseif button == 2 then
+		demo.isKeyboard = true
+	elseif key == "2" then
 		demo.isRotating = true
-	elseif button == 3 then
+		demo.isKeyboard = true
+	elseif key == "3" then
 		demo.isElevating = true
+		demo.isKeyboard = true
+	end
+end
+
+function demo.keyreleased(key)
+	if key == "1" and demo.isPanning then
+		demo.isPanning = false
+		demo.isKeyboard = false
+	elseif key == "2" and demo.isRotating then
+		demo.isRotating = false
+		demo.isKeyboard = false
+	elseif key == "3" and demo.isElevating then
+		demo.isElevating = false
+		demo.isKeyboard = false
+	end
+end
+
+function demo.mousepressed(x, y, button)
+	if demo.isMouse or demo.isKeyboard then
+		return
+	end
+
+	if button == 1 and demo.isPanning then
+		demo.isPanning = false
+		demo.isMouse = false
+	elseif button == 2 and demo.isRotating then
+		demo.isRotating = false
+		demo.isMouse = false
+	elseif button == 3 and demo.isElevating then
+		demo.isElevating = false
+		demo.isMouse = false
 	end
 end
 
@@ -338,23 +377,23 @@ function demo.update()
 		local o = math.max(w / GRID_SIZE, h / GRID_SIZE)
 		for x = minBounds.x + 5, maxBounds.x - 5, GRID_SIZE do
 			for z = minBounds.z + 5, maxBounds.z - 5, GRID_SIZE do
-		--for i = 1, GRID_SIZE do`
-			--for j = 1, GRID_SIZE do
+				--for i = 1, GRID_SIZE do`
+				--for j = 1, GRID_SIZE do
 				-- local x = w * ((i - 1) / (GRID_SIZE - 1))
 				-- local z = h * ((j - 1) / (GRID_SIZE - 1))
 
 				for _, y in ipairs({ 2, 6 }) do
-				local probe = ReflectionProbe()
-				probe:setDistance(GRID_SIZE)
-				probe:setDistanceFalloff(GRID_SIZE + GRID_OVERLAP)
-				probe:setFar(50)
-				probe:setPosition(Vector3(x, y, z))
-				print(">>> xyz", x, y, z)
-				probe:setIsRealtime(true)
+					local probe = ReflectionProbe()
+					probe:setDistance(GRID_SIZE)
+					probe:setDistanceFalloff(GRID_SIZE + GRID_OVERLAP)
+					probe:setFar(50)
+					probe:setPosition(Vector3(x, y, z))
+					print(">>> xyz", x, y, z)
+					probe:setIsRealtime(true)
 
-				demo.scene:getPipeline(ReflectionProbePipeline):add(probe)
+					demo.scene:getPipeline(ReflectionProbePipeline):add(probe)
 
-				table.insert(demo.reflectionProbes, probe)
+					table.insert(demo.reflectionProbes, probe)
 				end
 			end
 		end
