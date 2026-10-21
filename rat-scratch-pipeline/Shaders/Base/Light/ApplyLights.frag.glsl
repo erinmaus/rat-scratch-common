@@ -24,14 +24,14 @@ void ratApplyLightsImplGetDimensionsCoordinate(vec3 position, uvec2 cellSizeInPi
 	uvec2 screenCoordinate = uvec2(floor(clampedPosition.xy * vec2(screenDimensions)));
 	screenCoordinate = min(screenCoordinate, screenDimensions - uvec2(1));
 
-	coordinate = uvec3(screenCoordinate, 0);
-	dimensions = uvec3(screenDimensions, countPerCell + 1);
+	coordinate = uvec3(0, screenCoordinate);
+	dimensions = uvec3(countPerCell + 1, screenDimensions);
 }
 
 void ratApplyLightsImplGetLightDimensionsCoordinate(vec3 position, out uvec3 coordinate, out uvec3 dimensions)
 {
 	ratApplyLightsImplGetDimensionsCoordinate(position, RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELL_SIZE_IN_PIXELS,
-											  RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL + 1, coordinate,
+											  RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL, coordinate,
 											  dimensions);
 }
 
@@ -39,13 +39,39 @@ void ratApplyLightsImplGetProbeDimensionsCoordinate(vec3 position, out uvec3 coo
 {
 	ratApplyLightsImplGetDimensionsCoordinate(
 		position, RAT_SCRATCH_PIPELINE_CONFIG_REFLECTION_PROBE_CELL_SIZE_IN_PIXELS,
-		RAT_SCRATCH_PIPELINE_CONFIG_MAX_REFLECTION_PROBES_PER_CELL + 1, coordinate, dimensions);
+		RAT_SCRATCH_PIPELINE_CONFIG_MAX_REFLECTION_PROBES_PER_CELL, coordinate, dimensions);
 }
 
 uint ratApplyLightsImplGetIndex(uvec3 coordinate, uvec3 dimensions, uint layer)
 {
 	uint offset = dimensions.x * dimensions.y * dimensions.z * layer;
 	return coordinateToIndex(coordinate, dimensions) + offset;
+}
+
+// 1. Check if the fragment is completely outside the box
+float calcWeight(vec3 position, vec3 probePosition, vec2 radius)
+{
+	vec3 bMin = probePosition - vec3(radius.y);
+	vec3 bMax = probePosition + vec3(radius.y);
+
+    if (any(lessThan(position, bMin)) || any(greaterThan(position, bMax))) {
+        return 0.0;
+    }
+    
+    // 2. Calculate the shortest distance to any of the 6 box walls
+    vec3 distToMin = position - bMin;
+    vec3 distToMax = bMax - position;
+    
+    // Find the minimum distance to any bounding plane
+    vec3 minDists = min(distToMin, distToMax);
+    float minDistToWall = min(min(minDists.x, minDists.y), minDists.z);
+    
+    // 3. Calculate falloff based on the inner blend margin
+    // Full weight at the deep interior, fades to 0.0 right at the wall edge
+    float blendDist = radius.x;
+    float weight = smoothstep(0.0, blendDist, minDistToWall);
+    
+    return weight;
 }
 
 void ratApplyEnvironmentProbes(in RatScratchPipelineFragmentOutput fragmentOutput,
@@ -61,7 +87,7 @@ void ratApplyEnvironmentProbes(in RatScratchPipelineFragmentOutput fragmentOutpu
 	vec3 R = reflect(V, N);
 
 	uint probeCount = rat_ReflectionProbeCountIndices[ratApplyLightsImplGetIndex(
-		uvec3(probeCoordinate.xy, 0), probeDimensions, fragmentOutput.cameraIndex)];
+		uvec3(0, probeCoordinate.yz), probeDimensions, fragmentOutput.cameraIndex)];
 	probeCount = min(probeCount, RAT_SCRATCH_PIPELINE_CONFIG_MAX_REFLECTION_PROBES_PER_CELL);
 
 	vec3 radiance = vec3(0.0);
@@ -70,25 +96,31 @@ void ratApplyEnvironmentProbes(in RatScratchPipelineFragmentOutput fragmentOutpu
 	for (uint i = 0; i < probeCount; ++i)
 	{
 		uint probeIndex = rat_ReflectionProbeCountIndices[ratApplyLightsImplGetIndex(
-			uvec3(probeCoordinate.xy, i + 1), probeDimensions, fragmentOutput.cameraIndex)];
+			uvec3(i + 1, probeCoordinate.yz), probeDimensions, fragmentOutput.cameraIndex)];
 		RatScratchPipelineReflectionProbe probe = rat_ReflectionProbes[probeIndex];
 
-		float distanceFromProbe = length(fragmentOutput.position - probe.position);
-		float threshold = probe.radius.y - probe.radius.x;
-		float distanceFromThreshold = distanceFromProbe - probe.radius.x;
+		float distanceFromProbe = distance(fragmentOutput.position, probe.position) / probe.radius.y;
+		//float threshold = probe.radius.y - probe.radius.x;
+		//float distanceFromThreshold = distanceFromProbe - probe.radius.x;
 
-		if (distanceFromThreshold > 0.0 && threshold <= 0.0)
+		//if (distanceFromThreshold > 0.0 && threshold <= 0.0)
+		//{
+		//	continue;
+		//}
+
+		// float w = 1.0 - clamp(distanceFromProbe, 0.0, 1.0);
+		// if (w <= 0.0)
+		// {
+		// 	continue;
+		// }
+		float w = calcWeight(fragmentOutput.position, probe.position, probe.radius);
+
+		if (w > 0.0)
 		{
-			continue;
-		}
-
-		float w = 1.0 - clamp(distanceFromThreshold / threshold, 0.0, 1.0);
-
 		weight += w;
 		radiance += vec3(w) * ratSampleReflectionProbe(probe, fragmentOutput.position, fragmentOutput.roughness, R).rgb;
 		irradiance += vec3(w) * ratSampleGlobalIlluminationProbe(probe, fragmentOutput.position, N).rgb;
-
-		break;
+		}
 	}
 
 	if (weight <= 0.0)
@@ -102,8 +134,8 @@ void ratApplyEnvironmentProbes(in RatScratchPipelineFragmentOutput fragmentOutpu
 	float nDotV = max(dot(V, N), 0.0);
 	vec3 F = ratPBRFresnelSchlick(nDotV, mix(vec3(0.04), fragmentOutput.albedo.rgb, vec3(fragmentOutput.metal)));
 
-	// result.specular += F * radiance * vec3(result.occlusion);
-	// result.diffuse += irradiance * vec3(result.occlusion);
+	//result.specular += F * radiance * vec3(result.occlusion);
+	result.diffuse *= irradiance;// * vec3(result.occlusion);
 }
 
 void ratApplyLights(in RatScratchPipelineFragmentOutput fragmentOutput, inout RatScratchPipelineLightResult result)
@@ -117,20 +149,14 @@ void ratApplyLights(in RatScratchPipelineFragmentOutput fragmentOutput, inout Ra
 	uvec3 lightCoordinate, lightDimensions;
 	ratApplyLightsImplGetLightDimensionsCoordinate(fragmentOutput.screenPosition, lightCoordinate, lightDimensions);
 
-	uint lightsCount = rat_LightCountIndices[ratApplyLightsImplGetIndex(uvec3(lightCoordinate.xy, 0), lightDimensions,
+	uint lightsCount = rat_LightCountIndices[ratApplyLightsImplGetIndex(uvec3(0, lightCoordinate.yz), lightDimensions,
 																		fragmentOutput.cameraIndex)];
 	lightsCount = min(lightsCount, RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL);
-
-	result.diffuse = vec3(lightsCount);
-	if (true)
-	{
-		return;
-	}
 
 	for (uint i = 0; i < lightsCount; ++i)
 	{
 		uint lightIndex = rat_LightCountIndices[ratApplyLightsImplGetIndex(
-			uvec3(lightCoordinate.xy, i + 1), lightDimensions, fragmentOutput.cameraIndex)];
+			uvec3(i + 1, lightCoordinate.yz), lightDimensions, fragmentOutput.cameraIndex)];
 		light = rat_Lights[lightIndex];
 
 		switch (ratGetLightType(light))

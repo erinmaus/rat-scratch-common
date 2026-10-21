@@ -123,6 +123,7 @@ function RenderBuffer:resize(width, height, layers)
 			format = format,
 			canvas = true,
 			readable = true,
+			mipmaps = "auto"
 		})
 		self.canvases[i] = canvas
 

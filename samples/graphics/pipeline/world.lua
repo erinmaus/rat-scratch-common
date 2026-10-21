@@ -94,7 +94,7 @@ function demo.load()
 	world:getPipeline(AnimationPipeline):loadDefaultShaders()
 
 	local ambientLight = scene:newLight(AmbientLight)
-	ambientLight:setAmbience(0.1)
+	ambientLight:setAmbience(0.4)
 	ambientLight:setColor(GammaColor(0.85098, 0.713725, 0.556863, 1))
 
 	local directionalLight = scene:newLight(DirectionalLight)
@@ -186,10 +186,11 @@ function demo.load()
 
 	demo.centerProbe = ReflectionProbe()
 	demo.centerProbe:setFar(50)
-	demo.centerProbe:setDistance(10)
-	demo.centerProbe:setDistanceFalloff(15)
+	demo.centerProbe:setDistance(25)
+	demo.centerProbe:setDistanceFalloff(30)
 	demo.centerProbe:setIsRealtime(true)
-	demo.scene:getPipeline(ReflectionProbePipeline):add(demo.centerProbe)
+	demo.centerProbe:setPosition(Vector3(0, 5, 0))
+	--demo.scene:getPipeline(ReflectionProbePipeline):add(demo.centerProbe)
 end
 
 demo.isPanning = false
@@ -262,7 +263,8 @@ function demo.update()
 			end
 		end
 
-		pointLightInfo.light:setPosition(position:scale(10))
+		local minY = Vector3(-math.huge, 0.5, -math.huge)
+		pointLightInfo.light:setPosition(position:scale(5):max(minY))
 	end
 
 	ResourceLoader.update()
@@ -322,7 +324,7 @@ function demo.update()
 	if
 		not (
 			minBounds:equal(demo.minBounds) and maxBounds:equal(demo.maxBounds)
-		) and false
+		)
 	then
 		for _, probe in ipairs(demo.reflectionProbes) do
 			demo.scene:getPipeline(ReflectionProbePipeline):remove(probe)
@@ -330,26 +332,40 @@ function demo.update()
 		Table.clear(demo.reflectionProbes)
 
 		local GRID_SIZE = 10
-		for x = math.min(minBounds.x, -GRID_SIZE), math.max(maxBounds.x, GRID_SIZE), GRID_SIZE do
-			for z = math.min(minBounds.z, -GRID_SIZE), math.max(maxBounds.z, GRID_SIZE), GRID_SIZE do
+		local GRID_OVERLAP = 2
+		local w = maxBounds.x - minBounds.x
+		local h = maxBounds.z - minBounds.z
+		local o = math.max(w / GRID_SIZE, h / GRID_SIZE)
+		for x = minBounds.x + 5, maxBounds.x - 5, GRID_SIZE do
+			for z = minBounds.z + 5, maxBounds.z - 5, GRID_SIZE do
+		--for i = 1, GRID_SIZE do`
+			--for j = 1, GRID_SIZE do
+				-- local x = w * ((i - 1) / (GRID_SIZE - 1))
+				-- local z = h * ((j - 1) / (GRID_SIZE - 1))
+
+				for _, y in ipairs({ 2, 6 }) do
 				local probe = ReflectionProbe()
 				probe:setDistance(GRID_SIZE)
-				probe:setDistanceFalloff(GRID_SIZE * 1.25)
+				probe:setDistanceFalloff(GRID_SIZE + GRID_OVERLAP)
 				probe:setFar(50)
-				probe:setPosition(Vector3(x, 2, z))
+				probe:setPosition(Vector3(x, y, z))
+				print(">>> xyz", x, y, z)
 				probe:setIsRealtime(true)
 
 				demo.scene:getPipeline(ReflectionProbePipeline):add(probe)
 
 				table.insert(demo.reflectionProbes, probe)
+				end
 			end
 		end
+
+		print("???", #demo.reflectionProbes)
 
 		demo.minBounds:from(minBounds:get())
 		demo.maxBounds:from(maxBounds:get())
 	end
 
-	demo.centerProbe:setPosition(demo.view:getTranslation())
+	--demo.centerProbe:setPosition(demo.view:getTranslation())
 end
 
 local function prettyNumber(value)

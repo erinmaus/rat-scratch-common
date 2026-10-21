@@ -52,17 +52,17 @@ bool sphereInsideCell(RatScratchPipelineCamera camera, vec4 sphere, vec2 cellMin
 
 void tryAddLightToCell(uvec2 cellCoordinate, uint lightIndex, uint cameraIndex)
 {
-	uvec3 coordinate = uvec3(cellCoordinate, 0);
+	uvec3 coordinate = uvec3(0, cellCoordinate);
 	uvec3 dimensions =
-		uvec3(uvec2(ceil(vec2(rat_ScreenSize) / vec2(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELL_SIZE_IN_PIXELS))),
-			  RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL + 1);
+		uvec3(RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL + 1, uvec2(ceil(vec2(rat_ScreenSize) / vec2(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELL_SIZE_IN_PIXELS)))
+			  );
 	uint offset = dimensions.x * dimensions.y * dimensions.z * cameraIndex;
 	uint index = coordinateToIndex(coordinate, dimensions);
 
 	uint previousCount = atomicAdd(rat_LightCountIndices[index + offset], 1);
 	if (previousCount < RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL)
 	{
-		uvec3 lightCellCoordinate = uvec3(cellCoordinate, previousCount + 1);
+		uvec3 lightCellCoordinate = uvec3(previousCount + 1, cellCoordinate);
 		uint lightCellIndex = coordinateToIndex(lightCellCoordinate, dimensions);
 		rat_LightCountIndices[lightCellIndex + offset] = lightIndex;
 	}

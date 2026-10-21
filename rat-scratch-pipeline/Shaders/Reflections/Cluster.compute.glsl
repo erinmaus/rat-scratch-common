@@ -35,19 +35,18 @@ bool boundsInsideCell(RatScratchPipelineCamera camera, vec3 boundsMin, vec3 boun
 	return boundsInsideFrustum(planes, boundsMin, boundsMax);
 }
 
-void tryAddReflectinProbeToCell(uvec2 cellCoordinate, uint probeIndex, uint cameraIndex)
+void tryAddReflectionProbeToCell(uvec2 cellCoordinate, uint probeIndex, uint cameraIndex)
 {
-	uvec3 coordinate = uvec3(cellCoordinate, 0);
+	uvec3 coordinate = uvec3(0, cellCoordinate);
 	uvec3 dimensions = uvec3(
-		uvec2(ceil(vec2(rat_ScreenSize) / vec2(RAT_SCRATCH_PIPELINE_CONFIG_REFLECTION_PROBE_CELL_SIZE_IN_PIXELS))),
-		RAT_SCRATCH_PIPELINE_CONFIG_MAX_REFLECTION_PROBES_PER_CELL + 1);
+		RAT_SCRATCH_PIPELINE_CONFIG_MAX_REFLECTION_PROBES_PER_CELL + 1, uvec2(ceil(vec2(rat_ScreenSize) / vec2(RAT_SCRATCH_PIPELINE_CONFIG_REFLECTION_PROBE_CELL_SIZE_IN_PIXELS))));
 	uint offset = dimensions.x * dimensions.y * dimensions.z * cameraIndex;
 	uint index = coordinateToIndex(coordinate, dimensions);
 
 	uint previousCount = atomicAdd(rat_ReflectionProbeCountIndices[index + offset], 1);
 	if (previousCount < RAT_SCRATCH_PIPELINE_CONFIG_MAX_REFLECTION_PROBES_PER_CELL)
 	{
-		uvec3 probeCellCoordinate = uvec3(cellCoordinate, previousCount + 1);
+		uvec3 probeCellCoordinate = uvec3(previousCount + 1, cellCoordinate);
 		uint probeCellIndex = coordinateToIndex(probeCellCoordinate, dimensions);
 		rat_ReflectionProbeCountIndices[probeCellIndex + offset] = probeIndex;
 	}
@@ -62,7 +61,7 @@ void testReflectionProbe(RatScratchPipelineCamera camera, vec2 cellMin, vec2 cel
 
 	if (boundsInsideCell(camera, boundsMin, boundsMax, cellMin, cellMax))
 	{
-		tryAddReflectinProbeToCell(cellCoordinate, probeIndex, cameraIndex);
+		tryAddReflectionProbeToCell(cellCoordinate, probeIndex, cameraIndex);
 	}
 }
 
