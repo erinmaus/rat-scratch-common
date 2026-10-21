@@ -6,7 +6,6 @@ local CubeMap = require("rat-scratch-graphics").CubeMap
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local ArcballCameraView = require("rat-scratch-pipeline.ArcballCameraView")
 local Camera = require("rat-scratch-pipeline.Camera")
-local MathCommon = require("rat-scratch-math.Common")
 local PerspectiveFOVCameraProjection =
 	require("rat-scratch-pipeline.PerspectiveFOVCameraProjection")
 local ReflectionProbeEvent =
@@ -33,7 +32,7 @@ ReflectionProbe.REFLECTION_PROBE_FORMAT = {
 	{ location = 2, name = "boundsMin", format = "floatvec3" },
 	{ location = 3, name = "boundsMax", format = "floatvec3" },
 	{ location = 4, name = "falloffBoundsMin", format = "floatvec3" },
-	{ location = 5, name = "falloffBoundsMax", format = "floatvec3" }
+	{ location = 5, name = "falloffBoundsMax", format = "floatvec3" },
 }
 
 ReflectionProbe.REFLECTION_PROBE_FORMAT_INSTANCE =
@@ -118,10 +117,6 @@ function ReflectionProbe:setIsRealtime(value)
 	self:dirty()
 end
 
-function ReflectionProbe:getDistance()
-	return self.distance
-end
-
 do
 	local _min = Vector3()
 	local _max = Vector3()
@@ -154,7 +149,7 @@ function ReflectionProbe:setBounds(min, max)
 end
 
 function ReflectionProbe:getBounds()
-	return self.min, self.max
+	return self.boundsMin, self.boundsMax
 end
 
 --- @param min RatScratch.Math.Vector3

@@ -363,33 +363,28 @@ function demo.update()
 	if
 		not (
 			minBounds:equal(demo.minBounds) and maxBounds:equal(demo.maxBounds)
-		)
+		) and false
 	then
 		for _, probe in ipairs(demo.reflectionProbes) do
 			demo.scene:getPipeline(ReflectionProbePipeline):remove(probe)
 		end
 		Table.clear(demo.reflectionProbes)
 
-		if false then
-		local GRID_SIZE = 10
-		local GRID_OVERLAP = 2
 		local w = maxBounds.x - minBounds.x
 		local h = maxBounds.z - minBounds.z
-		local o = math.max(w / GRID_SIZE, h / GRID_SIZE)
-		for x = minBounds.x + 5, maxBounds.x - 5, GRID_SIZE do
-			for z = minBounds.z + 5, maxBounds.z - 5, GRID_SIZE do
-				--for i = 1, GRID_SIZE do`
-				--for j = 1, GRID_SIZE do
-				-- local x = w * ((i - 1) / (GRID_SIZE - 1))
-				-- local z = h * ((j - 1) / (GRID_SIZE - 1))
-
-				for _, y in ipairs({ 2, 6 }) do
+		local GRID_SIZE = math.min(w / 3, h / 3)
+		local GRID_OVERLAP = 1
+		for x = minBounds.x + GRID_SIZE / 2, maxBounds.x - GRID_SIZE / 2, GRID_SIZE do
+			for z = minBounds.z + GRID_SIZE / 2, maxBounds.z - GRID_SIZE / 2, GRID_SIZE do
+				for _, y in ipairs({
+					minBounds.y + (maxBounds.y - minBounds.y) / 2,
+					maxBounds.y - (maxBounds.y - minBounds.y) / 2,
+				}) do
 					local probe = ReflectionProbe()
 					probe:setRadius(GRID_SIZE)
 					probe:setRadiusFalloff(GRID_SIZE + GRID_OVERLAP)
 					probe:setFar(50)
 					probe:setPosition(Vector3(x, y, z))
-					print(">>> xyz", x, y, z)
 					probe:setIsRealtime(true)
 
 					demo.scene:getPipeline(ReflectionProbePipeline):add(probe)
@@ -397,9 +392,9 @@ function demo.update()
 					table.insert(demo.reflectionProbes, probe)
 				end
 			end
-		end
 
-		print("???", #demo.reflectionProbes) end
+			print("???", #demo.reflectionProbes)
+		end
 
 		demo.minBounds:from(minBounds:get())
 		demo.maxBounds:from(maxBounds:get())
@@ -407,9 +402,30 @@ function demo.update()
 		print(">>> center", maxBounds:subtract(minBounds):get())
 	end
 
-	demo.centerProbe:setPosition(maxBounds:subtract(minBounds):scale(0.5):add(minBounds))
-	demo.centerProbe:setFalloffBounds(maxBounds:subtract(minBounds):scale(0.5):negate(), maxBounds:subtract(minBounds):scale(0.5))
-	demo.centerProbe:setBounds(maxBounds:subtract(minBounds):scale(0.45):negate(), maxBounds:subtract(minBounds):scale(0.45))
+	local d = love.mouse.getY() / love.graphics.getHeight()
+	local p = maxBounds:subtract(minBounds):scale(0.5):add(minBounds)
+	if love.keyboard.isDown("space") then
+		demo.centerProbe:setPosition(
+			Vector3(0, Common.lerp(minBounds.y, maxBounds.y, d), 0)
+		)
+	else
+		demo.centerProbe:setPosition(p)
+	end
+	print("???", demo.centerProbe:getPosition():get())
+	demo.centerProbe:setRadius(
+		math.max(maxBounds.x - minBounds.x, maxBounds.y - minBounds.y)
+	)
+	demo.centerProbe:setRadiusFalloff(
+		math.max(maxBounds.x - minBounds.x, maxBounds.y - minBounds.y) + 1
+	)
+	-- demo.centerProbe:setFalloffBounds(
+	-- 	maxBounds:subtract(minBounds):scale(0.5):negate(),
+	-- 	maxBounds:subtract(minBounds):scale(0.5)
+	-- )
+	-- demo.centerProbe:setBounds(
+	-- 	maxBounds:subtract(minBounds):scale(0.45):negate(),
+	-- 	maxBounds:subtract(minBounds):scale(0.45)
+	-- )
 end
 
 local function prettyNumber(value)

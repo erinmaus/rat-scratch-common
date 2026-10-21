@@ -121,8 +121,9 @@ void ratApplyLightsImplEnvironmentProbes(in RatScratchPipelineFragmentOutput fra
 		if (w > 0.0)
 		{
 			weight += w;
-			radiance += vec3(w) * ratSampleReflectionProbe(probe, fragmentOutput.position, 0.0, R).rgb;
-			irradiance += vec3(w) * ratSampleGlobalIlluminationProbe(probe, fragmentOutput.position, -N).rgb;
+			radiance +=
+				vec3(w) * ratSampleReflectionProbe(probe, fragmentOutput.position, fragmentOutput.roughness, R).rgb;
+			irradiance += vec3(w) * ratSampleGlobalIlluminationProbe(probe, fragmentOutput.position, N).rgb;
 		}
 	}
 
@@ -134,13 +135,8 @@ void ratApplyLightsImplEnvironmentProbes(in RatScratchPipelineFragmentOutput fra
 	radiance /= weight;
 	irradiance /= weight;
 
-	ratApplyIBL(fragmentOutput, radiance, irradiance, cameraPosition, result);
-
-	// float nDotV = max(dot(V, N), 0.0);
-	// vec3 F = ratPBRFresnelSchlick(nDotV, mix(vec3(0.04), fragmentOutput.albedo.rgb, vec3(fragmentOutput.metal)));
-
-	// result.specular += F * radiance * vec3(result.occlusion);
-	// result.diffuse *= irradiance * vec3(result.occlusion);
+	// ratApplyIBL(fragmentOutput, radiance, irradiance, cameraPosition, result);
+	result.diffuse = radiance;
 }
 
 void ratApplyLights(in RatScratchPipelineFragmentOutput fragmentOutput, inout RatScratchPipelineLightResult result)
