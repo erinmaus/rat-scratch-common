@@ -2,5 +2,6 @@ struct RatScratchPipelineReflectionProbe
 {
 	uvec2 atlasImageIndexCount;
 	vec3 position;
-	vec2 radius;
+	vec3 boundsMin, boundsMax;
+	vec3 falloffBoundsMin, falloffBoundsMax;
 };

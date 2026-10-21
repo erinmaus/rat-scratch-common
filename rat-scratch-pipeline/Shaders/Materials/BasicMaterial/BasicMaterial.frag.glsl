@@ -20,7 +20,8 @@ void ratApplyFragmentMaterial(in RatScratchPipelineFragmentInput fragmentInput,
 	vec3 t = vec3(normalTextureSample.x) * fragmentInput.tangent;
 	vec3 b = vec3(normalTextureSample.y) * fragmentInput.bitangent;
 	vec3 n = vec3(normalTextureSample.z) * fragmentInput.normal;
-	fragmentOutput.normal = normalize(t + b + n);
+	//fragmentOutput.normal = normalize(t + b + n);
+	fragmentOutput.normal = fragmentInput.normal;
 
 	vec2 metallicRoughness =
 		ratSampleLinearTexture(materialProperties.metallicRoughnessTexture, fragmentInput.textureCoordinate).gb;

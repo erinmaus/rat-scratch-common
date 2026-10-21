@@ -48,33 +48,45 @@ uint ratApplyLightsImplGetIndex(uvec3 coordinate, uvec3 dimensions, uint layer)
 	return coordinateToIndex(coordinate, dimensions) + offset;
 }
 
-// 1. Check if the fragment is completely outside the box
-float calcWeight(vec3 position, vec3 probePosition, vec2 radius)
+bool ratApplyLightsImplCalculateWeightGetMinDistance(vec3 position, vec3 boundsMin, vec3 boundsMax, out float distanceFromBounds)
 {
-	vec3 bMin = probePosition - vec3(radius.y);
-	vec3 bMax = probePosition + vec3(radius.y);
-
-    if (any(lessThan(position, bMin)) || any(greaterThan(position, bMax))) {
-        return 0.0;
+    if (any(lessThan(position, boundsMin)) || any(greaterThan(position, boundsMax))) {
+		distanceFromBounds = 0.0;
+        return false;
     }
-    
-    // 2. Calculate the shortest distance to any of the 6 box walls
-    vec3 distToMin = position - bMin;
-    vec3 distToMax = bMax - position;
-    
-    // Find the minimum distance to any bounding plane
-    vec3 minDists = min(distToMin, distToMax);
-    float minDistToWall = min(min(minDists.x, minDists.y), minDists.z);
-    
-    // 3. Calculate falloff based on the inner blend margin
-    // Full weight at the deep interior, fades to 0.0 right at the wall edge
-    float blendDist = radius.x;
-    float weight = smoothstep(0.0, blendDist, minDistToWall);
-    
-    return weight;
+
+    vec3 distanceToMin = position - boundsMin;
+    vec3 distanceToMax = boundsMax - position;
+
+    vec3 distances = min(distanceToMin, distanceToMax);
+    float minDistance = min(min(distances.x, distances.y), distances.z);
+
+	return true;
 }
 
-void ratApplyEnvironmentProbes(in RatScratchPipelineFragmentOutput fragmentOutput,
+float ratApplyLightsImplCalculateWeight(RatScratchPipelineReflectionbounds probe, vec3 position)
+{
+	vec3 probeMin = probePosition + probe.boundsMin;
+	vec3 probeMax = probePosition + probe.boundsMax;
+	vec3 probeFalloffMin = probePosition + probe.falloffBoundsMin;
+	vec3 probeFalloffMax = probePosition + probe.falloffBoundsMax;
+
+	float minDistance;
+	if (!ratApplyLightsImplCalculateWeightGetMinDistance(position, probeMin, probeMax, minDistance))
+	{
+		return 0.0;
+	}
+
+	float falloffDistance;
+	if (!ratApplyLightsImplCalculateWeightGetMinDistance(position, probeFalloffMin, probeFalloffMax, falloffDistance))
+	{
+		return 0.0;
+	}
+
+    return smoothstep(0.0, falloffDistance, minDistance);
+}
+
+void ratApplyLightsImplEnvironmentProbes(in RatScratchPipelineFragmentOutput fragmentOutput,
 							   inout RatScratchPipelineLightResult result)
 {
 	uvec3 probeCoordinate, probeDimensions;
@@ -84,7 +96,7 @@ void ratApplyEnvironmentProbes(in RatScratchPipelineFragmentOutput fragmentOutpu
 
 	vec3 N = fragmentOutput.normal;
 	vec3 V = normalize(cameraPosition - fragmentOutput.position);
-	vec3 R = reflect(V, N);
+	vec3 R = -reflect(V, N);
 
 	uint probeCount = rat_ReflectionProbeCountIndices[ratApplyLightsImplGetIndex(
 		uvec3(0, probeCoordinate.yz), probeDimensions, fragmentOutput.cameraIndex)];
@@ -96,30 +108,15 @@ void ratApplyEnvironmentProbes(in RatScratchPipelineFragmentOutput fragmentOutpu
 	for (uint i = 0; i < probeCount; ++i)
 	{
 		uint probeIndex = rat_ReflectionProbeCountIndices[ratApplyLightsImplGetIndex(
-			uvec3(i + 1, probeCoordinate.yz), probeDimensions, fragmentOutput.cameraIndex)];
+			uvec3(i + 1, probeCoordinate.yz), probeDimensio.ns, fragmentOutput.cameraIndex)];
 		RatScratchPipelineReflectionProbe probe = rat_ReflectionProbes[probeIndex];
 
-		float distanceFromProbe = distance(fragmentOutput.position, probe.position) / probe.radius.y;
-		//float threshold = probe.radius.y - probe.radius.x;
-		//float distanceFromThreshold = distanceFromProbe - probe.radius.x;
-
-		//if (distanceFromThreshold > 0.0 && threshold <= 0.0)
-		//{
-		//	continue;
-		//}
-
-		// float w = 1.0 - clamp(distanceFromProbe, 0.0, 1.0);
-		// if (w <= 0.0)
-		// {
-		// 	continue;
-		// }
-		float w = calcWeight(fragmentOutput.position, probe.position, probe.radius);
-
+		float w = ratApplyLightsImplCalculateWeight(probe, fragmentOutput.position);
 		if (w > 0.0)
 		{
-		weight += w;
-		radiance += vec3(w) * ratSampleReflectionProbe(probe, fragmentOutput.position, fragmentOutput.roughness, R).rgb;
-		irradiance += vec3(w) * ratSampleGlobalIlluminationProbe(probe, fragmentOutput.position, N).rgb;
+			weight += w;
+			radiance += vec3(w) * ratSampleReflectionProbe(probe, fragmentOutput.position, 0.0, R).rgb;
+			irradiance += vec3(w) * ratSampleGlobalIlluminationProbe(probe, fragmentOutput.position, -N).rgb;
 		}
 	}
 
@@ -131,11 +128,13 @@ void ratApplyEnvironmentProbes(in RatScratchPipelineFragmentOutput fragmentOutpu
 	radiance /= weight;
 	irradiance /= weight;
 
-	float nDotV = max(dot(V, N), 0.0);
-	vec3 F = ratPBRFresnelSchlick(nDotV, mix(vec3(0.04), fragmentOutput.albedo.rgb, vec3(fragmentOutput.metal)));
+	ratApplyIBL(fragmentOutput, radiance, irradiance, cameraPosition, result);
 
-	//result.specular += F * radiance * vec3(result.occlusion);
-	result.diffuse *= irradiance;// * vec3(result.occlusion);
+	// float nDotV = max(dot(V, N), 0.0);
+	// vec3 F = ratPBRFresnelSchlick(nDotV, mix(vec3(0.04), fragmentOutput.albedo.rgb, vec3(fragmentOutput.metal)));
+
+	// result.specular += F * radiance * vec3(result.occlusion);
+	// result.diffuse *= irradiance * vec3(result.occlusion);
 }
 
 void ratApplyLights(in RatScratchPipelineFragmentOutput fragmentOutput, inout RatScratchPipelineLightResult result)
@@ -182,6 +181,6 @@ void ratApplyLights(in RatScratchPipelineFragmentOutput fragmentOutput, inout Ra
 
 	if (rat_ReflectionProbeCount > 0)
 	{
-		ratApplyEnvironmentProbes(fragmentOutput, result);
+		ratApplyLightsImplEnvironmentProbes(fragmentOutput, result);
 	}
 }

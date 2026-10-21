@@ -17,6 +17,10 @@ local ReflectionProbeEvent =
 --- @field private perspective RatScratch.Pipeline.PerspectiveFOVCameraProjection
 --- @field private cameras RatScratch.Pipeline.Camera<RatScratch.Pipeline.PerspectiveFOVCameraProjection, RatScratch.Pipeline.ArcballCameraView>[]
 --- @field private position RatScratch.Math.Vector3
+--- @field private boundsMin RatScratch.Math.Vector3
+--- @field private boundsMax RatScratch.Math.Vector3
+--- @field private falloffBoundsMin RatScratch.Math.Vector3
+--- @field private falloffBoundsMax RatScratch.Math.Vector3
 --- @field private isStatic boolean
 --- @field private isDirty boolean
 --- @field private eventSource RatScratch.Common.EventSource<RatScratch.Pipeline.ReflectionProbe>
@@ -26,7 +30,10 @@ local ReflectionProbe = Object()
 ReflectionProbe.REFLECTION_PROBE_FORMAT = {
 	{ location = 0, name = "atlasImageIndexCount", format = "uint32vec2" },
 	{ location = 1, name = "position", format = "floatvec3" },
-	{ location = 2, name = "radius", format = "floatvec2" },
+	{ location = 2, name = "boundsMin", format = "floatvec3" },
+	{ location = 3, name = "boundsMax", format = "floatvec3" },
+	{ location = 4, name = "falloffBoundsMin", format = "floatvec3" },
+	{ location = 5, name = "falloffBoundsMax", format = "floatvec3" }
 }
 
 ReflectionProbe.REFLECTION_PROBE_FORMAT_INSTANCE =
@@ -43,8 +50,11 @@ function ReflectionProbe:new()
 	self.cameras = {}
 	self:_initCameras()
 
-	self.distance = 1
-	self.distanceFalloff = 1.25
+	self.boundsMin = Vector3(-1)
+	self.boundsMax = Vector3(1)
+	self.falloffBoundsMin = Vector3(-1)
+	self.falloffBoundsMax = Vector3(1)
+
 	self.position = Vector3()
 
 	self.isStatic = true
@@ -112,20 +122,55 @@ function ReflectionProbe:getDistance()
 	return self.distance
 end
 
---- @param value number
-function ReflectionProbe:setDistance(value)
-	self.distance = math.max(value, MathCommon.EPSILON)
-	self.distanceFalloff = math.max(self.distance, self.distanceFalloff)
+do
+	local _min = Vector3()
+	local _max = Vector3()
+
+	--- @param value number
+	function ReflectionProbe:setRadius(value)
+		local min = _min:from(-value)
+		local max = _max:from(-value)
+		self:setBounds(min, max)
+	end
+
+	--- @param value number
+	function ReflectionProbe:setRadiusFalloff(value)
+		local min = _min:from(-value)
+		local max = _max:from(-value)
+		self:setFalloffBounds(min, max)
+	end
+end
+
+--- @param min RatScratch.Math.Vector3
+--- @param max RatScratch.Math.Vector3
+function ReflectionProbe:setBounds(min, max)
+	min:min(max, self.boundsMin)
+	max:max(min, self.boundsMax)
+
+	self.falloffBoundsMin:min(self.boundsMin, self.falloffBoundsMin)
+	self.falloffBoundsMax:max(self.boundsMax, self.falloffBoundsMax)
+
 	self:dirty()
 end
 
---- @param value number
-function ReflectionProbe:setDistanceFalloff(value)
-	self.distanceFalloff = math.max(value, self.distance)
+function ReflectionProbe:getBounds()
+	return self.min, self.max
 end
 
-function ReflectionProbe:getDistanceFalloff()
-	return self.distanceFalloff
+--- @param min RatScratch.Math.Vector3
+--- @param max RatScratch.Math.Vector3
+function ReflectionProbe:setFalloffBounds(min, max)
+	min:min(max, self.falloffBoundsMin)
+	max:max(min, self.falloffBoundsMax)
+
+	self.falloffBoundsMin:min(self.boundsMin, self.falloffBoundsMin)
+	self.falloffBoundsMax:max(self.boundsMax, self.falloffBoundsMax)
+
+	self:dirty()
+end
+
+function ReflectionProbe:getFalloffBounds()
+	return self.falloffBoundsMin, self.falloffBoundsMax
 end
 
 --- @param value number
@@ -151,10 +196,33 @@ function ReflectionProbe:update()
 		BufferFormat.setValue(
 			ReflectionProbe.REFLECTION_PROBE_FORMAT_INSTANCE,
 			self.data,
-			"radius",
+			"boundsMin",
 			0,
-			self.distance,
-			self.distanceFalloff
+			self.boundsMin:get()
+		)
+
+		BufferFormat.setValue(
+			ReflectionProbe.REFLECTION_PROBE_FORMAT_INSTANCE,
+			self.data,
+			"boundsMax",
+			0,
+			self.boundsMax:get()
+		)
+
+		BufferFormat.setValue(
+			ReflectionProbe.REFLECTION_PROBE_FORMAT_INSTANCE,
+			self.data,
+			"falloffBoundsMin",
+			0,
+			self.falloffBoundsMin:get()
+		)
+
+		BufferFormat.setValue(
+			ReflectionProbe.REFLECTION_PROBE_FORMAT_INSTANCE,
+			self.data,
+			"falloffBoundsMax",
+			0,
+			self.falloffBoundsMax:get()
 		)
 
 		self.isDirty = false

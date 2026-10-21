@@ -97,4 +97,8 @@ function love.quit()
 	if isProfiling then
 		require("jit.p").stop()
 	end
+
+	if currentSample and currentSample.quit then
+		currentSample.quit()
+	end
 end

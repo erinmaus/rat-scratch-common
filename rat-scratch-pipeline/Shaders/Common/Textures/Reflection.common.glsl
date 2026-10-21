@@ -29,8 +29,10 @@ const float RAT_SCRATCH_PIPELINE_PROBE_IMPL_MAX_MIP_LEVEL =
 
 void ratSampleProbeCorrectParallaxImpl(RatScratchPipelineReflectionProbe probe, vec3 position, inout vec3 direction)
 {
-	vec3 probeMin = probe.position - vec3(probe.radius.x);
-	vec3 probeMax = probe.position + vec3(probe.radius.x);
+	vec3 size = vec3(30.428867340088, 39.52284084633,  30.428867340088);
+	vec3 r = size / vec3(2.0);
+	vec3 probeMin = probe.position - vec3(r);
+	vec3 probeMax = probe.position + vec3(r);
 
 	if (!(all(greaterThanEqual(position, probeMin)) && all(lessThanEqual(position, probeMax))))
 	{
@@ -43,7 +45,7 @@ void ratSampleProbeCorrectParallaxImpl(RatScratchPipelineReflectionProbe probe, 
 	float intersectionDistance = min(farIntersection.x, min(farIntersection.y, farIntersection.z));
 	vec3 intersectionPosition = position + direction * intersectionDistance;
 
-	direction = intersectionPosition - probe.position;
+	direction = normalize(intersectionPosition - probe.position);
 }
 
 vec4 ratSampleGlobalIlluminationProbe(RatScratchPipelineReflectionProbe probe, vec3 position, vec3 direction)
@@ -54,8 +56,8 @@ vec4 ratSampleGlobalIlluminationProbe(RatScratchPipelineReflectionProbe probe, v
 
 vec4 ratSampleReflectionProbe(RatScratchPipelineReflectionProbe probe, vec3 position, float roughness, vec3 direction)
 {
-	//ratSampleProbeCorrectParallaxImpl(probe, position, direction);
+	ratSampleProbeCorrectParallaxImpl(probe, position, direction);
 
-	float mipLevel = clamp(roughness * roughness * RAT_SCRATCH_PIPELINE_PROBE_IMPL_MAX_MIP_LEVEL, 0.0, RAT_SCRATCH_PIPELINE_PROBE_IMPL_MAX_MIP_LEVEL);
+	float mipLevel = clamp((roughness * roughness) * RAT_SCRATCH_PIPELINE_PROBE_IMPL_MAX_MIP_LEVEL, 0.0, RAT_SCRATCH_PIPELINE_PROBE_IMPL_MAX_MIP_LEVEL);
 	return ratSampleProbeImpl(rat_PipelineReflectionAtlasView, probe.atlasImageIndexCount.x, direction, mipLevel);
 }

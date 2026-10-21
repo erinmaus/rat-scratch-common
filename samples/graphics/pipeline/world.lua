@@ -186,11 +186,11 @@ function demo.load()
 
 	demo.centerProbe = ReflectionProbe()
 	demo.centerProbe:setFar(50)
-	demo.centerProbe:setDistance(25)
-	demo.centerProbe:setDistanceFalloff(30)
+	demo.centerProbe:setRadius(25)
+	demo.centerProbe:setRadiusFalloff(30)
 	demo.centerProbe:setIsRealtime(true)
 	demo.centerProbe:setPosition(Vector3(0, 5, 0))
-	--demo.scene:getPipeline(ReflectionProbePipeline):add(demo.centerProbe)
+	demo.scene:getPipeline(ReflectionProbePipeline):add(demo.centerProbe)
 end
 
 demo.isKeyboard = false
@@ -370,6 +370,7 @@ function demo.update()
 		end
 		Table.clear(demo.reflectionProbes)
 
+		if false then
 		local GRID_SIZE = 10
 		local GRID_OVERLAP = 2
 		local w = maxBounds.x - minBounds.x
@@ -384,8 +385,8 @@ function demo.update()
 
 				for _, y in ipairs({ 2, 6 }) do
 					local probe = ReflectionProbe()
-					probe:setDistance(GRID_SIZE)
-					probe:setDistanceFalloff(GRID_SIZE + GRID_OVERLAP)
+					probe:setRadius(GRID_SIZE)
+					probe:setRadiusFalloff(GRID_SIZE + GRID_OVERLAP)
 					probe:setFar(50)
 					probe:setPosition(Vector3(x, y, z))
 					print(">>> xyz", x, y, z)
@@ -398,13 +399,15 @@ function demo.update()
 			end
 		end
 
-		print("???", #demo.reflectionProbes)
+		print("???", #demo.reflectionProbes) end
 
 		demo.minBounds:from(minBounds:get())
 		demo.maxBounds:from(maxBounds:get())
+
+		print(">>> center", maxBounds:subtract(minBounds):get())
 	end
 
-	--demo.centerProbe:setPosition(demo.view:getTranslation())
+	demo.centerProbe:setPosition(maxBounds:subtract(minBounds):scale(0.5):add(minBounds))
 end
 
 local function prettyNumber(value)

@@ -56,8 +56,8 @@ void testReflectionProbe(RatScratchPipelineCamera camera, vec2 cellMin, vec2 cel
 						 uint probeIndex, uint cameraIndex)
 {
 	RatScratchPipelineReflectionProbe reflectionProbe = rat_ReflectionProbes[probeIndex];
-	vec3 boundsMin = reflectionProbe.position - vec3(reflectionProbe.radius.y);
-	vec3 boundsMax = reflectionProbe.position + vec3(reflectionProbe.radius.y);
+	vec3 boundsMin = reflectionProbe.position + vec3(reflectionProbe.falloffBoundsMin);
+	vec3 boundsMax = reflectionProbe.position + vec3(reflectionProbe.falloffBoundsMax);
 
 	if (boundsInsideCell(camera, boundsMin, boundsMax, cellMin, cellMax))
 	{

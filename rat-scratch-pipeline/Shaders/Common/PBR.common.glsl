@@ -39,7 +39,12 @@ float ratPBRGeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 
 vec3 ratPBRFresnelSchlick(float cosTheta, vec3 F0)
 {
-	return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+	return F0 + (vec3(1.0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+vec3 ratPBRFresnelSchlick(float cosTheta, vec3 F0, float roughness)
+{
+	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
 void ratApplyPBR(in RatScratchPipelineFragmentOutput fragmentOutput, vec3 L, vec3 radiance, vec3 cameraPosition,
@@ -53,7 +58,7 @@ void ratApplyPBR(in RatScratchPipelineFragmentOutput fragmentOutput, vec3 L, vec
 	float metallic = fragmentOutput.metal;
 	vec3 albedo = fragmentOutput.albedo.rgb;
 
-	vec3 F0 = mix(vec3(0.04), albedo, metallic);
+	vec3 F0 = mix(vec3(0.04), albedo, vec3(metallic));
 	vec3 F = ratPBRFresnelSchlick(max(dot(H, V), 0.0), F0);
 	float NDF = ratPBRDistributionGGX(N, H, roughness);
 	float G = ratPBRGeometrySmith(N, V, L, roughness);
@@ -67,10 +72,28 @@ void ratApplyPBR(in RatScratchPipelineFragmentOutput fragmentOutput, vec3 L, vec
 	}
 
 	float nDotL = max(dot(N, L), 0.0);
-	vec3 kS = max(F, vec3(0.04) * vec3(1.0 - metallic));
+	vec3 kS = F;//max(F, vec3(0.04) * vec3(1.0 - metallic));
 	vec3 kD = (vec3(1.0) - kS) * vec3(1.0 - metallic);
 	vec3 diffuseTerm = radiance * nDotL * kD;
 
 	result.diffuse += diffuseTerm;
 	result.specular += specularTerm * vec3(nDotL);
+}
+
+void ratApplyIBL(in RatScratchPipelineFragmentOutput fragmentOutput, vec3 radiance, vec3 irradiance, vec3 cameraPosition,
+				 inout RatScratchPipelineLightResult result)
+{
+	vec3 N = normalize(fragmentOutput.normal);
+	vec3 V = normalize(cameraPosition - fragmentOutput.position);
+
+	vec3 F0 = mix(vec3(0.04), fragmentOutput.albedo.rgb, vec3(fragmentOutput.metal));
+	vec3 F = ratPBRFresnelSchlick(max(dot(N, V), 0.0), F0, fragmentOutput.roughness);
+	vec3 specularTerm = radiance * F;
+
+	vec3 kS = F;
+	vec3 kD = ((vec3(1.0) - kS)) * (1.0 - fragmentOutput.metal);
+	vec3 diffuseTerm = irradiance * kD;
+
+	result.diffuse += diffuseTerm;
+	result.specular += specularTerm;
 }
