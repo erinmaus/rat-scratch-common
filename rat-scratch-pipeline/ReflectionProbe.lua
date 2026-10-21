@@ -129,14 +129,14 @@ do
 	--- @param value number
 	function ReflectionProbe:setRadius(value)
 		local min = _min:from(-value)
-		local max = _max:from(-value)
+		local max = _max:from(value)
 		self:setBounds(min, max)
 	end
 
 	--- @param value number
 	function ReflectionProbe:setRadiusFalloff(value)
 		local min = _min:from(-value)
-		local max = _max:from(-value)
+		local max = _max:from(value)
 		self:setFalloffBounds(min, max)
 	end
 end

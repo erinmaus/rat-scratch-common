@@ -29,10 +29,8 @@ const float RAT_SCRATCH_PIPELINE_PROBE_IMPL_MAX_MIP_LEVEL =
 
 void ratSampleProbeCorrectParallaxImpl(RatScratchPipelineReflectionProbe probe, vec3 position, inout vec3 direction)
 {
-	vec3 size = vec3(30.428867340088, 39.52284084633,  30.428867340088);
-	vec3 r = size / vec3(2.0);
-	vec3 probeMin = probe.position - vec3(r);
-	vec3 probeMax = probe.position + vec3(r);
+	vec3 probeMin = probe.position + probe.falloffBoundsMin;
+	vec3 probeMax = probe.position + probe.falloffBoundsMax;
 
 	if (!(all(greaterThanEqual(position, probeMin)) && all(lessThanEqual(position, probeMax))))
 	{
@@ -50,7 +48,7 @@ void ratSampleProbeCorrectParallaxImpl(RatScratchPipelineReflectionProbe probe, 
 
 vec4 ratSampleGlobalIlluminationProbe(RatScratchPipelineReflectionProbe probe, vec3 position, vec3 direction)
 {
-	//ratSampleProbeCorrectParallaxImpl(probe, position, direction);
+	ratSampleProbeCorrectParallaxImpl(probe, position, direction);
 	return ratSampleProbeImpl(rat_PipelineGlobalIlluminationAtlasView, probe.atlasImageIndexCount.x, direction);
 }
 

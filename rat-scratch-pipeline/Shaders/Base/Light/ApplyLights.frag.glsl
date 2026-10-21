@@ -103,6 +103,11 @@ void ratApplyLightsImplEnvironmentProbes(in RatScratchPipelineFragmentOutput fra
 		uvec3(0, probeCoordinate.yz), probeDimensions, fragmentOutput.cameraIndex)];
 	probeCount = min(probeCount, RAT_SCRATCH_PIPELINE_CONFIG_MAX_REFLECTION_PROBES_PER_CELL);
 
+	if (probeCount == 0)
+	{
+		result.diffuse *= vec3(1.0, 0.0, 0.0);
+	}
+
 	vec3 radiance = vec3(0.0);
 	vec3 irradiance = vec3(0.0);
 	float weight = 0.0;
@@ -129,8 +134,6 @@ void ratApplyLightsImplEnvironmentProbes(in RatScratchPipelineFragmentOutput fra
 	radiance /= weight;
 	irradiance /= weight;
 
-	result.specular = vec3(0.0);
-	result.diffuse = vec3(0.0);
 	ratApplyIBL(fragmentOutput, radiance, irradiance, cameraPosition, result);
 
 	// float nDotV = max(dot(V, N), 0.0);

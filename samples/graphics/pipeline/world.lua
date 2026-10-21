@@ -408,6 +408,8 @@ function demo.update()
 	end
 
 	demo.centerProbe:setPosition(maxBounds:subtract(minBounds):scale(0.5):add(minBounds))
+	demo.centerProbe:setFalloffBounds(maxBounds:subtract(minBounds):scale(0.5):negate(), maxBounds:subtract(minBounds):scale(0.5))
+	demo.centerProbe:setBounds(maxBounds:subtract(minBounds):scale(0.45):negate(), maxBounds:subtract(minBounds):scale(0.45))
 end
 
 local function prettyNumber(value)
