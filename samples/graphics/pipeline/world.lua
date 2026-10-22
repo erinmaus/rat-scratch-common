@@ -6,6 +6,7 @@ local AmbientLight = require("rat-scratch-pipeline").AmbientLight
 local DirectionalLight = require("rat-scratch-pipeline").DirectionalLight
 local Vector3 = require("rat-scratch-math").Vector3
 local Quaternion = require("rat-scratch-math").Quaternion
+local MathCommon = require("rat-scratch-math").Common
 local LightPipeline = require("rat-scratch-pipeline").LightPipeline
 local GLTF = require("rat-scratch-gltf")
 local ExtendedScene = require("rat-scratch-pipeline-tools").Model.ExtendedScene
@@ -190,7 +191,7 @@ function demo.load()
 	demo.centerProbe:setRadiusFalloff(30)
 	demo.centerProbe:setIsRealtime(true)
 	demo.centerProbe:setPosition(Vector3(0, 5, 0))
-	demo.scene:getPipeline(ReflectionProbePipeline):add(demo.centerProbe)
+	--demo.scene:getPipeline(ReflectionProbePipeline):add(demo.centerProbe)
 end
 
 demo.isKeyboard = false
@@ -363,29 +364,46 @@ function demo.update()
 	if
 		not (
 			minBounds:equal(demo.minBounds) and maxBounds:equal(demo.maxBounds)
-		) and false
+)
 	then
 		for _, probe in ipairs(demo.reflectionProbes) do
 			demo.scene:getPipeline(ReflectionProbePipeline):remove(probe)
 		end
 		Table.clear(demo.reflectionProbes)
+		local realMinBounds = Vector3(-10, 0, -10)
+		local realMaxBounds = Vector3(10, 11.2, 10)
 
-		local w = maxBounds.x - minBounds.x
-		local h = maxBounds.z - minBounds.z
-		local GRID_SIZE = math.min(w / 3, h / 3)
-		local GRID_OVERLAP = 1
-		for x = minBounds.x + GRID_SIZE / 2, maxBounds.x - GRID_SIZE / 2, GRID_SIZE do
-			for z = minBounds.z + GRID_SIZE / 2, maxBounds.z - GRID_SIZE / 2, GRID_SIZE do
-				for _, y in ipairs({
-					minBounds.y + (maxBounds.y - minBounds.y) / 2,
-					maxBounds.y - (maxBounds.y - minBounds.y) / 2,
-				}) do
+		local GRID_CELLS_XZ = 2
+		local GRID_CELLS_Y = 1
+		local sx = realMaxBounds.x - realMinBounds.x
+		local sy = realMaxBounds.y - realMinBounds.y
+		local sz = realMaxBounds.z - realMinBounds.z
+		local gx = sx / GRID_CELLS_XZ
+		local gy = sy / GRID_CELLS_Y
+		local gz = sz / GRID_CELLS_XZ
+		local hx, hy, hz = gx / 2, gy / 2, gz / 2
+		local p = 0.5
+
+		for i = 1, GRID_CELLS_XZ do
+			for j = 1, GRID_CELLS_Y do
+				for k = 1, GRID_CELLS_XZ do
+					local x1 = MathCommon.lerp(realMinBounds.x, realMaxBounds.x, (i - 1) / GRID_CELLS_XZ)
+					local x2 = MathCommon.lerp(realMinBounds.x, realMaxBounds.x, i / GRID_CELLS_XZ)
+					local y1 = MathCommon.lerp(realMinBounds.y, realMaxBounds.y, (j - 1) / GRID_CELLS_Y)
+					local y2 = MathCommon.lerp(realMinBounds.y, realMaxBounds.y, j / GRID_CELLS_Y)
+					local z1 = MathCommon.lerp(realMinBounds.z, realMaxBounds.z, (k - 1) / GRID_CELLS_XZ)
+					local z2 = MathCommon.lerp(realMinBounds.z, realMaxBounds.z, k / GRID_CELLS_XZ)
+					local x = (x2 - x1) / 2 + x1
+					local y = (y2 - y1) / 2 + y1
+					local z = (z2 - z1) / 2 + z1
+
 					local probe = ReflectionProbe()
-					probe:setRadius(GRID_SIZE)
-					probe:setRadiusFalloff(GRID_SIZE + GRID_OVERLAP)
+					probe:setBounds(Vector3(-hx, -hy, -hz), Vector3(hx, hy, hz))
+					probe:setFalloffBounds(Vector3(-hx - p, -hy - p, -hz - p), Vector3(hx + p, hy + p, hz + p))
 					probe:setFar(50)
 					probe:setPosition(Vector3(x, y, z))
 					probe:setIsRealtime(true)
+					print("...", x, y, z)
 
 					demo.scene:getPipeline(ReflectionProbePipeline):add(probe)
 
@@ -398,25 +416,25 @@ function demo.update()
 
 		demo.minBounds:from(minBounds:get())
 		demo.maxBounds:from(maxBounds:get())
-
-		print(">>> center", maxBounds:subtract(minBounds):get())
 	end
 
 	local d = love.mouse.getY() / love.graphics.getHeight()
 	local p = maxBounds:subtract(minBounds):scale(0.5):add(minBounds)
-	if love.keyboard.isDown("space") then
+	minBounds = Vector3(-10, -5, -10)
+	maxBounds = Vector3(10, 6.2, 10)
+	if love.keyboard.isDown("space") or true then
 		demo.centerProbe:setPosition(
-			Vector3(0, Common.lerp(minBounds.y, maxBounds.y, d), 0)
+			Vector3(0, 5, 0)
 		)
 	else
 		demo.centerProbe:setPosition(p)
 	end
-	print("???", demo.centerProbe:getPosition():get())
-	demo.centerProbe:setRadius(
-		math.max(maxBounds.x - minBounds.x, maxBounds.y - minBounds.y)
+	local halfBounds = 
+	demo.centerProbe:setBounds(
+		minBounds:add(Vector3.ONE), maxBounds:subtract(Vector3.ONE)
 	)
-	demo.centerProbe:setRadiusFalloff(
-		math.max(maxBounds.x - minBounds.x, maxBounds.y - minBounds.y) + 1
+	demo.centerProbe:setFalloffBounds(
+		minBounds, maxBounds
 	)
 	-- demo.centerProbe:setFalloffBounds(
 	-- 	maxBounds:subtract(minBounds):scale(0.5):negate(),
