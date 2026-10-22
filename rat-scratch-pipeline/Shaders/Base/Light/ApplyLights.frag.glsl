@@ -80,7 +80,7 @@ float ratApplyLightsImplCalculateWeight(RatScratchPipelineReflectionProbe probe,
 	}
 
 	float falloffWidth = minDistance - falloffDistance;
-	float t = minDistance / minDistance - falloffDistance;
+	float t = minDistance / falloffWidth;
 
 	return 1.0 - smoothstep(0.0, 1.0, t);
 }
@@ -118,23 +118,17 @@ void ratApplyLightsImplEnvironmentProbes(in RatScratchPipelineFragmentOutput fra
 				vec3(w) * ratSampleReflectionProbe(probe, fragmentOutput.position, fragmentOutput.roughness, R).rgb;
 			irradiance += vec3(w) * ratSampleGlobalIlluminationProbe(probe, fragmentOutput.position, N).rgb;
 		}
-
-		break;
 	}
 
 	if (weight <= 0.0)
 	{
-		result.diffuse = vec3(weight, 0.0, 0.0);
 		return;
-		//return;
 	}
 
 	radiance /= weight;
 	irradiance /= weight;
 
-	// ratApplyIBL(fragmentOutput, radiance, irradiance, cameraPosition, result);
-	// result.diffuse = radiance;
-	result.diffuse = vec3(0.0, weight, 0.0);
+	ratApplyIBL(fragmentOutput, radiance, irradiance, cameraPosition, result);
 }
 
 void ratApplyLights(in RatScratchPipelineFragmentOutput fragmentOutput, inout RatScratchPipelineLightResult result)

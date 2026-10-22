@@ -29,18 +29,18 @@ const float RAT_SCRATCH_PIPELINE_PROBE_IMPL_MAX_MIP_LEVEL =
 
 void ratSampleProbeCorrectParallaxImpl(RatScratchPipelineReflectionProbe probe, vec3 position, inout vec3 direction)
 {
-	vec3 probeMin = probe.position + probe.boundsMin;
-	vec3 probeMax = probe.position + probe.boundsMax;
+	vec3 probeMin = probe.position + probe.falloffBoundsMin;
+	vec3 probeMax = probe.position + probe.falloffBoundsMax;
 
 	if (!(all(greaterThanEqual(position, probeMin)) && all(lessThanEqual(position, probeMax))))
 	{
-		//return;
+		// return;
 	}
 
 	direction = normalize(direction);
 	vec3 intersection1 = (probeMax - position) / direction;
 	vec3 intersection2 = (probeMin - position) / direction;
-	//vec3 farIntersection = max(intersection1, intersection2);
+	// vec3 farIntersection = max(intersection1, intersection2);
 	vec3 farIntersection = mix(intersection2, intersection1, step(0.0, direction));
 	float intersectionDistance = min(farIntersection.x, min(farIntersection.y, farIntersection.z));
 	vec3 intersectionPosition = position + direction * intersectionDistance;
