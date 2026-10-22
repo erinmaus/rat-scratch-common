@@ -42,10 +42,6 @@ function ReflectionProbe:new()
 	self.data = {}
 	BufferFormat.resetValue(ReflectionProbe.REFLECTION_PROBE_FORMAT, self.data)
 
-	self.perspective = PerspectiveFOVCameraProjection()
-	self.perspective:setNear(0.001)
-	self.perspective:setFar(1)
-
 	self.cameras = {}
 	self:_initCameras()
 
@@ -145,6 +141,13 @@ function ReflectionProbe:setBounds(min, max)
 	self.falloffBoundsMin:min(self.boundsMin, self.falloffBoundsMin)
 	self.falloffBoundsMax:max(self.boundsMax, self.falloffBoundsMax)
 
+	self.cameras[1]:getProjection():setFar(math.abs(self.boundsMin.x))
+	self.cameras[2]:getProjection():setFar(math.abs(self.boundsMax.x))
+	self.cameras[3]:getProjection():setFar(math.abs(self.boundsMin.y))
+	self.cameras[4]:getProjection():setFar(math.abs(self.boundsMax.y))
+	self.cameras[5]:getProjection():setFar(math.abs(self.boundsMin.z))
+	self.cameras[6]:getProjection():setFar(math.abs(self.boundsMax.z))
+
 	self:dirty()
 end
 
@@ -239,10 +242,12 @@ do
 	function ReflectionProbe:_initCameras()
 		local rotation = _rotation
 		for i = 1, CubeMap.FACES do
+			local perspective = PerspectiveFOVCameraProjection()
+
 			local view = ArcballCameraView()
 			view:setRotation(CubeMap.getRotation(i, rotation))
 
-			local camera = Camera(self.perspective, view)
+			local camera = Camera(perspective, view)
 			table.insert(self.cameras, camera)
 		end
 	end

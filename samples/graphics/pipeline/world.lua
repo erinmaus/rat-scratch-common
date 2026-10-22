@@ -186,7 +186,7 @@ function demo.load()
 	demo.instancedDraws = { 0, 0, total = 0 }
 
 	demo.centerProbe = ReflectionProbe()
-	demo.centerProbe:setFar(50)
+	--demo.centerProbe:setFar(50)
 	demo.centerProbe:setRadius(25)
 	demo.centerProbe:setRadiusFalloff(30)
 	demo.centerProbe:setIsRealtime(true)
@@ -364,7 +364,7 @@ function demo.update()
 	if
 		not (
 			minBounds:equal(demo.minBounds) and maxBounds:equal(demo.maxBounds)
-)
+		)
 	then
 		for _, probe in ipairs(demo.reflectionProbes) do
 			demo.scene:getPipeline(ReflectionProbePipeline):remove(probe)
@@ -387,20 +387,47 @@ function demo.update()
 		for i = 1, GRID_CELLS_XZ do
 			for j = 1, GRID_CELLS_Y do
 				for k = 1, GRID_CELLS_XZ do
-					local x1 = MathCommon.lerp(realMinBounds.x, realMaxBounds.x, (i - 1) / GRID_CELLS_XZ)
-					local x2 = MathCommon.lerp(realMinBounds.x, realMaxBounds.x, i / GRID_CELLS_XZ)
-					local y1 = MathCommon.lerp(realMinBounds.y, realMaxBounds.y, (j - 1) / GRID_CELLS_Y)
-					local y2 = MathCommon.lerp(realMinBounds.y, realMaxBounds.y, j / GRID_CELLS_Y)
-					local z1 = MathCommon.lerp(realMinBounds.z, realMaxBounds.z, (k - 1) / GRID_CELLS_XZ)
-					local z2 = MathCommon.lerp(realMinBounds.z, realMaxBounds.z, k / GRID_CELLS_XZ)
+					local x1 = MathCommon.lerp(
+						realMinBounds.x,
+						realMaxBounds.x,
+						(i - 1) / GRID_CELLS_XZ
+					)
+					local x2 = MathCommon.lerp(
+						realMinBounds.x,
+						realMaxBounds.x,
+						i / GRID_CELLS_XZ
+					)
+					local y1 = MathCommon.lerp(
+						realMinBounds.y,
+						realMaxBounds.y,
+						(j - 1) / GRID_CELLS_Y
+					)
+					local y2 = MathCommon.lerp(
+						realMinBounds.y,
+						realMaxBounds.y,
+						j / GRID_CELLS_Y
+					)
+					local z1 = MathCommon.lerp(
+						realMinBounds.z,
+						realMaxBounds.z,
+						(k - 1) / GRID_CELLS_XZ
+					)
+					local z2 = MathCommon.lerp(
+						realMinBounds.z,
+						realMaxBounds.z,
+						k / GRID_CELLS_XZ
+					)
 					local x = (x2 - x1) / 2 + x1
 					local y = (y2 - y1) / 2 + y1
 					local z = (z2 - z1) / 2 + z1
 
 					local probe = ReflectionProbe()
 					probe:setBounds(Vector3(-hx, -hy, -hz), Vector3(hx, hy, hz))
-					probe:setFalloffBounds(Vector3(-hx - p, -hy - p, -hz - p), Vector3(hx + p, hy + p, hz + p))
-					probe:setFar(50)
+					probe:setFalloffBounds(
+						Vector3(-hx - p, -hy - p, -hz - p),
+						Vector3(hx + p, hy + p, hz + p)
+					)
+					--probe:setFar(50)
 					probe:setPosition(Vector3(x, y, z))
 					probe:setIsRealtime(true)
 					print("...", x, y, z)
@@ -423,19 +450,15 @@ function demo.update()
 	minBounds = Vector3(-10, -5, -10)
 	maxBounds = Vector3(10, 6.2, 10)
 	if love.keyboard.isDown("space") or true then
-		demo.centerProbe:setPosition(
-			Vector3(0, 5, 0)
-		)
+		demo.centerProbe:setPosition(Vector3(0, 5, 0))
 	else
 		demo.centerProbe:setPosition(p)
 	end
-	local halfBounds = 
-	demo.centerProbe:setBounds(
-		minBounds:add(Vector3.ONE), maxBounds:subtract(Vector3.ONE)
+	local halfBounds = demo.centerProbe:setBounds(
+		minBounds:add(Vector3.ONE),
+		maxBounds:subtract(Vector3.ONE)
 	)
-	demo.centerProbe:setFalloffBounds(
-		minBounds, maxBounds
-	)
+	demo.centerProbe:setFalloffBounds(minBounds, maxBounds)
 	-- demo.centerProbe:setFalloffBounds(
 	-- 	maxBounds:subtract(minBounds):scale(0.5):negate(),
 	-- 	maxBounds:subtract(minBounds):scale(0.5)
