@@ -4,6 +4,7 @@ local Table = require("rat-scratch-common").Table
 local Pipeline = require("rat-scratch-pipeline.impl.Pipeline")
 local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
+local CameraBuffer = require("rat-scratch-pipeline.CameraBuffer")
 local CameraFrame = require("rat-scratch-pipeline.CameraFrame")
 local CullResult = require("rat-scratch-pipeline.CullResult")
 local DoubleBufferResult = require("rat-scratch-pipeline.DoubleBufferResult")
@@ -13,24 +14,22 @@ local LightEvent = require("rat-scratch-pipeline.LightEvent")
 local PipelineMultiBuffer =
 	require("rat-scratch-pipeline.Buffer.PipelineMultiBuffer")
 local PointLight = require("rat-scratch-pipeline.PointLight")
+local RenderBuffer = require("rat-scratch-pipeline.RenderBuffer")
 local Transform = require("rat-scratch-math").Transform
 
 --- @class RatScratch.Pipeline.LightPipeline : RatScratch.Pipeline.impl.Pipeline
 --- @field private lights table<RatScratch.Pipeline.Light, true>
 --- @field private shadowCastingLights table<RatScratch.Pipeline.Light, true>
---- @field private shadowAtlasDepth love.Texture
---- @field private shadowAtlasColor love.Texture
---- @field private shadowAtlasOtherColor love.Texture
---- @field private shadowAtlasBinding table
+--- @field private shadowAtlasColor RatScratch.Pipeline.RenderBuffer
+--- @field private shadowAtlasOtherColor RatScratch.Pipeline.RenderBuffer
 --- @field private shadowBlurResult RatScratch.Pipeline.DoubleBufferResult
 --- @field private dirtyLights table<RatScratch.Pipeline.Light, true>
 --- @field private lightsBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Light>
 --- @field private lightData number[]
---- @field private camerasBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>
+--- @field private camerasBuffer RatScratch.Pipeline.CameraBuffer
 --- @field private cameras table<RatScratch.Pipeline.Camera, RatScratch.Pipeline.CameraFrame>
 --- @field private _CELLS_BUFFER love.GraphicsBuffer
---- @field private clusterShaders table<string, love.Shader>
---- @field private cellShaders table<string, love.Shader>
+--- @field private clusterShaders table<string, RatScratch.Resource.Resource<love.Shader>>
 --- @overload fun(pipelineRuntime: RatScratch.Pipeline.PipelineRuntime): RatScratch.Pipeline.LightPipeline
 local LightPipeline = Object(Pipeline)
 
@@ -41,28 +40,14 @@ LightPipeline.SHADOW_TEXTURE_ATLAS_FORMAT = {
 	{ location = 3, name = "cameraIndex", format = "uint32" },
 }
 
-LightPipeline.CELLS_FORMAT = {
-	{ location = 0, name = "worldMin", format = "floatvec3" },
-	{ location = 1, name = "worldMax", format = "floatvec3" },
-}
-
 LightPipeline.DEFAULT_LIGHTS_COUNT = 1024
 LightPipeline.DEFAULT_CAMERA_COUNT = 64
 
-LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_SETTINGS = {
-	format = "rg32f",
-	canvas = true,
-	readable = true,
+LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_FORMATS = {
+	"rg32f",
 }
 
-LightPipeline.SHADOW_ATLAS_DEPTH_CANVAS_SETTINGS = {
-	format = "depth32f",
-	canvas = true,
-	readable = true,
-}
-
---- @type love.GraphicsBuffer | false
-LightPipeline._CELLS_BUFFER = false
+LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_DEPTH_FORMAT = "depth32f"
 
 --- @param pipelineRuntime RatScratch.Pipeline.PipelineRuntime
 function LightPipeline:new(pipelineRuntime)
@@ -94,32 +79,15 @@ function LightPipeline:new(pipelineRuntime)
 
 	self.currentCameraCount = 1
 
-	self.shadowAtlasColor = love.graphics.newTexture(
-		width,
-		height,
-		1,
-		LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_SETTINGS
+	self.shadowAtlasColor = RenderBuffer(
+		LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_FORMATS,
+		LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_DEPTH_FORMAT
 	)
+	self.shadowAtlasOtherColor =
+		RenderBuffer(LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_FORMATS)
 
-	self.shadowAtlasOtherColor = love.graphics.newTexture(
-		width,
-		height,
-		1,
-		LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_SETTINGS
-	)
-
-	self.shadowAtlasDepth = love.graphics.newTexture(
-		width,
-		height,
-		1,
-		LightPipeline.SHADOW_ATLAS_DEPTH_CANVAS_SETTINGS
-	)
-
-	self.shadowAtlasBinding = {
-		self.shadowAtlasColor,
-		depthstencil = self.shadowAtlasDepth,
-		alllayers = true,
-	}
+	self.shadowAtlasColor:resize(width, height, 1)
+	self.shadowAtlasOtherColor:resize(width, height, 1)
 
 	self.shadowAtlasData = {}
 	self.shadowAtlasBuffer = love.graphics.newBuffer(
@@ -128,19 +96,9 @@ function LightPipeline:new(pipelineRuntime)
 		{ shaderstorage = true }
 	)
 
-	self.shadowBlurResult =
-		DoubleBufferResult(self.shadowAtlasColor, self.shadowAtlasOtherColor)
-
-	self.camerasBuffer = PipelineBuffer(
-		CameraFrame.CAMERA_FORMAT,
-		{ shaderstorage = true },
-		LightPipeline.DEFAULT_CAMERA_COUNT
-	)
-
-	self.cameras = setmetatable({}, { __mode = "k" })
+	self.camerasBuffer = CameraBuffer()
 
 	self.clusterShaders = {}
-	self.cellShaders = {}
 end
 
 --- @param shader love.Shader
@@ -151,13 +109,16 @@ function LightPipeline:bind(shader, qualityPreset)
 	end
 
 	if shader:hasUniform("rat_ShadowCamerasBuffer") then
-		shader:send("rat_ShadowCamerasBuffer", self.camerasBuffer:getBuffer())
+		shader:send(
+			"rat_ShadowCamerasBuffer",
+			self.camerasBuffer:getCameraBuffer():getBuffer()
+		)
 	end
 
 	if shader:hasUniform("rat_PipelineShadowTextureAtlasView") then
 		shader:send(
 			"rat_PipelineShadowTextureAtlasView",
-			self.shadowBlurResult:getResult()
+			self.shadowAtlasColor:getCanvas(1)
 		)
 	end
 
@@ -192,6 +153,8 @@ function LightPipeline:removeLight(light)
 	self.lights[light] = nil
 	self.shadowCastingLights[light] = nil
 	self.dirtyLights[light] = nil
+
+	light:silence(LightEvent.UPDATE, self._onLightUpdate, self)
 end
 
 --- @private
@@ -220,24 +183,14 @@ end
 function LightPipeline:_addShadowCastingLight(light)
 	self.camerasBuffer:registerOrResize(light, light:getCameraCount())
 	self.shadowCastingLights[light] = true
-end
 
---- @private
---- @param light RatScratch.Pipeline.Light
-function LightPipeline:_flushShadowCastingLight(light)
 	local count = light:getCameraCount()
-
 	for i = 1, count do
 		local camera = light:getCamera(i)
-		local cameraFrame = self.cameras[camera]
-		if not cameraFrame then
-			cameraFrame = CameraFrame(camera)
-			self.cameras[camera] = cameraFrame
-		end
-
-		cameraFrame:update()
-		self.camerasBuffer:copyTable(light, cameraFrame:getData(), i, 1)
+		self.camerasBuffer:set(light, i, camera)
 	end
+
+	self.camerasBuffer:activate(light)
 end
 
 --- @private
@@ -247,7 +200,8 @@ function LightPipeline:_flushLight(light)
 
 	local cameraIndex, cameraCount = 0, 0
 	if self.camerasBuffer:has(light) then
-		cameraIndex, cameraCount = self.camerasBuffer:getIndexCount(light)
+		cameraIndex, cameraCount =
+			self.camerasBuffer:getCameraBuffer():getIndexCount(light)
 	end
 
 	BufferFormat.setValue(
@@ -260,10 +214,6 @@ function LightPipeline:_flushLight(light)
 	)
 
 	self.lightsBuffer:copyTable(light, self.lightData, 1, 1)
-
-	if self.shadowCastingLights[light] then
-		self:_flushShadowCastingLight(light)
-	end
 
 	light:update()
 end
@@ -278,12 +228,9 @@ end
 
 --- @private
 function LightPipeline:_flushShadowAtlas()
-	local _, cameraCount = self.camerasBuffer:getIndexCount()
+	local cameraCount = self.camerasBuffer:getCameraCount()
 	if self.currentCameraCount < cameraCount then
 		self.currentCameraCount = cameraCount
-
-		self.shadowAtlasDepth:release()
-		self.shadowAtlasColor:release()
 
 		--- @type integer?, integer?
 		local width, height = self:getPipelineRuntime():getCurrentProperty(
@@ -294,34 +241,8 @@ function LightPipeline:_flushShadowAtlas()
 		--- @cast width integer
 		--- @cast height integer
 
-		self.shadowAtlasColor = love.graphics.newTexture(
-			width,
-			height,
-			cameraCount,
-			LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_SETTINGS
-		)
-
-		self.shadowAtlasOtherColor = love.graphics.newTexture(
-			width,
-			height,
-			cameraCount,
-			LightPipeline.SHADOW_ATLAS_COLOR_CANVAS_SETTINGS
-		)
-
-		self.shadowAtlasDepth = love.graphics.newTexture(
-			width,
-			height,
-			cameraCount,
-			LightPipeline.SHADOW_ATLAS_DEPTH_CANVAS_SETTINGS
-		)
-
-		self.shadowAtlasBinding[1] = self.shadowAtlasColor
-		self.shadowAtlasBinding.depthstencil = self.shadowAtlasDepth
-
-		self.shadowBlurResult = DoubleBufferResult(
-			self.shadowAtlasColor,
-			self.shadowAtlasOtherColor
-		)
+		self.shadowAtlasColor:resize(width, height, cameraCount)
+		self.shadowAtlasOtherColor:resize(width, height, cameraCount)
 
 		self.shadowAtlasBuffer = love.graphics.newBuffer(
 			LightPipeline.SHADOW_TEXTURE_ATLAS_FORMAT,
@@ -361,7 +282,6 @@ end
 
 function LightPipeline:flush()
 	if next(self.dirtyLights) then
-		self.camerasBuffer:compact()
 		self.lightsBuffer:compact()
 
 		self:_flushLights()
@@ -371,18 +291,24 @@ function LightPipeline:flush()
 
 		self:_flushShadowAtlas()
 	end
+
+	self.camerasBuffer:flush()
+end
+
+function LightPipeline:update()
+	self.camerasBuffer:update()
 end
 
 function LightPipeline:newCullResult()
 	return CullResult(self.camerasBuffer)
 end
 
-function LightPipeline:setCanvas()
-	love.graphics.setCanvas(self.shadowAtlasBinding)
-end
-
-function LightPipeline:getShadowBlurResult()
-	return self.shadowBlurResult
+function LightPipeline:newShadowBlurDoubleBufferResult()
+	return DoubleBufferResult(
+		self.shadowAtlasColor,
+		self.shadowAtlasOtherColor,
+		1
+	)
 end
 
 function LightPipeline:loadDefaultShaders()
@@ -394,121 +320,101 @@ function LightPipeline:loadDefaultShaders()
 		self.clusterShaders[qualityPreset] =
 			runtime:loadComputeShader("@Pipeline/Lights/Cluster.compute.glsl")
 	end
-
-	Table.clear(self.cellShaders)
-	for i = 1, runtime:getQualityPresetCount() do
-		local qualityPreset = runtime:getQualityPreset(i)
-		self.cellShaders[qualityPreset] =
-			runtime:loadComputeShader("@Pipeline/Lights/Cells.compute.glsl")
-	end
 end
 
---- @private
---- @param count integer
-function LightPipeline._reserveCells(count)
-	if
-		not LightPipeline._CELLS_BUFFER
-		or count > LightPipeline._CELLS_BUFFER:getElementCount()
-	then
-		LightPipeline._CELLS_BUFFER = love.graphics.newBuffer(
-			LightPipeline.CELLS_FORMAT,
-			math.max(count, 1),
-			{ shaderstorage = true }
+do
+	local _screenSize = { 0, 0 }
+
+	--- @private
+	--- @param qualityPreset string
+	--- @param shader love.Shader
+	--- @param screenWidth integer
+	--- @param screenHeight integer
+	--- @param result RatScratch.Pipeline.LightClusterResult
+	function LightPipeline:_dispatchCluster(
+		qualityPreset,
+		screenWidth,
+		screenHeight,
+		shader,
+		result
+	)
+		shader:send("rat_LightsBuffer", self.lightsBuffer:getBuffer())
+
+		local screenSize = _screenSize
+		screenSize[1], screenSize[2] = screenWidth, screenHeight
+		shader:send("rat_ScreenSize", screenSize)
+
+		local _, lightsCount = self.lightsBuffer:getIndexCount()
+		shader:send("rat_LightCount", lightsCount)
+
+		local camerasBuffer = result:getCamerasBuffer()
+		camerasBuffer:bind(shader)
+
+		local cellSizeX, cellSizeY = self.pipelineRuntime:getCurrentProperty(
+			qualityPreset,
+			"pipeline.properties.lighting.cellsSizeInPixels"
+		)
+		local maxLightsPerCell = self.pipelineRuntime:getCurrentProperty(
+			qualityPreset,
+			"pipeline.properties.lighting.maxLightsPerCell"
+		) or 0
+		local maxLightsPerThread = self.pipelineRuntime:getCurrentProperty(
+			qualityPreset,
+			"pipeline.properties.lighting.maxLightsPerThread"
+		) or 1
+
+		local cellsCount = math.ceil(screenWidth / (cellSizeX or 1))
+			* math.ceil(screenHeight / (cellSizeY or 1))
+
+		local minLightIndicesElementCount = cellsCount
+			* (maxLightsPerCell + 1)
+			* camerasBuffer:getCameraCount()
+		local lightsIndicesBuffer =
+			result:reserveLightIndices(minLightIndicesElementCount)
+		lightsIndicesBuffer:clear()
+
+		shader:send("rat_LightCountIndicesBuffer", lightsIndicesBuffer)
+
+		local localSizeX, localSizeY, localSizeZ =
+			shader:getLocalThreadgroupSize()
+		love.graphics.dispatchThreadgroups(
+			shader,
+			math.max(math.ceil(cellsCount / localSizeX), 1),
+			math.max(
+				math.ceil(lightsCount / maxLightsPerThread / localSizeY),
+				1
+			),
+			math.max(
+				math.ceil(camerasBuffer:getActiveCameraCount() / localSizeZ),
+				1
+			)
 		)
 	end
-
-	return LightPipeline._CELLS_BUFFER
-end
-
---- @private
---- @param qualityPreset string
---- @param shader love.Shader
---- @param result RatScratch.Pipeline.LightClusterResult
-function LightPipeline:_dispatchCluster(qualityPreset, shader, result)
-	shader:send("rat_LightsBuffer", self.lightsBuffer:getBuffer())
-
-	local _, lightsCount = self.lightsBuffer:getIndexCount()
-	shader:send("rat_LightCount", lightsCount)
-
-	local cellsBuffer = LightPipeline._CELLS_BUFFER
-	shader:send("rat_WorldCellsBuffer", cellsBuffer)
-
-	local camerasBuffer = result:getCamerasBuffer()
-	local _, cameraCount = camerasBuffer:getIndexCount()
-	shader:send("rat_CameraCount", cameraCount)
-
-	local cellsX, cellsY, cellsZ = self.pipelineRuntime:getCurrentProperty(
-		qualityPreset,
-		"pipeline.properties.lighting.cells"
-	)
-	local maxLightsPerCell = self.pipelineRuntime:getCurrentProperty(
-		qualityPreset,
-		"pipeline.properties.lighting.maxLightsPerCell"
-	) or 0
-	local maxLightsPerThread = self.pipelineRuntime:getCurrentProperty(
-		qualityPreset,
-		"pipeline.properties.lighting.maxLightsPerThread"
-	) or 1
-	local cellsCount = (cellsX or 0) * (cellsY or 0) * (cellsZ or 0)
-
-	local minLightIndicesElementCount = cellsCount
-		* (maxLightsPerCell + 1)
-		* cameraCount
-	local lightsIndicesBuffer =
-		result:reserveLightIndices(minLightIndicesElementCount)
-	lightsIndicesBuffer:clear()
-
-	shader:send("rat_LightCountIndicesBuffer", lightsIndicesBuffer)
-
-	local localSizeX, localSizeY, localSizeZ = shader:getLocalThreadgroupSize()
-	love.graphics.dispatchThreadgroups(
-		shader,
-		math.max(math.ceil(cellsCount / localSizeX), 1),
-		math.max(math.ceil(lightsCount / maxLightsPerThread / localSizeY), 1),
-		math.max(math.ceil(cameraCount / localSizeZ), 1)
-	)
-end
-
---- @private
---- @param qualityPreset string
---- @param shader love.Shader
---- @param result RatScratch.Pipeline.LightClusterResult
-function LightPipeline:_dispatchCells(qualityPreset, shader, result)
-	local camerasBuffer = result:getCamerasBuffer()
-	shader:send("rat_CamerasBuffer", camerasBuffer:getBuffer())
-
-	local _, cameraCount = camerasBuffer:getIndexCount()
-	shader:send("rat_CameraCount", cameraCount)
-
-	local cellsX, cellsY, cellsZ = self.pipelineRuntime:getCurrentProperty(
-		qualityPreset,
-		"pipeline.properties.lighting.cells"
-	)
-	local cellsCount = (cellsX or 0) * (cellsY or 0) * (cellsZ or 0)
-
-	local cellsBuffer = LightPipeline._reserveCells(cellsCount * cameraCount)
-	shader:send("rat_WorldCellsBuffer", cellsBuffer)
-
-	local localSizeX, localSizeY = shader:getLocalThreadgroupSize()
-	love.graphics.dispatchThreadgroups(
-		shader,
-		math.max(math.ceil(cellsCount / localSizeX), 1),
-		math.max(math.ceil(cameraCount / localSizeY), 1)
-	)
 end
 
 --- @param qualityPreset string
 --- @param result RatScratch.Pipeline.LightClusterResult
+--- @param screenWidth integer
+--- @param screenHeight integer
 --- @return boolean, RatScratch.Pipeline.LightClusterResult
-function LightPipeline:clusterLights(qualityPreset, result)
+function LightPipeline:clusterLights(
+	qualityPreset,
+	screenWidth,
+	screenHeight,
+	result
+)
 	local clusterShader = self.clusterShaders[qualityPreset]
-	local cellShader = self.cellShaders[qualityPreset]
-	if not (clusterShader and cellShader) then
+	if not (clusterShader and clusterShader:getIsReady()) then
 		return false, result
 	end
 
-	self:_dispatchCells(qualityPreset, cellShader, result)
-	self:_dispatchCluster(qualityPreset, clusterShader, result)
+	self:_dispatchCluster(
+		qualityPreset,
+		screenWidth,
+		screenHeight,
+		clusterShader:get(),
+		result
+	)
 
 	return true, result
 end

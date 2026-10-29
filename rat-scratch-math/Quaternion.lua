@@ -379,7 +379,7 @@ do
 	--- @param x number
 	--- @param y number
 	--- @param z number
-	--- @param result RatScratch.Math.Quaternion
+	--- @param result? RatScratch.Math.Quaternion
 	--- @return RatScratch.Math.Quaternion
 	function Quaternion.fromEulerXYZ(x, y, z, result)
 		result = result or Quaternion()

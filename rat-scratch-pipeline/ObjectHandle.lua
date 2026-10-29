@@ -8,8 +8,11 @@ local Skeleton = require("rat-scratch-graphics").Graphics3D.Skeleton
 local Resource = require("rat-scratch-resource").Resource
 local ResourceEvent = require("rat-scratch-resource").ResourceEvent
 local MaterialPipeline = require("rat-scratch-pipeline.MaterialPipeline")
+local Vector3 = require("rat-scratch-math").Vector3
+local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
 local ObjectHandleAnimatorProvider =
 	require("rat-scratch-pipeline.ObjectHandleAnimatorProvider")
+local PipelineLOD = require("rat-scratch-pipeline.Graphics3D.PipelineLOD")
 local PipelineModel = require("rat-scratch-pipeline.Graphics3D.PipelineModel")
 local PipelineModelMeshPointer =
 	require("rat-scratch-pipeline.Resources.PipelineModelMeshPointer")
@@ -17,11 +20,16 @@ local PipelinePointer = require("rat-scratch-pipeline.Buffer.PipelinePointer")
 local PipelineScene = require("rat-scratch-pipeline.Graphics3D.PipelineScene")
 local PipelineScenePointer =
 	require("rat-scratch-pipeline.Resources.PipelineScenePointer")
+local Transform = require("rat-scratch-math.Transform")
 
 --- @alias RatScratch.Pipeline.ObjectHandle.Pointer
 --- | "object"
 --- | "models"
 --- | "bones"
+
+--- @alias RatScratch.Pipeline.ObjectHandle.TransformType
+--- | "static"
+--- | "dynamic"
 
 --- @class RatScratch.Pipeline.ObjectHandle : RatScratch.Common.BaseObject
 --- @field private id integer
@@ -42,13 +50,17 @@ local PipelineScenePointer =
 --- @field private resourceToUniforms table<RatScratch.Resource.Resource, table<RatScratch.Pipeline.Graphics3D.PipelineMaterialUniform, table<RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh, true>>>>
 --- @field private meshUniformToResource table<RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>, table<RatScratch.Pipeline.Graphics3D.PipelineMaterialUniform, RatScratch.Resource.Resource>>
 --- @field private pointers table<RatScratch.Pipeline.ObjectHandle.Pointer, RatScratch.Pipeline.Buffer.PipelinePointer>
---- @overload fun(id: integer, world: RatScratch.Pipeline.World): RatScratch.Pipeline.ObjectHandle
+--- @overload fun(id: integer, world: RatScratch.Pipeline.World, transformType: RatScratch.Pipeline.ObjectHandle.TransformType): RatScratch.Pipeline.ObjectHandle
 local ObjectHandle = Object()
 
-function ObjectHandle:new(id, world)
+--- @param id integer
+--- @param world RatScratch.Pipeline.World
+--- @param transformType RatScratch.Pipeline.ObjectHandle.TransformType
+function ObjectHandle:new(id, world, transformType)
 	self.id = id
 	self.world = world
 	self.transform = love.math.newTransform()
+	self.transformType = transformType
 
 	self.animatorProvider = ObjectHandleAnimatorProvider(self)
 	self.models = {}
@@ -63,6 +75,13 @@ function ObjectHandle:new(id, world)
 	self.resourceToUniforms = {}
 	self.meshUniformToResource = {}
 	self.uniformsDirty = false
+
+	self.minBounds = Vector3()
+	self.maxBounds = Vector3()
+	self.transformedMinBounds = Vector3()
+	self.transformedMaxBounds = Vector3()
+	self.transformedBoundsDirty = true
+	self.boundsDirty = true
 
 	self.pointers = {}
 end
@@ -123,6 +142,125 @@ end
 function ObjectHandle:setTransform(transform)
 	self.transform:setMatrix(transform:getMatrix())
 	self.eventSource:process(ObjectHandleEvent.fromTransformed(self.transform))
+
+	self.transformedBoundsDirty = true
+end
+
+function ObjectHandle:getIsStatic()
+	return self.transformType == "static"
+end
+
+function ObjectHandle:getIsDynamic()
+	return self.transformType == "dynamics"
+end
+
+do
+	local _nodeMin, _nodeMax = Vector3(), Vector3()
+	local _modelMin, _modelMax = Vector3(), Vector3()
+	local _transformedModelMin, _transformedModelMax = Vector3(), Vector3()
+
+	--- @private
+	function ObjectHandle:_updateStaticBounds()
+		self.minBounds:from(math.huge)
+		self.maxBounds:from(-math.huge)
+
+		local nodeFormatInstance = BufferFormat.get(PipelineLOD.NODE_FORMAT)
+		local nodePositionRadiusByteOffset =
+			nodeFormatInstance:getByteOffset("boundsPositionRadius")
+		local nodeStride = nodeFormatInstance:getStride()
+		local nodeMin, nodeMax = _nodeMin, _nodeMax
+		local modelMin, modelMax = _modelMin, _modelMax
+		local transformedModelMin, transformedModelMax =
+			_transformedModelMin, _transformedModelMax
+
+		local isPending = false
+		local hadData = false
+		for _, modelResource in ipairs(self.models) do
+			if not modelResource:getIsReady() then
+				isPending = true
+			else
+				modelMin:from(math.huge)
+				modelMax:from(-math.huge)
+
+				local model = modelResource:get()
+				for i = 1, model:getMeshCount() do
+					local mesh = model:getMesh(i)
+					local lod = mesh:getLOD()
+					local nodeData = lod:getNodeData()
+
+					local offset = nodePositionRadiusByteOffset
+					for j = 1, lod:getNodeCount() do
+						local x, y, z, radius = nodeData:getFloat(offset, 4)
+						nodeMin:from(x - radius, y - radius, z - radius)
+						nodeMax:from(x + radius, y + radius, z + radius)
+
+						modelMin:min(nodeMin, modelMin)
+						modelMax:max(nodeMax, modelMax)
+
+						offset = offset + nodeStride
+					end
+
+					hadData = hadData or lod:getNodeCount() > 0
+				end
+
+				Transform.transformBounds(
+					model:getTransform(),
+					modelMin,
+					modelMax,
+					transformedModelMin,
+					transformedModelMax
+				)
+
+				self.minBounds:min(transformedModelMin, self.minBounds)
+				self.maxBounds:max(transformedModelMax, self.maxBounds)
+			end
+		end
+
+		self.boundsDirty = isPending
+
+		if not hadData then
+			self.minBounds:from(0)
+			self.maxBounds:from(0)
+		end
+	end
+end
+
+--- @private
+function ObjectHandle:_updateTransformedBounds()
+	Transform.transformBounds(
+		self.transform,
+		self.minBounds,
+		self.maxBounds,
+		self.transformedMinBounds,
+		self.transformedMaxBounds
+	)
+
+	if not self.boundsDirty then
+		self.transformedBoundsDirty = false
+	end
+end
+
+--- @private
+function ObjectHandle:_updateBounds()
+	if self.boundsDirty then
+		self:_updateStaticBounds()
+	end
+
+	if self.transformedBoundsDirty then
+		self:_updateTransformedBounds()
+	end
+end
+
+function ObjectHandle:getStaticBounds()
+	self:_updateBounds()
+
+	return self.minBounds, self.maxBounds
+end
+
+function ObjectHandle:getTransformedBounds()
+	self:_updateBounds()
+
+	return self.transformedMinBounds, self.transformedMaxBounds
 end
 
 --- @param pointer RatScratch.Pipeline.ObjectHandle.Pointer
@@ -534,6 +672,12 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 			"albedoTexture",
 			meshResource:getTexturePointer("albedo")
 		)
+	else
+		self:setModelMeshMaterialUniformByArguments(
+			meshResource,
+			"albedoTexture",
+			materialPipeline:getDefaultPBRTexture("albedo")
+		)
 	end
 
 	self:setModelMeshMaterialUniformByArguments(
@@ -553,6 +697,12 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 			"metallicRoughnessTexture",
 			meshResource:getTexturePointer("metalRoughness")
 		)
+	else
+		self:setModelMeshMaterialUniformByArguments(
+			meshResource,
+			"metallicRoughnessTexture",
+			materialPipeline:getDefaultPBRTexture("metallicRoughness")
+		)
 	end
 
 	self:setModelMeshMaterialUniformByArguments(
@@ -566,6 +716,12 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 			meshResource,
 			"occlusionTexture",
 			meshResource:getTexturePointer("occlusion")
+		)
+	else
+		self:setModelMeshMaterialUniformByArguments(
+			meshResource,
+			"occlusionTexture",
+			materialPipeline:getDefaultPBRTexture("occlusion")
 		)
 	end
 
@@ -581,6 +737,12 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 			"normalTexture",
 			meshResource:getTexturePointer("normal")
 		)
+	else
+		self:setModelMeshMaterialUniformByArguments(
+			meshResource,
+			"normalTexture",
+			materialPipeline:getDefaultPBRTexture("normal")
+		)
 	end
 
 	self:setModelMeshMaterialUniformByArguments(
@@ -594,6 +756,12 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 			meshResource,
 			"emissiveTexture",
 			meshResource:getTexturePointer("emissive")
+		)
+	else
+		self:setModelMeshMaterialUniformByArguments(
+			meshResource,
+			"emissiveTexture",
+			materialPipeline:getDefaultPBRTexture("emissive")
 		)
 	end
 
@@ -840,7 +1008,7 @@ end
 
 --- @param mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>
 --- @param uniformKey string | integer
---- @param ... number | RatScratch.Resource.Resource<love.ImageData>
+--- @param ... number | RatScratch.Resource.Resource<love.ImageData> | love.ImageData
 function ObjectHandle:setModelMeshMaterialUniformByArguments(
 	mesh,
 	uniformKey,
@@ -860,14 +1028,24 @@ function ObjectHandle:setModelMeshMaterialUniformByArguments(
 
 		local value = ...
 		if value ~= nil then
-			--- @cast value RatScratch.Resource.Resource<love.ImageData>
-			assert(
-				Object.isDerived(Resource, Object.getType(value)),
-				"value is not resource"
-			)
-			self:addResource(value, "love.ImageData")
+			if type(value) == "userdata" then
+				--- @cast value love.ImageData
+				assert(
+					value:typeOf("ImageData"),
+					"expected ImageData, got %s",
+					value:type()
+				)
+				materialInstance:setUniformByArguments(uniformKey, value)
+			else
+				--- @cast value RatScratch.Resource.Resource<love.ImageData>
+				assert(
+					Object.isDerived(Resource, Object.getType(value)),
+					"value is not resource"
+				)
+				self:addResource(value, "love.ImageData")
 
-			self:_bindResourceToUniform(mesh, uniform, value)
+				self:_bindResourceToUniform(mesh, uniform, value)
+			end
 		end
 	else
 		--- @diagnostic disable-next-line: param-type-mismatch
@@ -896,14 +1074,24 @@ function ObjectHandle:setModelMeshMaterialUniformByValue(
 		self:_unbindUniformResource(mesh, uniform)
 
 		if value ~= nil then
-			--- @cast value RatScratch.Resource.Resource<love.ImageData>
-			assert(
-				Object.isDerived(Resource, Object.getType(value)),
-				"value is not resource"
-			)
-			self:addResource(value, "love.ImageData")
+			if type(value) == "userdata" then
+				--- @cast value love.ImageData
+				assert(
+					value:typeOf("ImageData"),
+					"expected ImageData, got %s",
+					value:type()
+				)
+				materialInstance:setUniformByArguments(uniformKey, value)
+			else
+				--- @cast value RatScratch.Resource.Resource<love.ImageData>
+				assert(
+					Object.isDerived(Resource, Object.getType(value)),
+					"value is not resource"
+				)
+				self:addResource(value, "love.ImageData")
 
-			self:_bindResourceToUniform(mesh, uniform, value)
+				self:_bindResourceToUniform(mesh, uniform, value)
+			end
 		end
 	else
 		materialInstance:setUniformByValue(uniformKey, value)

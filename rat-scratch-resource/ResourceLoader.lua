@@ -4,6 +4,7 @@ local Table = require("rat-scratch-common").Table
 local assert = require("rat-scratch-common").Debug.assert
 local RatScratchModule = require("lib.rat-scratch-module")
 local Resource = require("rat-scratch-resource.Resource")
+local ResourceArguments = require("rat-scratch-resource.ResourceArguments")
 
 --- @class RatScratch.Resource.ResourceLoader : RatScratch.Common.BaseObject
 --- @overload fun(): RatScratch.Resource.ResourceLoader
@@ -12,19 +13,22 @@ local ResourceLoader = Object()
 ResourceLoader.INPUT_CHANNEL = love.thread.newChannel()
 ResourceLoader.OUTPUT_CHANNEL = love.thread.newChannel()
 
-local _call = _call
-
 local call = function(func, ...)
 	return true, func(...)
 end
 
---- comment
+local safe_call = function(func, ...)
+	return xpcall(func, debug.traceback, ...)
+end
+
+local _call = call
+
 --- @param enabled boolean
 function ResourceLoader.toggleDebug(enabled)
 	if enabled then
-		_call = call
+		_call = safe_call
 	else
-		_call = _call
+		_call = call
 	end
 end
 
@@ -104,7 +108,7 @@ function ResourceLoader.update()
 						if not success then
 							result = resources.instance:instantiateFromData(
 								id,
-								resources.instance:createDefaultResource()
+								resources.instance:createDefaultResource(data)
 							)
 						end
 
@@ -119,7 +123,7 @@ function ResourceLoader.update()
 						if not success then
 							result = resources.instance:updateFromData(
 								resource.resource,
-								resources.instance:createDefaultResource()
+								resources.instance:createDefaultResource(data)
 							)
 						end
 
@@ -141,7 +145,7 @@ function ResourceLoader.update()
 				ResourceLoader.OUTPUT_CHANNEL:push({
 					type = "load",
 					resource = resource.type._DEBUG.requireName,
-					filename = resource.filename,
+					filename = ResourceArguments.serialize(resource.filename),
 					resourceID = resource.id,
 				})
 			elseif event.type == "dependency" then
@@ -149,12 +153,14 @@ function ResourceLoader.update()
 					ResourceLoader.RESOURCE_ID_TO_RESOURCE[event.resourceID]
 
 				local resourceType = require(event.resourceType)
+				local args = ResourceArguments.get(
+					ResourceArguments.decompress(event.filename)
+				)
 
 				local otherResource =
-					ResourceLoader._tryLoad(resourceType, event.filename)
+					ResourceLoader._tryLoad(resourceType, args)
 				if not otherResource then
-					otherResource =
-						ResourceLoader._newLoad(resourceType, event.filename)
+					otherResource = ResourceLoader._newLoad(resourceType, args)
 				end
 
 				ResourceLoader.DEPENDENCY_ID_TO_RESOURCE[event.dependencyID] =
@@ -180,7 +186,7 @@ ResourceLoader.NEXT_ID = 1
 --- @alias RatScratch.Resource.ResourceLoader.Resource {
 ---   id: integer,
 ---   type: RatScratch.Resource.ResourceType,
----   filename: string,
+---   filename: string | RatScratch.Resource.ResourceArguments,
 ---   resource: RatScratch.Resource.Resource,
 ---   parents: table<RatScratch.Resource.ResourceLoader.Resource, true>,
 ---   modifiedTimes: table<string, number>,
@@ -191,9 +197,14 @@ ResourceLoader.NEXT_ID = 1
 --- @private
 --- @param id integer
 --- @param resourceType RatScratch.Resource.ResourceType
---- @param filename string
+--- @param filename string | RatScratch.Resource.ResourceArguments
 --- @return RatScratch.Resource.ResourceLoader.Resource
 function ResourceLoader._newResource(id, resourceType, filename)
+	local handle = newproxy(true)
+	getmetatable(handle).__gc = function()
+		ResourceArguments.free(filename)
+	end
+
 	return {
 		id = id,
 		type = resourceType,
@@ -202,6 +213,7 @@ function ResourceLoader._newResource(id, resourceType, filename)
 		reloading = 0,
 		dependencies = {},
 		parents = {},
+		handle = handle,
 	}
 end
 
@@ -320,7 +332,7 @@ end
 
 --- @private
 --- @param resourceType RatScratch.Resource.ResourceType
---- @param filename string
+--- @param filename string | RatScratch.Resource.ResourceArguments
 --- @return RatScratch.Resource.ResourceLoader.Resource
 function ResourceLoader._tryLoad(resourceType, filename)
 	local resources = ResourceLoader._getResources(resourceType)
@@ -329,7 +341,7 @@ end
 
 --- @private
 --- @param resourceType RatScratch.Resource.ResourceType
---- @param filename string
+--- @param filename string | RatScratch.Resource.ResourceArguments
 --- @return RatScratch.Resource.ResourceLoader.Resource
 function ResourceLoader._newLoad(resourceType, filename)
 	local resources = ResourceLoader._getResources(resourceType)
@@ -346,7 +358,7 @@ function ResourceLoader._newLoad(resourceType, filename)
 	ResourceLoader.OUTPUT_CHANNEL:push({
 		type = "load",
 		resource = resourceType._DEBUG.requireName,
-		filename = filename,
+		filename = ResourceArguments.serialize(filename),
 		resourceID = id,
 	})
 
@@ -362,12 +374,14 @@ function ResourceLoader.newID()
 end
 
 --- @param resourceType RatScratch.Resource.ResourceType | unknown
---- @param filename string
+--- @param filename string | table
 --- @return RatScratch.Resource.Resource
 function ResourceLoader.load(resourceType, filename)
-	local resource = ResourceLoader._tryLoad(resourceType, filename)
+	local args = ResourceArguments.get(filename)
+
+	local resource = ResourceLoader._tryLoad(resourceType, args)
 	if not resource then
-		resource = ResourceLoader._newLoad(resourceType, filename)
+		resource = ResourceLoader._newLoad(resourceType, args)
 	end
 
 	return resource.resource
@@ -379,6 +393,27 @@ function ResourceLoader.get(id)
 	local resource = ResourceLoader.RESOURCE_ID_TO_RESOURCE[id]
 		or ResourceLoader.DEPENDENCY_ID_TO_RESOURCE[id]
 	return resource and resource.resource or nil
+end
+
+--- @param id integer
+--- @param result? string[]
+--- @return string[]?
+function ResourceLoader.getDependencies(id, result)
+	local resource = ResourceLoader.RESOURCE_ID_TO_RESOURCE[id]
+
+	if resource then
+		result = result or {}
+		Table.clear(result)
+
+		for filename in pairs(resource.modifiedTimes) do
+			table.insert(result, filename)
+		end
+		table.sort(result)
+
+		return result
+	end
+
+	return nil
 end
 
 function ResourceLoader.ready(id)

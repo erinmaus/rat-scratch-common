@@ -1421,7 +1421,7 @@ function GLTFParser:_loadMaterial(index)
 		and material.pbrMetallicRoughness
 		and material.pbrMetallicRoughness.roughnessFactor
 	then
-		metalRoughnessTexture.metalFactor =
+		metalRoughnessTexture.roughnessFactor =
 			material.pbrMetallicRoughness.roughnessFactor
 	end
 	materialDefinition.metalRoughnessTexture = metalRoughnessTexture

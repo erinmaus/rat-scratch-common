@@ -102,6 +102,10 @@ function CameraFrame:new(camera)
 	self:update()
 end
 
+function CameraFrame:getCamera()
+	return self.camera
+end
+
 --- @private
 --- @param name string
 --- @param transform love.Transform

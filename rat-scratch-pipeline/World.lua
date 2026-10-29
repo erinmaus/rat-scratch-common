@@ -353,8 +353,12 @@ function World:getModelInstancesHandle(object)
 	return self.objectHandleToModelInstancesHandle[object]
 end
 
-function World:newObject()
-	local objectHandle = ObjectHandle(self.nextObjectHandleID, self)
+--- @private
+--- @param transformType RatScratch.Pipeline.ObjectHandle.TransformType
+--- @return RatScratch.Pipeline.ObjectHandle
+function World:_newObject(transformType)
+	local objectHandle =
+		ObjectHandle(self.nextObjectHandleID, self, transformType)
 	self.objectHandles[objectHandle] = true
 	self.nextObjectHandleID = self.nextObjectHandleID + 1
 
@@ -406,6 +410,14 @@ function World:newObject()
 	self.pipelines:get(ObjectPipeline):addObject(objectHandle)
 
 	return objectHandle
+end
+
+function World:newStaticObject()
+	return self:_newObject("static")
+end
+
+function World:newDynamicObject()
+	return self:_newObject("dynamic")
 end
 
 --- @private
@@ -664,10 +676,7 @@ function World:_updateObjectHandleDraw(objectHandle)
 					skinnedBaseVertexPointer
 				)
 				draw:setPointer("boneOffsetCount", bonesPointer)
-				draw:setPointer(
-					"indexOffset",
-					baseIndexPointer
-				)
+				draw:setPointer("indexOffset", baseIndexPointer)
 
 				currentDraw = currentDraw + 1
 			end

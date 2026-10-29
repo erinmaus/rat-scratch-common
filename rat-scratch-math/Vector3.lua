@@ -406,4 +406,11 @@ Vector3.UNIT_X = Vector3(1, 0, 0)
 Vector3.UNIT_Y = Vector3(0, 1, 0)
 Vector3.UNIT_Z = Vector3(0, 0, 1)
 
+Vector3.POSITIVE_X = Vector3(1, 0, 0)
+Vector3.NEGATIVE_X = Vector3(-1, 0, 0)
+Vector3.POSITIVE_Y = Vector3(0, 1, 0)
+Vector3.NEGATIVE_Y = Vector3(0, -1, 0)
+Vector3.POSITIVE_Z = Vector3(0, 0, 1)
+Vector3.NEGATIVE_Z = Vector3(0, 0, -1)
+
 return Vector3

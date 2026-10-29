@@ -37,7 +37,7 @@ bool ratSphereInsideFrustum(RatScratchPipelineCamera camera, vec3 position, floa
 		float distanceFromPlane = dot(planes[i].xyz, position) + planes[i].w;
 		if (distanceFromPlane < -radius)
 		{
-			return true;
+			return false;
 		}
 	}
 

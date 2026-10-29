@@ -7,7 +7,10 @@ local PipelineConfig = require("rat-scratch-pipeline.PipelineConfig")
 local PipelineProperty = require("rat-scratch-pipeline.PipelineProperty")
 local PipelineSetting = require("rat-scratch-pipeline.PipelineSetting")
 local RatScratchModule = require("lib.rat-scratch-module")
+local ResourceArguments = require("rat-scratch-resource.ResourceArguments")
+local ResourceLoader = require("rat-scratch-resource.ResourceLoader")
 local ShaderPreprocessor = require("rat-scratch-graphics.ShaderPreprocessor")
+local ShaderResourceType = require("rat-scratch-pipeline.ShaderResourceType")
 local json = require("lib.json")
 
 --- @alias RatScratch.Pipeline.PipelineProperties table<string, table<string, (number | integer | boolean)[]>>
@@ -22,7 +25,7 @@ local json = require("lib.json")
 --- @field settings RatScratch.Pipeline.PipelineSetting[]
 --- @field settingsByKey table<string, RatScratch.Pipeline.PipelineSetting>
 --- @field propertyToSetting table<string, RatScratch.Pipeline.PipelineSetting>
---- @field virtualPaths table<string, table<string, string>>
+--- @field virtualPaths table<string, table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>>
 --- @overload fun(runtime: RatScratch.Pipeline.PipelineRuntimeConfig, config: RatScratch.Pipeline.PipelineConfig, currentProperties?: RatScratch.Pipeline.PipelineProperties): RatScratch.Pipeline.PipelineRuntime
 local PipelineRuntime = Object()
 
@@ -183,7 +186,7 @@ do
 	local _defaultShaderOptions
 
 	--- @private
-	--- @param virtualPaths table<string, string>?
+	--- @param virtualPaths table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>?
 	--- @return RatScratch.Graphics.ShaderPreprocessOptions
 	function PipelineRuntime._getDefaultShaderOptions(virtualPaths)
 		if not _defaultShaderOptions then
@@ -258,7 +261,10 @@ function PipelineRuntime:_loadConfigShaderForPreset(qualityPreset)
 	end
 
 	self.virtualPaths[qualityPreset] = {
-		["generated:/Pipeline/Config.common.glsl"] = source,
+		["generated:/Pipeline/Config.common.glsl"] = {
+			source = source,
+			dependencies = result and result.dependencies or {},
+		},
 	}
 end
 
@@ -338,7 +344,7 @@ do
 		--- @type table<string, string>?
 		local rootPaths = destination.rootPaths or {}
 
-		--- @type table<string, string>?
+		--- @type table<string, string | RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies> | false
 		local virtualPaths = destination.virtualPaths or {}
 
 		for k, v in pairs(source) do
@@ -355,10 +361,13 @@ do
 
 		if source.virtualPaths then
 			for k, v in pairs(source.virtualPaths) do
-				virtualPaths[k] = v
+				virtualPaths[k] = {
+					source = v.source,
+					dependencies = v.dependencies,
+				}
 			end
 		elseif source.virtualPaths == false then
-			virtualPaths = nil
+			virtualPaths = false
 		end
 
 		destination.rootPaths = rootPaths
@@ -394,7 +403,7 @@ do
 	--- @param filename string
 	--- @param qualityPreset? string
 	--- @param options? RatScratch.Graphics.ShaderPreprocessOptions
-	--- @return love.Shader
+	--- @return RatScratch.Resource.Resource<love.Shader>
 	function PipelineRuntime:loadComputeShader(filename, qualityPreset, options)
 		local resultOptions = _getMergedOptions(
 			options,
@@ -403,14 +412,20 @@ do
 			)
 		)
 
-		return ShaderPreprocessor.newComputeShader(filename, resultOptions)
+		return ResourceLoader.load(
+			ShaderResourceType,
+			ResourceArguments.get({
+				computeFilename = filename,
+				options = resultOptions,
+			})
+		)
 	end
 
 	--- @param pixelFilename string
 	--- @param vertexFilename? string
 	--- @param qualityPreset? string
 	--- @param options? RatScratch.Graphics.ShaderPreprocessOptions
-	--- @return love.Shader
+	--- @return RatScratch.Resource.Resource<love.Shader>
 	function PipelineRuntime:loadShader(
 		pixelFilename,
 		vertexFilename,
@@ -424,10 +439,13 @@ do
 			)
 		)
 
-		return ShaderPreprocessor.newShader(
-			pixelFilename,
-			vertexFilename,
-			resultOptions
+		return ResourceLoader.load(
+			ShaderResourceType,
+			ResourceArguments.get({
+				pixelFilename = pixelFilename,
+				vertexFilename = vertexFilename,
+				options = resultOptions,
+			})
 		)
 	end
 end

@@ -7,7 +7,7 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #include "@Pipeline/Common/Types/Lights.common.glsl"
 #include "@Pipeline/Common/Buffers/Draw.common.glsl"
 #include "@Pipeline/Common/Index.common.glsl"
-#include "./Types.common.glsl"
+#include "@Pipeline/Common/Cluster.common.glsl"
 
 restrict readonly buffer rat_LightsBuffer
 {
@@ -19,13 +19,14 @@ restrict buffer rat_LightCountIndicesBuffer
 	uint rat_LightCountIndices[];
 };
 
-restrict readonly buffer rat_WorldCellsBuffer
+restrict readonly buffer rat_ActiveCamerasBuffer
 {
-	RatScratchPipelineCell rat_WorldCells[];
+	uint rat_ActiveCameras[];
 };
 
 uniform uint rat_LightCount;
-uniform uint rat_CameraCount;
+uniform uint rat_ActiveCameraCount;
+uniform uvec2 rat_ScreenSize;
 
 vec4 getSpotLightMinBoundingSphere(const in RatScratchPipelineSpotLight light)
 {
@@ -41,58 +42,53 @@ vec4 getSpotLightMinBoundingSphere(const in RatScratchPipelineSpotLight light)
 	return vec4(light.position + radius * axis, radius);
 }
 
-bool sphereIntersectsCell(vec4 sphere, vec3 cellMin, vec3 cellMax)
+bool sphereInsideCell(RatScratchPipelineCamera camera, vec4 sphere, vec2 cellMin, vec2 cellMax)
 {
-	if (all(greaterThanEqual(sphere.xyz, cellMin)) && all(lessThanEqual(sphere.xyz, cellMax)))
-	{
-		return true;
-	}
+	vec4[RAT_SCRATCH_PIPELINE_CAMERA_PLANE_COUNT] planes;
+	getCameraPlanes(camera, planes, cellMin, cellMax);
 
-	vec3 closest = clamp(sphere.xyz, cellMin, cellMax);
-	vec3 difference = sphere.xyz - closest;
-	float distanceSquared = dot(difference, difference);
-	float radiusSquared = sphere.w * sphere.w;
-	return distanceSquared <= radiusSquared;
+	return sphereInsideFrustum(planes, sphere);
 }
 
-void tryAddLightToCell(uvec3 cellCoordinate, uint lightIndex, uint cameraIndex)
+void tryAddLightToCell(uvec2 cellCoordinate, uint lightIndex, uint cameraIndex)
 {
-	uvec4 coordinate = uvec4(cellCoordinate, 0);
-	uvec4 dimensions =
-		uvec4(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS, RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL + 1);
-	uint offset = dimensions.x * dimensions.y * dimensions.z * dimensions.w * cameraIndex;
+	uvec3 coordinate = uvec3(0, cellCoordinate);
+	uvec3 dimensions =
+		uvec3(RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL + 1,
+			  uvec2(ceil(vec2(rat_ScreenSize) / vec2(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELL_SIZE_IN_PIXELS))));
+	uint offset = dimensions.x * dimensions.y * dimensions.z * cameraIndex;
 	uint index = coordinateToIndex(coordinate, dimensions);
 
 	uint previousCount = atomicAdd(rat_LightCountIndices[index + offset], 1);
 	if (previousCount < RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_CELL)
 	{
-		uvec4 lightCellCoordinate = uvec4(cellCoordinate, previousCount + 1);
+		uvec3 lightCellCoordinate = uvec3(previousCount + 1, cellCoordinate);
 		uint lightCellIndex = coordinateToIndex(lightCellCoordinate, dimensions);
 		rat_LightCountIndices[lightCellIndex + offset] = lightIndex;
 	}
 }
 
-void testPointLight(RatScratchPipelineLight light, vec3 cellMin, vec3 cellMax, uvec3 cellCoordinate, uint lightIndex,
-					uint cameraIndex)
+void testPointLight(RatScratchPipelineLight light, RatScratchPipelineCamera camera, vec2 cellMin, vec2 cellMax,
+					uvec2 cellCoordinate, uint lightIndex, uint cameraIndex)
 {
 	RatScratchPipelinePointLight pointLight;
 	ratGetLight(light, pointLight);
 
 	vec4 sphere = vec4(pointLight.position, pointLight.attenuation);
-	if (sphereIntersectsCell(sphere, cellMin, cellMax))
+	if (sphereInsideCell(camera, sphere, cellMin, cellMax))
 	{
 		tryAddLightToCell(cellCoordinate, lightIndex, cameraIndex);
 	}
 }
 
-void testSpotLight(RatScratchPipelineLight light, vec3 cellMin, vec3 cellMax, uvec3 cellCoordinate, uint lightIndex,
-				   uint cameraIndex)
+void testSpotLight(RatScratchPipelineLight light, RatScratchPipelineCamera camera, vec2 cellMin, vec2 cellMax,
+				   uvec2 cellCoordinate, uint lightIndex, uint cameraIndex)
 {
 	RatScratchPipelineSpotLight spotLight;
 	ratGetLight(light, spotLight);
 
 	vec4 sphere = getSpotLightMinBoundingSphere(spotLight);
-	if (sphereIntersectsCell(sphere, cellMin, cellMax))
+	if (sphereInsideCell(camera, sphere, cellMin, cellMax))
 	{
 		tryAddLightToCell(cellCoordinate, lightIndex, cameraIndex);
 	}
@@ -101,24 +97,27 @@ void testSpotLight(RatScratchPipelineLight light, vec3 cellMin, vec3 cellMax, uv
 void computemain()
 {
 	uint cellIndex = gl_GlobalInvocationID.x;
-	uvec3 dimensions = RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELLS;
-	uvec3 coordinate = indexToCoordinate(cellIndex, dimensions);
-	if (coordinate.x >= dimensions.x || coordinate.y >= dimensions.y || coordinate.z >= dimensions.z)
+	uvec2 dimensions = uvec2(ceil(vec2(rat_ScreenSize) / vec2(RAT_SCRATCH_PIPELINE_CONFIG_LIGHT_CELL_SIZE_IN_PIXELS)));
+	uvec2 coordinate = indexToCoordinate(cellIndex, dimensions);
+	if (coordinate.x >= dimensions.x || coordinate.y >= dimensions.y)
 	{
 		return;
 	}
 
-	uint cameraIndex = gl_GlobalInvocationID.z;
-	if (cameraIndex >= rat_CameraCount)
+	uint activeCameraIndex = gl_GlobalInvocationID.z;
+	if (activeCameraIndex >= rat_ActiveCameraCount)
 	{
 		return;
 	}
 
-	uint cellOffset = dimensions.x * dimensions.y * dimensions.z * cameraIndex;
-	RatScratchPipelineCell cell = rat_WorldCells[cellIndex + cellOffset];
+	uint cameraIndex = rat_ActiveCameras[activeCameraIndex];
+	RatScratchPipelineCamera camera = rat_Cameras[cameraIndex];
 
 	uint i = min(gl_GlobalInvocationID.y * RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_THREAD, rat_LightCount);
 	uint j = min(i + RAT_SCRATCH_PIPELINE_CONFIG_MAX_LIGHTS_PER_THREAD, rat_LightCount);
+
+	vec2 cellMin, cellMax;
+	getCellPlaneMinMax(coordinate, dimensions, cellMin, cellMax);
 
 	for (uint k = i; k < j; ++k)
 	{
@@ -131,10 +130,10 @@ void computemain()
 			tryAddLightToCell(coordinate, k, cameraIndex);
 			break;
 		case RAT_SCRATCH_LIGHT_TYPE_POINT:
-			testPointLight(light, cell.worldMin, cell.worldMax, coordinate, k, cameraIndex);
+			testPointLight(light, camera, cellMin, cellMax, coordinate, k, cameraIndex);
 			break;
 		case RAT_SCRATCH_LIGHT_TYPE_SPOT:
-			testSpotLight(light, cell.worldMin, cell.worldMax, coordinate, k, cameraIndex);
+			testSpotLight(light, camera, cellMin, cellMax, coordinate, k, cameraIndex);
 			break;
 		}
 	}

@@ -49,15 +49,16 @@ end
 --- @generic T
 --- @generic D
 --- @param self RatScratch.Resource.ResourceType<T, D>
+--- @param hint? D
 --- @return D
-function ResourceType:createDefaultResource()
+function ResourceType:createDefaultResource(hint)
 	return self:ABSTRACT()
 end
 
 --- @generic T
 --- @generic D
 --- @param self RatScratch.Resource.ResourceType<T, D>
---- @param filename string
+--- @param filename string | table
 --- @return D, string[], RatScratch.Resource.ResourceDependency[]?
 function ResourceType:loadDataFromFile(filename)
 	return self:ABSTRACT()

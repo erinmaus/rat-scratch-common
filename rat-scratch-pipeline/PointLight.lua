@@ -84,6 +84,31 @@ function PointLight:getCameraCount()
 	return CubeMap.FACES
 end
 
+function PointLight:update()
+	if self:getIsDirty() then
+		self:_updateCameras()
+	end
+
+	Light.update(self)
+end
+
+--- @private
+--- @param camera RatScratch.Pipeline.Camera<RatScratch.Pipeline.PerspectiveFOVCameraProjection, RatScratch.Pipeline.ArcballCameraView>
+function PointLight:_updateCamera(camera)
+	camera:getProjection():setNear(0.001)
+	camera:getProjection():setFar(math.max(self.attenuation, 1))
+	camera:getView():setTranslation(self.position)
+end
+
+--- @private
+function PointLight:_updateCameras()
+	for _, camera in ipairs(self.cameras) do
+		if camera then
+			self:_updateCamera(camera)
+		end
+	end
+end
+
 do
 	local _rotation = Quaternion()
 
@@ -98,9 +123,7 @@ do
 			self.cameras[index] = camera
 		end
 
-		camera:getProjection():setNear(0.001)
-		camera:getProjection():setFar(math.max(self.attenuation, 1))
-		camera:getView():setTranslation(self.position)
+		self:_updateCamera(camera)
 
 		return camera
 	end

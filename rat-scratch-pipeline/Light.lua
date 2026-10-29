@@ -35,6 +35,11 @@ end
 Light.listen, Light.silence = EventSource.mixin("eventSource")
 
 --- @protected
+function Light:getIsDirty()
+	return self.isDirty
+end
+
+--- @protected
 function Light:dirty()
 	if not self.isDirty then
 		self.isDirty = true

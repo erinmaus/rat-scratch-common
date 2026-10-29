@@ -1,4 +1,5 @@
 local Object = require("rat-scratch-common").Object
+local ResourceArguments = require("rat-scratch-resource.ResourceArguments")
 local ResourceLoaderTask = require("rat-scratch-resource.ResourceLoaderTask")
 
 --- @type love.Channel, love.Channel
@@ -26,7 +27,7 @@ while isRunning do
 			resourceType.loadDataFromFile,
 			debug.traceback,
 			resourceType,
-			event.filename
+			ResourceArguments.decompress(event.filename)
 		)
 		if not success then
 			-- TODO: log error message somehow ("a")
@@ -59,7 +60,9 @@ while isRunning do
 						resourceID = event.resourceID,
 						dependencyID = otherResource.dependencyID,
 						resourceType = resourceTypeName,
-						filename = otherResource.filename,
+						filename = ResourceArguments.serialize(
+							otherResource.filename
+						),
 					})
 				end
 			end

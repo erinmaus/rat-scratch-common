@@ -1,24 +1,37 @@
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
+local CameraBuffer = require("rat-scratch-pipeline.CameraBuffer")
 local CameraFrame = require("rat-scratch-pipeline.CameraFrame")
 local CullResult = require("rat-scratch-pipeline.CullResult")
 local DrawPipeline = require("rat-scratch-pipeline.DrawPipeline")
 local LightClusterResult = require("rat-scratch-pipeline.LightClusterResult")
 local LightPipeline = require("rat-scratch-pipeline.LightPipeline")
 local ObjectHandleEvent = require("rat-scratch-pipeline.ObjectHandleEvent")
-local PipelineBuffer = require("rat-scratch-pipeline.Buffer.PipelineBuffer")
 local Pipelines = require("rat-scratch-pipeline.Pipelines")
+local ReflectionProbePipeline =
+	require("rat-scratch-pipeline.ReflectionProbePipeline")
+local Vector3 = require("rat-scratch-math").Vector3
 
 --- @class RatScratch.Pipeline.Scene : RatScratch.Common.BaseObject
 --- @field private world RatScratch.Pipeline.World
 --- @field private camera RatScratch.Pipeline.Camera
 --- @field private cameraFrame RatScratch.Pipeline.CameraFrame
---- @field private camerasBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Camera>
+--- @field private camerasBuffer RatScratch.Pipeline.CameraBuffer<RatScratch.Pipeline.Camera>
 --- @field private objectHandles table<RatScratch.Pipeline.ObjectHandle, true>
+--- @field private staticObjects RatScratch.Pipeline.ObjectHandle[]
+--- @field private dynamicObjects RatScratch.Pipeline.ObjectHandle[]
 --- @field private dirtyObjectHandles table<RatScratch.Pipeline.ObjectHandle, true>
 --- @field private lights table<RatScratch.Pipeline.Light, true>
 --- @field private lightsByIndex RatScratch.Pipeline.Light[]
---- @field private lightClusterResults RatScratch.Pipeline.LightClusterResult
+--- @field private staticMinBounds RatScratch.Math.Vector3
+--- @field private staticMaxBounds RatScratch.Math.Vector3
+--- @field private staticObjectBoundsDirty boolean
+--- @field private dynamicMinBounds RatScratch.Math.Vector3
+--- @field private dynamicMaxBounds RatScratch.Math.Vector3
+--- @field private dynamicObjectBoundsDirty boolean
+--- @field private minBounds RatScratch.Math.Vector3
+--- @field private maxBounds RatScratch.Math.Vector3
+--- @field private sceneBoundsDirty boolean
 --- @overload fun(world: RatScratch.Pipeline.World): RatScratch.Pipeline.Scene
 local Scene = Object()
 
@@ -26,6 +39,8 @@ local Scene = Object()
 function Scene:new(world)
 	self.world = world
 	self.objectHandles = {}
+	self.staticObjects = {}
+	self.dynamicObjects = {}
 	self.dirtyObjectHandles = {}
 	self.dirtyObjectHandleDraws = {}
 
@@ -34,32 +49,33 @@ function Scene:new(world)
 
 	self.pipelines = Pipelines(world:getPipelineRuntime())
 
-	self.camerasBuffer =
-		PipelineBuffer(CameraFrame.CAMERA_FORMAT, { shaderstorage = true }, 1)
-	self.lightClusterResults = LightClusterResult(self.camerasBuffer)
+	self.camerasBuffer = CameraBuffer()
+
+	self.staticMinBounds = Vector3()
+	self.staticMaxBounds = Vector3()
+	self.staticObjectBoundsDirty = false
+
+	self.dynamicMinBounds = Vector3()
+	self.dynamicMaxBounds = Vector3()
+	self.dynamicObjectBoundsDirty = false
+
+	self.minBounds = Vector3()
+	self.maxBounds = Vector3()
+	self.sceneBoundsDirty = false
 end
 
 function Scene:newCullResult()
 	return CullResult(self.camerasBuffer)
 end
 
+function Scene:newLightClusterResult()
+	return LightClusterResult(self.camerasBuffer)
+end
+
 --- @param shader love.Shader
 --- @param qualityPreset string
 function Scene:bind(shader, qualityPreset)
-	if self.camera and shader:hasUniform("rat_CamerasBuffer") then
-		shader:send("rat_CamerasBuffer", self.camerasBuffer:getBuffer())
-
-		if
-			qualityPreset
-				== self.world:getPipelineRuntime():getDefaultQualityPreset()
-			and shader:hasUniform("rat_LightCountIndicesBuffer")
-		then
-			shader:send(
-				"rat_LightCountIndicesBuffer",
-				self.lightClusterResults:getLightIndicesBuffer()
-			)
-		end
-	end
+	self.camerasBuffer:bind(shader)
 end
 
 --- @param camera RatScratch.Pipeline.Camera
@@ -72,6 +88,8 @@ function Scene:setCamera(camera)
 	self.cameraFrame = CameraFrame(camera)
 
 	self.camerasBuffer:register(self.camera, 1)
+	self.camerasBuffer:set(self.camera, 1, self.camera)
+	self.camerasBuffer:activate(self.camera)
 end
 
 function Scene:getCamera()
@@ -98,7 +116,29 @@ function Scene:addObject(object)
 		self
 	)
 
+	object:listen(
+		ObjectHandleEvent.TRANSFORMED,
+		self._onObjectTransformed,
+		self
+	)
+
 	self.pipelines:get(DrawPipeline):addDrawable(object)
+
+	if object:getIsStatic() then
+		table.insert(self.staticObjects, object)
+	elseif object:getIsDynamic() then
+		table.insert(self.dynamicObjects, object)
+	end
+end
+
+--- @private
+--- @param object RatScratch.Pipeline.ObjectHandle
+function Scene:_makeBoundsDirty(object)
+	if object:getIsStatic() then
+		self.staticObjectBoundsDirty = true
+	elseif object:getIsDynamic() then
+		self.dynamicObjectBoundsDirty = true
+	end
 end
 
 --- @private
@@ -106,6 +146,14 @@ end
 --- @param object RatScratch.Pipeline.ObjectHandle
 function Scene:_onObjectDrawUpdated(event, object)
 	self.dirtyObjectHandles[object] = true
+	self:_makeBoundsDirty(object)
+end
+
+--- @private
+--- @param event RatScratch.Pipeline.ObjectHandleEvent
+--- @param object RatScratch.Pipeline.ObjectHandle
+function Scene:_onObjectTransformed(event, object)
+	self:_makeBoundsDirty(object)
 end
 
 --- @param object RatScratch.Pipeline.ObjectHandle
@@ -121,7 +169,19 @@ function Scene:removeObject(object)
 		self
 	)
 
+	object:silence(
+		ObjectHandleEvent.TRANSFORMED,
+		self._onObjectTransformed,
+		self
+	)
+
 	self.pipelines:get(DrawPipeline):removeDrawable(object)
+
+	if object:getIsStatic() then
+		Table.remove(self.staticObjects, object)
+	elseif object:getIsDynamic() then
+		Table.remove(self.dynamicObjects, object)
+	end
 end
 
 --- @generic T : RatScratch.Pipeline.Light
@@ -162,6 +222,81 @@ function Scene:_updateDirtyObjectHandles()
 	end
 end
 
+--- @private
+--- @param objects RatScratch.Pipeline.ObjectHandle[]
+--- @param minBounds RatScratch.Math.Vector3
+--- @param maxBounds RatScratch.Math.Vector3
+function Scene:_updateObjectBounds(objects, minBounds, maxBounds)
+	if #objects == 0 then
+		minBounds:from(0)
+		maxBounds:from(0)
+
+		return
+	end
+
+	minBounds:from(math.huge)
+	maxBounds:from(-math.huge)
+	for _, object in ipairs(objects) do
+		local objectMinBounds, objectMaxBounds = object:getTransformedBounds()
+
+		minBounds:min(objectMinBounds, minBounds)
+		maxBounds:max(objectMaxBounds, maxBounds)
+	end
+end
+
+function Scene:getStaticBounds()
+	if self.staticObjectBoundsDirty then
+		self:_updateObjectBounds(
+			self.staticObjects,
+			self.staticMinBounds,
+			self.staticMaxBounds
+		)
+
+		self.staticObjectBoundsDirty = false
+	end
+
+	return self.staticMinBounds, self.staticMaxBounds
+end
+
+function Scene:getDynamicBounds()
+	if self.dynamicObjectBoundsDirty then
+		self:_updateObjectBounds(
+			self.dynamicObjects,
+			self.dynamicMinBounds,
+			self.dynamicMaxBounds
+		)
+
+		self.dynamicObjectBoundsDirty = false
+	end
+
+	return self.dynamicMinBounds, self.dynamicMaxBounds
+end
+
+function Scene:getBounds()
+	if self.sceneBoundsDirty then
+		local dynamicMinBounds, dynamicMaxBounds = self:getDynamicBounds()
+		local staticMinBounds, staticMaxBounds = self:getStaticBounds()
+
+		self.minBounds:from(staticMinBounds:get())
+		self.maxBounds:from(staticMaxBounds:get())
+
+		self.minBounds:min(dynamicMinBounds, self.minBounds)
+		self.maxBounds:max(dynamicMaxBounds, self.maxBounds)
+
+		self.sceneBoundsDirty = false
+	end
+
+	return self.minBounds, self.maxBounds
+end
+
+function Scene:update()
+	self.pipelines:get(DrawPipeline):update()
+	self.pipelines:get(LightPipeline):update()
+	self.pipelines:get(ReflectionProbePipeline):update()
+
+	self.camerasBuffer:update()
+end
+
 function Scene:flush()
 	if next(self.dirtyObjectHandles) then
 		self:_updateDirtyObjectHandles()
@@ -169,23 +304,9 @@ function Scene:flush()
 
 	self.pipelines:get(DrawPipeline):flush()
 	self.pipelines:get(LightPipeline):flush()
+	self.pipelines:get(ReflectionProbePipeline):flush()
 
-	if self.camera then
-		self.cameraFrame:update()
-
-		self.camerasBuffer:copyTable(
-			self.camera,
-			self.cameraFrame:getData(),
-			1,
-			1
-		)
-		self.camerasBuffer:flush()
-
-		self.pipelines:get(LightPipeline):clusterLights(
-			self.world:getPipelineRuntime():getDefaultQualityPreset(),
-			self.lightClusterResults
-		)
-	end
+	self.camerasBuffer:flush()
 end
 
 return Scene
