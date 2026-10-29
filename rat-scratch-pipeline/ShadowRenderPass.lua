@@ -192,6 +192,7 @@ function ShadowRenderPass:_blurShadows()
 	love.graphics.push("all")
 	do
 		love.graphics.setBlendState("add", "one", "zero")
+		love.graphics.setDepthMode()
 
 		local blurShader = self.blurShaderResource:get()
 		love.graphics.setShader(blurShader)
