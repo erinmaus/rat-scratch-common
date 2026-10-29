@@ -42,7 +42,7 @@ void ratGetFragmentInput(out RatScratchPipelineFragmentInput fragmentInput)
 	fragmentInput.worldPosition = frag_WorldPosition;
 	fragmentInput.viewPosition = frag_ViewPosition;
 	fragmentInput.position = frag_Position;
-	fragmentInput.screenPosition = (frag_Position.xyz + vec3(1.0)) / vec3(2.0);
+	fragmentInput.screenPosition = (frag_Position.xyz / vec3(frag_Position.w) + vec3(1.0)) / vec3(2.0);
 	fragmentInput.localNormal = frag_LocalNormal;
 	fragmentInput.normal = frag_Normal;
 	fragmentInput.tangent = frag_Tangent;
