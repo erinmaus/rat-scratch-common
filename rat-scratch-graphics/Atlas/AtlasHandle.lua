@@ -46,6 +46,11 @@ function AtlasHandle:getHeight()
 	return self:ABSTRACT()
 end
 
+--- @return integer
+function AtlasHandle:getPadding()
+	return 0
+end
+
 --- @param texture love.Texture
 --- @param layer integer
 --- @param x integer
