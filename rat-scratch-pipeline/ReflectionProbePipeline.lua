@@ -341,4 +341,121 @@ function ReflectionProbePipeline:clusterReflectionProbes(
 	return true, result
 end
 
+function ReflectionProbePipeline:loadDefaultShaders()
+	local runtime = self:getPipelineRuntime()
+
+	Table.clear(self.clusterShaders)
+	for i = 1, runtime:getQualityPresetCount() do
+		local qualityPreset = runtime:getQualityPreset(i)
+		self.clusterShaders[qualityPreset] = runtime:loadComputeShader(
+			"@Pipeline/Reflections/Cluster.compute.glsl"
+		)
+	end
+end
+
+do
+	local _screenSize = { 0, 0 }
+
+	--- @private
+	--- @param qualityPreset string
+	--- @param shader love.Shader
+	--- @param screenWidth integer
+	--- @param screenHeight integer
+	--- @param result RatScratch.Pipeline.ReflectionProbeClusterResult
+	function ReflectionProbePipeline:_dispatchCluster(
+		qualityPreset,
+		screenWidth,
+		screenHeight,
+		shader,
+		result
+	)
+		shader:send(
+			"rat_ReflectionProbesBuffer",
+			self.reflectionProbesBuffer:getBuffer()
+		)
+
+		local screenSize = _screenSize
+		screenSize[1], screenSize[2] = screenWidth, screenHeight
+		shader:send("rat_ScreenSize", screenSize)
+
+		local _, probesCount = self.reflectionProbesBuffer:getIndexCount()
+		shader:send("rat_ReflectionProbeCount", probesCount)
+
+		local camerasBuffer = result:getCamerasBuffer()
+		camerasBuffer:bind(shader)
+
+		local cellSizeX, cellSizeY = self.pipelineRuntime:getCurrentProperty(
+			qualityPreset,
+			"pipeline.properties.reflection.cellsSizeInPixels"
+		)
+		local maxProbesPerCell = self.pipelineRuntime:getCurrentProperty(
+			qualityPreset,
+			"pipeline.properties.reflection.maxProbesPerCell"
+		) or 0
+		local maxProbesPerThread = self.pipelineRuntime:getCurrentProperty(
+			qualityPreset,
+			"pipeline.properties.reflection.maxProbesPerThread"
+		) or 1
+
+		local cellsCount = math.ceil(screenWidth / (cellSizeX or 1))
+			* math.ceil(screenHeight / (cellSizeY or 1))
+
+		local minReflectionProbeIndicesElementCount = cellsCount
+			* (maxProbesPerCell + 1)
+			* camerasBuffer:getCameraCount()
+		local reflectionProbeIndicesBuffer =
+			result:reserveReflectionProbeIndices(
+				minReflectionProbeIndicesElementCount
+			)
+		reflectionProbeIndicesBuffer:clear()
+
+		shader:send(
+			"rat_ReflectionProbeCountIndicesBuffer",
+			reflectionProbeIndicesBuffer
+		)
+
+		local localSizeX, localSizeY, localSizeZ =
+			shader:getLocalThreadgroupSize()
+		love.graphics.dispatchThreadgroups(
+			shader,
+			math.max(math.ceil(cellsCount / localSizeX), 1),
+			math.max(
+				math.ceil(probesCount / maxProbesPerThread / localSizeY),
+				1
+			),
+			math.max(
+				math.ceil(camerasBuffer:getActiveCameraCount() / localSizeZ),
+				1
+			)
+		)
+	end
+end
+
+--- @param qualityPreset string
+--- @param result RatScratch.Pipeline.ReflectionProbeClusterResult
+--- @param screenWidth integer
+--- @param screenHeight integer
+--- @return boolean, RatScratch.Pipeline.ReflectionProbeClusterResult
+function ReflectionProbePipeline:clusterReflectionProbes(
+	qualityPreset,
+	screenWidth,
+	screenHeight,
+	result
+)
+	local clusterShader = self.clusterShaders[qualityPreset]
+	if not (clusterShader and clusterShader:getIsReady()) then
+		return false, result
+	end
+
+	self:_dispatchCluster(
+		qualityPreset,
+		screenWidth,
+		screenHeight,
+		clusterShader:get(),
+		result
+	)
+
+	return true, result
+end
+
 return ReflectionProbePipeline

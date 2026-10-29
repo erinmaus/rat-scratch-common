@@ -392,33 +392,6 @@ do
 	end
 end
 
---- @private
---- @param qualityPreset string
---- @param shader love.Shader
---- @param result RatScratch.Pipeline.LightClusterResult
-function LightPipeline:_dispatchCells(qualityPreset, shader, result)
-	local camerasBuffer = result:getCamerasBuffer()
-	local cameraCount = camerasBuffer:getCameraCount()
-
-	camerasBuffer:bind(shader)
-
-	local cellsX, cellsY, cellsZ = self.pipelineRuntime:getCurrentProperty(
-		qualityPreset,
-		"pipeline.properties.lighting.cells"
-	)
-	local cellsCount = (cellsX or 0) * (cellsY or 0) * (cellsZ or 0)
-
-	local cellsBuffer = LightPipeline._reserveCells(cellsCount * cameraCount)
-	shader:send("rat_WorldCellsBuffer", cellsBuffer)
-
-	local localSizeX, localSizeY = shader:getLocalThreadgroupSize()
-	love.graphics.dispatchThreadgroups(
-		shader,
-		math.max(math.ceil(cellsCount / localSizeX), 1),
-		math.max(math.ceil(cameraCount / localSizeY), 1)
-	)
-end
-
 --- @param qualityPreset string
 --- @param result RatScratch.Pipeline.LightClusterResult
 --- @param screenWidth integer

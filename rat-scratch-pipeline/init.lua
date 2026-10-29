@@ -49,6 +49,9 @@ return {
 	PointLight = require("rat-scratch-pipeline.PointLight"),
 	PostProcess = require("rat-scratch-pipeline.PostProcess"),
 	ReflectionProbe = require("rat-scratch-pipeline.ReflectionProbe"),
+	ReflectionProbeClusterResult = require(
+		"rat-scratch-pipeline.ReflectionProbeClusterResult"
+	),
 	ReflectionProbeEvent = require("rat-scratch-pipeline.ReflectionProbeEvent"),
 	ReflectionProbePipeline = require(
 		"rat-scratch-pipeline.ReflectionProbePipeline"
