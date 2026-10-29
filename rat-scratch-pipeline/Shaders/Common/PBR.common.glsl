@@ -2,7 +2,7 @@
 #include "@Pipeline/Common/Types/Fragment.common.glsl"
 #include "@Pipeline/Common/Types/Lights.common.glsl"
 
-float ratPBRImplDistributionGGX(vec3 N, vec3 H, float roughness)
+float ratPBRDistributionGGX(vec3 N, vec3 H, float roughness)
 {
 	float a = roughness * roughness;
 	float aSquared = a * a;
@@ -16,7 +16,7 @@ float ratPBRImplDistributionGGX(vec3 N, vec3 H, float roughness)
 	return numerator / max(denominator, RAT_SCRATCH_EPSILON);
 }
 
-float ratPBRImplGeometrySchlickGGX(float nDotV, float roughness)
+float ratPBRGeometrySchlickGGX(float nDotV, float roughness)
 {
 	float r = (roughness + 1.0);
 	float k = (r * r) / 8.0;
@@ -27,19 +27,24 @@ float ratPBRImplGeometrySchlickGGX(float nDotV, float roughness)
 	return numerator / denominator;
 }
 
-float ratPBRImplGeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+float ratPBRGeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 {
 	float nDotV = max(dot(N, V), 0.0);
 	float nDotL = max(dot(N, L), 0.0);
-	float ggx2 = ratPBRImplGeometrySchlickGGX(nDotV, roughness);
-	float ggx1 = ratPBRImplGeometrySchlickGGX(nDotL, roughness);
+	float ggx2 = ratPBRGeometrySchlickGGX(nDotV, roughness);
+	float ggx1 = ratPBRGeometrySchlickGGX(nDotL, roughness);
 
 	return ggx1 * ggx2;
 }
 
-vec3 ratPBRImplFresnelSchlick(float cosTheta, vec3 F0)
+vec3 ratPBRFresnelSchlick(float cosTheta, vec3 F0)
 {
-	return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+	return F0 + (vec3(1.0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+vec3 ratPBRFresnelSchlick(float cosTheta, vec3 F0, float roughness)
+{
+	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
 void ratApplyPBR(in RatScratchPipelineFragmentOutput fragmentOutput, vec3 L, vec3 radiance, vec3 cameraPosition,
@@ -53,10 +58,10 @@ void ratApplyPBR(in RatScratchPipelineFragmentOutput fragmentOutput, vec3 L, vec
 	float metallic = fragmentOutput.metal;
 	vec3 albedo = fragmentOutput.albedo.rgb;
 
-	vec3 F0 = mix(vec3(0.04), albedo, metallic);
-	vec3 F = ratPBRImplFresnelSchlick(max(dot(H, V), 0.0), F0);
-	float NDF = ratPBRImplDistributionGGX(N, H, roughness);
-	float G = ratPBRImplGeometrySmith(N, V, L, roughness);
+	vec3 F0 = mix(vec3(0.04), albedo, vec3(metallic));
+	vec3 F = ratPBRFresnelSchlick(max(dot(H, V), 0.0), F0);
+	float NDF = ratPBRDistributionGGX(N, H, roughness);
+	float G = ratPBRGeometrySmith(N, V, L, roughness);
 
 	float nDotV = max(dot(N, V), 0.0);
 
@@ -67,10 +72,28 @@ void ratApplyPBR(in RatScratchPipelineFragmentOutput fragmentOutput, vec3 L, vec
 	}
 
 	float nDotL = max(dot(N, L), 0.0);
-	vec3 kS = max(F, vec3(0.04) * vec3(1.0 - metallic));
+	vec3 kS = F; // max(F, vec3(0.04) * vec3(1.0 - metallic));
 	vec3 kD = (vec3(1.0) - kS) * vec3(1.0 - metallic);
 	vec3 diffuseTerm = radiance * nDotL * kD;
 
 	result.diffuse += diffuseTerm;
 	result.specular += specularTerm * vec3(nDotL);
+}
+
+void ratApplyIBL(in RatScratchPipelineFragmentOutput fragmentOutput, vec3 radiance, vec3 irradiance,
+				 vec3 cameraPosition, inout RatScratchPipelineLightResult result)
+{
+	vec3 N = normalize(fragmentOutput.normal);
+	vec3 V = normalize(cameraPosition - fragmentOutput.position);
+
+	vec3 F0 = mix(vec3(0.04), fragmentOutput.albedo.rgb, vec3(fragmentOutput.metal));
+	vec3 F = ratPBRFresnelSchlick(max(dot(N, V), 0.0), F0, fragmentOutput.roughness);
+	vec3 specularTerm = radiance * F;
+
+	vec3 kS = F;
+	vec3 kD = ((vec3(1.0) - kS)) * (1.0 - fragmentOutput.metal);
+	vec3 diffuseTerm = irradiance * kD;
+
+	result.diffuse += diffuseTerm;
+	result.specular += specularTerm;
 }

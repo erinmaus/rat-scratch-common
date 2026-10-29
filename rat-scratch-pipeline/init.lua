@@ -56,6 +56,7 @@ return {
 	ReflectionProbePipeline = require(
 		"rat-scratch-pipeline.ReflectionProbePipeline"
 	),
+	ReflectionRenderPass = require("rat-scratch-pipeline.ReflectionRenderPass"),
 	RenderBuffer = require("rat-scratch-pipeline.RenderBuffer"),
 	RenderPass = require("rat-scratch-pipeline.RenderPass"),
 	Resources = require("rat-scratch-pipeline.Resources"),

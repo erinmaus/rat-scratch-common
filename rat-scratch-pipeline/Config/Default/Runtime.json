@@ -38,6 +38,48 @@
         "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_LOD_MAX_PENDING_CLUSTER_DRAWS",
         "format": "uint32",
         "default": [32]
+      },
+      {
+        "key": "pipeline.properties.reflection.sizeInPixels",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_REFLECTION_PROBE_SIZE_IN_PIXELS",
+        "format": "uint32vec2",
+        "default": [512, 512]
+      },
+      {
+        "key": "pipeline.properties.reflection.cellsSizeInPixels",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_REFLECTION_PROBE_CELL_SIZE_IN_PIXELS",
+        "format": "uint32vec2",
+        "default": [16, 16]
+      },
+      {
+        "key": "pipeline.properties.reflection.maxProbesPerCell",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_MAX_REFLECTION_PROBES_PER_CELL",
+        "format": "uint32",
+        "default": [64]
+      },
+      {
+        "key": "pipeline.properties.reflection.maxProbesPerThread",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_MAX_REFLECTION_PROBES_PER_THREAD",
+        "format": "uint32",
+        "default": [16]
+      },
+      {
+        "key": "pipeline.properties.reflection.raymarchBias",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_REFLECTION_RAYMARCH_BIAS",
+        "format": "float",
+        "default": [0.001]
+      },
+      {
+        "key": "pipeline.properties.reflection.raymarchStepDistanceBias",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_REFLECTION_RAYMARCH_STEP_DISTANCE_BIAS",
+        "format": "float",
+        "default": [0.5]
+      },
+      {
+        "key": "pipeline.properties.reflection.raymarchIterations",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_REFLECTION_RAYMARCH_ITERATIONS",
+        "format": "uint32",
+        "default": [50]
       }
     ],
     "settings": [
