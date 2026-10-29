@@ -9,6 +9,8 @@ local World = require("rat-scratch-pipeline.World")
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local IndirectDraw = require("rat-scratch-pipeline.IndirectDraw")
 local PostProcess = require("rat-scratch-pipeline.PostProcess")
+local ReflectionProbePipeline =
+	require("rat-scratch-pipeline.ReflectionProbePipeline")
 
 --- @class RatScratch.Pipeline.PipelineRenderer : RatScratch.Common.BaseObject
 --- @field private pipelineRuntime RatScratch.Pipeline.PipelineRuntime
@@ -61,31 +63,36 @@ end
 
 --- @private
 --- @param shader love.Shader
-function PipelineRenderer:_bindWorldUniforms(shader)
+--- @param qualityPreset string
+function PipelineRenderer:_bindWorldUniforms(shader, qualityPreset)
 	local material = self.world:getPipeline(MaterialPipeline)
-	material:bind(shader, self.pipelineRuntime:getDefaultQualityPreset())
+	material:bind(shader, qualityPreset)
 
 	local model = self.world:getPipeline(ModelPipeline)
-	model:bind(shader, self.pipelineRuntime:getDefaultQualityPreset())
+	model:bind(shader, qualityPreset)
 
 	local object = self.world:getPipeline(ObjectPipeline)
-	object:bind(shader, self.pipelineRuntime:getDefaultQualityPreset())
+	object:bind(shader, qualityPreset)
 
 	local animation = self.world:getPipeline(AnimationPipeline)
-	animation:bind(shader, self.pipelineRuntime:getDefaultQualityPreset())
+	animation:bind(shader, qualityPreset)
 end
 
 --- @private
 --- @param shader love.Shader
 --- @param scene RatScratch.Pipeline.Scene
-function PipelineRenderer:_bindSceneUniforms(shader, scene)
+--- @param qualityPreset string
+function PipelineRenderer:_bindSceneUniforms(shader, scene, qualityPreset)
 	local draw = scene:getPipeline(DrawPipeline)
-	draw:bind(shader, self.pipelineRuntime:getDefaultQualityPreset())
+	draw:bind(shader, qualityPreset)
 
 	local light = scene:getPipeline(LightPipeline)
-	light:bind(shader, self.pipelineRuntime:getDefaultQualityPreset())
+	light:bind(shader, qualityPreset)
 
-	scene:bind(shader, self.pipelineRuntime:getDefaultQualityPreset())
+	local reflection = scene:getPipeline(ReflectionProbePipeline)
+	reflection:bind(shader, qualityPreset)
+
+	scene:bind(shader, qualityPreset)
 end
 
 --- @private
@@ -200,8 +207,8 @@ function PipelineRenderer:cull(qualityPreset, scene, result)
 
 	local cullShader = self.cullShader:get()
 
-	self:_bindWorldUniforms(cullShader)
-	self:_bindSceneUniforms(cullShader, scene)
+	self:_bindWorldUniforms(cullShader, qualityPreset)
+	self:_bindSceneUniforms(cullShader, scene, qualityPreset)
 
 	result:getIndirectBuffer():setArrayData(self.indirectDrawBufferData)
 
@@ -238,49 +245,15 @@ function PipelineRenderer:cull(qualityPreset, scene, result)
 	)
 end
 
-local BLUR_DIRECTION_X_AXIS = { 1, 0 }
-local BLUR_DIRECTION_Y_AXIS = { 0, 1 }
-
 --- @param shader love.Shader
 --- @param rendererPass RatScratch.Pipeline.RenderPass
 function PipelineRenderer:bind(shader, rendererPass)
-	self:_bindWorldUniforms(shader)
-	self:_bindSceneUniforms(shader, rendererPass:getScene())
-end
-
---- @param forwardRenderPass RatScratch.Pipeline.ForwardRenderPass
-function PipelineRenderer:drawForward(forwardRenderPass)
-	if true then
-		return
-	end
-
-	forwardRenderPass:start()
-
-	local material = self.world:getPipeline(MaterialPipeline)
-
-	local drawShader = material:getShader(
-		forwardRenderPass:getQualityPreset(),
-		"forward",
-		"draw"
+	self:_bindWorldUniforms(shader, rendererPass:getQualityPreset())
+	self:_bindSceneUniforms(
+		shader,
+		rendererPass:getScene(),
+		rendererPass:getQualityPreset()
 	)
-	self:_bindWorldUniforms(drawShader)
-	self:_bindSceneUniforms(drawShader, forwardRenderPass:getScene())
-
-	forwardRenderPass:bind(drawShader)
-
-	love.graphics.push("all")
-	love.graphics.setShader(drawShader)
-	forwardRenderPass:getRenderBuffer():bind()
-	love.graphics.clear(0, 0, 0, 0)
-	love.graphics.drawFromShaderIndirect(
-		"triangles",
-		forwardRenderPass:getCullResult():getIndirectBuffer()
-	)
-	love.graphics.pop()
-
-	forwardRenderPass:stop()
-
-	-- TODO: oit
 end
 
 --- @param rendererPass RatScratch.Pipeline.RenderPass
