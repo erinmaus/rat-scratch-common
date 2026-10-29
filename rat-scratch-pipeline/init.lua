@@ -15,6 +15,7 @@ return {
 	DrawPipeline = require("rat-scratch-pipeline.DrawPipeline"),
 	ForwardRendererPass = require("rat-scratch-pipeline.ForwardRendererPass"),
 	GLTF = require("rat-scratch-pipeline.GLTF"),
+	HiZResult = require("rat-scratch-pipeline.HiZResult"),
 	GBuffer = require("rat-scratch-pipeline.GBuffer"),
 	Graphics3D = require("rat-scratch-pipeline.Graphics3D"),
 	IndexBufferInfo = require("rat-scratch-pipeline.IndexBufferInfo"),

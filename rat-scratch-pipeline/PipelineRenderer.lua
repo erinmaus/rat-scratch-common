@@ -39,9 +39,14 @@ function PipelineRenderer:new(pipelineRuntime)
 		pipelineRuntime:getDefaultQualityPreset()
 	)
 
-	self.shadowBlurShader = pipelineRuntime:loadShader(
-		"@Pipeline/Base/Shadow/Blur.frag.glsl",
-		"@Pipeline/PostProcess/LayeredVertex.vert.glsl",
+	self.generateHiZShader = pipelineRuntime:loadComputeShader(
+		"@Pipeline/HiZ/Generate.compute.glsl",
+		pipelineRuntime:getDefaultQualityPreset()
+	)
+
+	self.prepareCubeMapHiZShader = pipelineRuntime:loadShader(
+		"@Pipeline/HiZ/PrepareCubeMap.frag.glsl",
+		"@Pipeline/PostProcess/SubsetLayeredVertex.vert.glsl",
 		pipelineRuntime:getDefaultQualityPreset()
 	)
 end
@@ -84,36 +89,105 @@ function PipelineRenderer:_bindSceneUniforms(shader, scene)
 end
 
 --- @private
---- @param scene RatScratch.Pipeline.Scene
-function PipelineRenderer:_cullScene(scene)
-	self:_bindWorldUniforms(self.cullShader)
-	self:_bindSceneUniforms(self.cullShader, scene)
+--- @param result RatScratch.Pipeline.HiZResult
+function PipelineRenderer:_prepareCubeMapHiZ(result)
+	if not self.prepareCubeMapHiZShader:getIsReady() then
+		return
+	end
 
-	local draw = scene:getPipeline(DrawPipeline)
-	local drawsBuffer = draw:getDrawsBuffer()
+	local prepareShader = self.prepareCubeMapHiZShader:get()
 
-	scene:getPipeline(DrawPipeline):cull(self.cullShader, 1)
+	local depthRenderBuffer = result:getSourceRenderBuffer()
+
+	local hiZRenderBuffer = result:getDestinationRenderBuffer()
+	hiZRenderBuffer:resize(
+		depthRenderBuffer:getWidth(),
+		depthRenderBuffer:getHeight(),
+		depthRenderBuffer:getLayers()
+	)
+
+	result:getCamerasBuffer():bind(prepareShader)
+
+	if prepareShader:hasUniform("rat_LayersBuffer") then
+		prepareShader:send(
+			"rat_LayersBuffer",
+			result:getCamerasBuffer():getActiveCameraBuffer():getBuffer()
+		)
+	end
+
+	if prepareShader:hasUniform("rat_DepthTexture") then
+		prepareShader:send(
+			"rat_DepthTexture",
+			depthRenderBuffer:getDepthCanvasMipmap(1)
+		)
+	end
+
+	love.graphics.push("all")
+	do
+		love.graphics.setBlendState("add", "one", "zero")
+		love.graphics.setDepthMode()
+
+		hiZRenderBuffer:bind()
+		love.graphics.clear(0, 0, 0, 0)
+
+		love.graphics.setShader(prepareShader)
+		PostProcess.drawInstanced(
+			result:getCamerasBuffer():getActiveCameraCount()
+		)
+	end
+	love.graphics.pop()
 end
 
 --- @private
---- @param scene RatScratch.Pipeline.Scene
-function PipelineRenderer:_drawForward(scene)
-	self:_cullScene(scene)
+--- @param result RatScratch.Pipeline.HiZResult
+function PipelineRenderer:_generateHiZ(result)
+	if not self.generateHiZShader:getIsReady() then
+		return
+	end
 
-	local material = self.world:getPipeline(MaterialPipeline)
+	local generateShader = self.generateHiZShader:get()
+	local localX, localY, localZ = generateShader:getLocalThreadgroupSize()
 
-	local drawShader = material:getShader(
-		self.pipelineRuntime:getDefaultQualityPreset(),
-		"forward",
-		"draw"
-	)
-	self:_bindWorldUniforms(drawShader)
-	self:_bindSceneUniforms(drawShader, scene)
+	result:getCamerasBuffer():bind(generateShader)
+	if generateShader:hasUniform("rat_LayersBuffer") then
+		generateShader:send(
+			"rat_LayersBuffer",
+			result:getCamerasBuffer():getActiveCameraBuffer():getBuffer()
+		)
+	end
 
-	love.graphics.push("all")
-	love.graphics.setShader(drawShader)
-	scene:getPipeline(DrawPipeline):draw()
-	love.graphics.pop()
+	local hiZRenderBuffer = result:getDestinationRenderBuffer()
+	for i = 2, hiZRenderBuffer:getMipmapCount() do
+		local source = hiZRenderBuffer:getCanvasMipmap(1, i - 1)
+		local destination = hiZRenderBuffer:getCanvasMipmap(1, i)
+
+		if generateShader:hasUniform("rat_Source") then
+			generateShader:send("rat_Source", source)
+		end
+
+		if generateShader:hasUniform("rat_Destination") then
+			generateShader:send("rat_Destination", destination)
+		end
+
+		love.graphics.dispatchThreadgroups(
+			generateShader,
+			math.max(math.ceil(destination:getWidth() / localX), 1),
+			math.max(math.ceil(destination:getHeight() / localY), 1),
+			math.max(
+				math.ceil(
+					result:getCamerasBuffer():getActiveCameraCount() / localZ
+				),
+				1
+			)
+		)
+	end
+end
+
+--- @param qualityPreset string
+--- @param result RatScratch.Pipeline.HiZResult
+function PipelineRenderer:computeCubeMapHiZ(qualityPreset, result)
+	self:_prepareCubeMapHiZ(result)
+	self:_generateHiZ(result)
 end
 
 --- @param qualityPreset string
