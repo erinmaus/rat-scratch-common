@@ -14,6 +14,7 @@ void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOu
 	result.diffuse += ambient * vec3(occlusion);
 	result.fluorescence +=
 		fragmentOutput.fluorescence * vec3(ambientLight.ambience * ambientLight.ultraviolet * occlusion);
+	result.occlusion = 1.0 + occlusion * (result.occlusion - 1.0);
 }
 
 void ratApplyDefaultFragmentLight(in RatScratchPipelineFragmentOutput fragmentOutput,
