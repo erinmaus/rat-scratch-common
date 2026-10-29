@@ -3,6 +3,12 @@ local assert = require("rat-scratch-common").Debug.assert
 local LightClusterResult = require("rat-scratch-pipeline.LightClusterResult")
 local LightPipeline = require("rat-scratch-pipeline.LightPipeline")
 local MaterialPipeline = require("rat-scratch-pipeline.MaterialPipeline")
+local ReflectionProbeClusterResult =
+	require("rat-scratch-pipeline.ReflectionProbeClusterResult")
+local ReflectionProbePipeline =
+	require("rat-scratch-pipeline.ReflectionProbePipeline")
+local ReflectionRenderPass =
+	require("rat-scratch-pipeline.ReflectionRenderPass")
 local RenderBuffer = require("rat-scratch-pipeline.RenderBuffer")
 local RenderPass = require("rat-scratch-pipeline.RenderPass")
 local ShadowRenderPass = require("rat-scratch-pipeline.ShadowRenderPass")
@@ -11,6 +17,7 @@ local ShadowRenderPass = require("rat-scratch-pipeline.ShadowRenderPass")
 --- @field private renderBuffer RatScratch.Pipeline.RenderBuffer
 --- @field private cullResult RatScratch.Pipeline.CullResult
 --- @field private lightClusterResult RatScratch.Pipeline.LightClusterResult
+--- @field private reflectionProbeClusterResult? RatScratch.Pipeline.ReflectionProbeClusterResult
 --- @field private width integer
 --- @field private height integer
 --- @overload fun(): RatScratch.Pipeline.ForwardRenderPass
@@ -26,6 +33,7 @@ function ForwardRenderPass:new()
 	RenderPass.new(self)
 
 	self:addDependencyRequirement(ShadowRenderPass, "soft")
+	self:addDependencyRequirement(ReflectionRenderPass, "soft")
 
 	self.width, self.height = love.graphics.getDimensions()
 	self.isRenderBufferDirty = true
@@ -37,7 +45,7 @@ function ForwardRenderPass:resize(width, height)
 	local w, h = math.max(width, 1), math.max(height, 1)
 	if not (self.width == w and self.height == h) then
 		self.width = w
-		self.width = h
+		self.height = h
 		self.isRenderBufferDirty = true
 	end
 end
@@ -55,7 +63,7 @@ function ForwardRenderPass:_updateRenderBuffer()
 	local cameraCount = self.cullResult:getCamerasBuffer():getCameraCount()
 	if
 		self.isRenderBufferDirty
-		or (self.renderBuffer and self.renderBuffer:getLayers() ~= cameraCount)
+		or (self.renderBuffer and self.renderBuffer:getLayers() < cameraCount)
 	then
 		if not self.renderBuffer then
 			self.renderBuffer = RenderBuffer(
@@ -83,6 +91,11 @@ function ForwardRenderPass:attached()
 
 	self.lightClusterResult =
 		LightClusterResult(self.cullResult:getCamerasBuffer())
+
+	if self:hasDependency(ReflectionRenderPass) then
+		self.reflectionProbeClusterResult =
+			ReflectionProbeClusterResult(self.cullResult:getCamerasBuffer())
+	end
 end
 
 function ForwardRenderPass:getCullResult()
@@ -113,6 +126,17 @@ function ForwardRenderPass:start()
 		self.renderBuffer:getHeight(),
 		self.lightClusterResult
 	)
+
+	if self.reflectionProbeClusterResult then
+		self:getScene()
+			:getPipeline(ReflectionProbePipeline)
+			:clusterReflectionProbes(
+				self:getQualityPreset(),
+				self.renderBuffer:getWidth(),
+				self.renderBuffer:getHeight(),
+				self.reflectionProbeClusterResult
+			)
+	end
 end
 
 do
@@ -144,6 +168,25 @@ do
 
 		if self:hasDependency(ShadowRenderPass) then
 			self:getDependency(ShadowRenderPass):bind(drawShader)
+		end
+
+		if self:hasDependency(ReflectionRenderPass) then
+			self:getDependency(ReflectionRenderPass):bind(drawShader)
+		else
+			if drawShader:hasUniform("rat_ReflectionProbeCount") then
+				drawShader:send("rat_ReflectionProbeCount", 0)
+			end
+		end
+
+		if self.reflectionProbeClusterResult then
+			if
+				drawShader:hasUniform("rat_ReflectionProbeCountIndicesBuffer")
+			then
+				drawShader:send(
+					"rat_ReflectionProbeCountIndicesBuffer",
+					self.reflectionProbeClusterResult:getReflectionProbeIndicesBuffer()
+				)
+			end
 		end
 	end
 end

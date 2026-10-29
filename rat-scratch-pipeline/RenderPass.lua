@@ -74,7 +74,7 @@ function RenderPass:hasDependency(dependencyType)
 		dependencyType._DEBUG.shortName
 	)
 
-	return self.dependencies[dependencyType] ~= nil
+	return self.dependencies[dependencyType] ~= false
 end
 
 --- @param quality string
