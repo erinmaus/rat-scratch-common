@@ -254,9 +254,15 @@ function CameraBuffer:flush()
 		end
 
 		for instance in pairs(self.activeCameraInstances) do
-			local index = self.cameraBuffer:getIndexCount(instance)
-			for i, camera in ipairs(self.activeCamerasByIndex) do
-				self.activeCameraBuffer:set(camera, 1, 1, (index - 1) + (i - 1))
+			local index, count = self.cameraBuffer:getIndexCount(instance)
+			local cameras = self.instanceToCamera[instance]
+			for i = 1, count do
+				self.activeCameraBuffer:set(
+					cameras[i],
+					1,
+					1,
+					(index - 1) + (i - 1)
+				)
 			end
 		end
 
