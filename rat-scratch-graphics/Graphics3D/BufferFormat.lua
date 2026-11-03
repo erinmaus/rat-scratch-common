@@ -544,6 +544,24 @@ end
 --- @param vertex number[]
 --- @param attribute number | string
 --- @param offset? integer
+--- @return number ...
+function BufferFormat.getValue(format, vertex, attribute, offset)
+	local formatInstance = Object.isDerived(
+		Object.getType(format),
+		BufferFormat
+	) and format or BufferFormat.get(format)
+	offset = offset or 0
+
+	local c, o = formatInstance:getCountOffset(attribute)
+	local i = o + offset
+	local j = o + c + offset - 1
+	return Table.unpack(vertex, i, j)
+end
+
+--- @param format RatScratch.Graphics.Graphics3D.MeshFormatAttribute[] | RatScratch.Graphics.Graphics3D.BufferFormat
+--- @param vertex number[]
+--- @param attribute number | string
+--- @param offset? integer
 --- @param ... number
 function BufferFormat.setValue(format, vertex, attribute, offset, ...)
 	local formatInstance = Object.isDerived(
