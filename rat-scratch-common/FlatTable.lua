@@ -151,7 +151,7 @@ function FlatTable:resize(count, zero)
 	zero = zero or 0
 
 	if count > self.length then
-		local i = #self.length + 1
+		local i = Table.indexToStride(self.length + 1, self.stride)
 		local j = Table.indexToStride(count, self.stride)
 
 		for k = i, j do
