@@ -7,5 +7,6 @@ return {
 	GammaColor = require("rat-scratch-graphics.GammaColor"),
 	Graphics3D = require("rat-scratch-graphics.Graphics3D"),
 	LinearColor = require("rat-scratch-graphics.LinearColor"),
+	MeshBVH = require("rat-scratch-graphics.MeshBVH"),
 	ShaderPreprocessor = require("rat-scratch-graphics.ShaderPreprocessor"),
 }
