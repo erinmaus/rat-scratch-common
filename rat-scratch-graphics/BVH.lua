@@ -553,7 +553,7 @@ do
 		local head = 1
 		local tail = 1
 
-		local success, t, objectIndex = false, nil, 0
+		local success, t, objectIndex = false, math.huge, 0
 		while head <= tail do
 			local node = queue[head]
 			head = head + 1
@@ -561,7 +561,7 @@ do
 			local nodeMin, nodeMax = node:getBounds()
 			local nodeHitSuccess, nodeT =
 				AABB.raycast(nodeMin, nodeMax, origin, direction)
-			if nodeHitSuccess and nodeT < (t or math.huge) then
+			if nodeHitSuccess and nodeT < t then
 				if node:getIsLeaf() then
 					local index, count = node:getIndexCount()
 					local startIndex, stopIndex = index, index + count - 1
@@ -573,7 +573,7 @@ do
 							direction
 						)
 
-						if objectHitSuccess and objectT < (t or math.huge) then
+						if objectHitSuccess and objectT < t and objectT > 0 then
 							success = true
 							t = objectT
 							objectIndex = currentObjectIndex
@@ -590,7 +590,7 @@ do
 
 		Table.clear(queue)
 
-		return success, t or 0, objectIndex
+		return success, success and t or math.huge, objectIndex
 	end
 end
 

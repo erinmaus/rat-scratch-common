@@ -3,6 +3,18 @@ local AABB = {}
 
 --- @param minBounds RatScratch.Math.Vector3
 --- @param maxBounds RatScratch.Math.Vector3
+--- @param point RatScratch.Math.Vector3
+function AABB.inside(minBounds, maxBounds, point)
+	return point.x >= minBounds.x
+		and point.y >= minBounds.y
+		and point.z >= minBounds.z
+		and point.x <= maxBounds.x
+		and point.y <= maxBounds.y
+		and point.z <= maxBounds.z
+end
+
+--- @param minBounds RatScratch.Math.Vector3
+--- @param maxBounds RatScratch.Math.Vector3
 --- @param value RatScratch.Math.Vector3
 --- @param resultMinBounds? RatScratch.Math.Vector3
 --- @param resultMaxBounds? RatScratch.Math.Vector3
@@ -98,7 +110,7 @@ do
 		tMin = math.max(tMin, math.min(tz1, tz2, tMax))
 		tMax = math.min(tMax, math.max(tz1, tz2, tMin))
 
-		if tMax > tMin and tMin >= 0 then
+		if tMax > math.max(tMin, 0) then
 			return true, tMin
 		else
 			return false, math.huge
