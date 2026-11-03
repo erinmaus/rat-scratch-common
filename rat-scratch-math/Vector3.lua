@@ -64,6 +64,16 @@ function Vector3:get()
 	return self.x, self.y, self.z
 end
 
+--- @param axis integer | RatScratch.Math.Vector3.Axis
+--- @return number
+function Vector3:getAxis(axis)
+	local axisKey = (
+		Vector3.AXIS_INDEX[axis] and Vector3.AXES[Vector3.AXIS_INDEX[axis]]
+	) or Vector3.AXES[axis]
+
+	return self[axisKey] or 0
+end
+
 --- @param result RatScratch.Math.Vector3??
 --- @return RatScratch.Math.Vector3
 function Vector3:abs(result)
@@ -399,6 +409,25 @@ function Vector3:equal(other, e)
 		and math.abs(self.y - other.y) < e
 		and math.abs(self.z - other.z) < e
 end
+
+--- @alias RatScratch.Math.Vector3.Axis "x" | "y" | "z"
+
+Vector3.AXES = {
+	"x",
+	"y",
+	"z",
+}
+
+Vector3.AXIS_INDEX = {
+	x = 1,
+	y = 2,
+	z = 3,
+}
+
+Vector3.AXIS_X = 1
+Vector3.AXIS_Y = 2
+Vector3.AXIS_Z = 3
+Vector3.AXIS_COUNT = 3
 
 Vector3.ZERO = Vector3(0, 0, 0)
 Vector3.ONE = Vector3(1, 1, 1)
