@@ -285,6 +285,8 @@ function ReflectionRenderPass:_blurGI()
 		self.blurDoubleBufferResult:stop()
 	end
 	love.graphics.pop()
+
+	self.blurDoubleBufferResult:getResult():generateMipmaps()
 end
 
 --- @private
