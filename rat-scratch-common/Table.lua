@@ -1,7 +1,18 @@
 local Table = {}
 
-Table.clear = require("table.clear")
-Table.new = require("table.new")
+local tclear = require("table.clear")
+local tnew = require("table.new")
+
+--- @param t any[]
+function Table.clear(t)
+	tclear(t)
+end
+
+--- @param arrayN? integer
+--- @param hashN? integer
+function Table.new(arrayN, hashN)
+	return tnew(arrayN or 0, hashN or 0)
+end
 
 --- @generic T
 --- @param t T[]
