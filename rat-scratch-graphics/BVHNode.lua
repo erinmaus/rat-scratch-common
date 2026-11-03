@@ -223,9 +223,15 @@ function BVHNode:setChildren(left, right)
 	assert(not self.parent, "node is read-only")
 
 	local isValid = left and right
+	if not isValid then
+		self.leftNode = false
+		self.rightNode = false
+
+		return
+	end
 
 	assert(
-		not isValid or left:getNodeIndex() + 1 == right:getNodeIndex(),
+		left:getNodeIndex() + 1 == right:getNodeIndex(),
 		"right node index (got %d, expected %d) must be adjacent to left node index (%d)",
 		right:getNodeIndex(),
 		left:getNodeIndex() + 1,

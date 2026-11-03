@@ -181,7 +181,7 @@ do
 
 		local bvh = MeshBVH(2 * triangleCount, triangleCount)
 		bvh.vertexPositions:resize(#meshDefinition.vertices)
-		bvh.indexData:resize(#meshDefinition.indices)
+		bvh.indexData:resize(triangleCount)
 
 		local vertexFormatInstance = BufferFormat.get(meshDefinition.format)
 		assert(

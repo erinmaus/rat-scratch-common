@@ -212,7 +212,9 @@ do
 end
 
 function BVH:flush()
-	for i, node in ipairs(self.nodes) do
+	for i = 1, self.nodeCount do
+		local node = self.nodes[i]
+
 		node:toData(
 			self.data,
 			Table.indexToStride(
@@ -271,7 +273,7 @@ local DEFAULT_SAH_BUILD_STRATEGY = {
 	strategy = "sah",
 	maxDepth = 32,
 	minObjectCount = 1,
-	maxObjectCount = math.huge,
+	maxObjectCount = 8,
 	binCount = 8,
 }
 
@@ -580,6 +582,8 @@ do
 				else
 					table.insert(queue, node:getLeftNode())
 					table.insert(queue, node:getRightNode())
+
+					tail = tail + 2
 				end
 			end
 		end
