@@ -67,4 +67,43 @@ do
 	end
 end
 
+do
+	local _inverseDirection = Vector3()
+
+	--- @param minBounds RatScratch.Math.Vector3
+	--- @param maxBounds RatScratch.Math.Vector3
+	--- @param origin RatScratch.Math.Vector3
+	--- @param direction RatScratch.Math.Vector3
+	--- @return boolean, number
+	function AABB.raycast(minBounds, maxBounds, origin, direction)
+		local inverseDirection =
+			Vector3.ONE:divide(direction, _inverseDirection)
+		local tMin, tMax
+
+		local tx1 = (minBounds.x - origin.x) * inverseDirection.x
+		local tx2 = (maxBounds.x - origin.x) * inverseDirection.x
+
+		tMin = math.min(tx1, tx2)
+		tMax = math.max(tx1, tx2)
+
+		local ty1 = (minBounds.y - origin.y) * inverseDirection.y
+		local ty2 = (maxBounds.y - origin.y) * inverseDirection.y
+
+		tMin = math.max(tMin, math.min(ty1, ty2, tMax))
+		tMax = math.min(tMax, math.max(ty1, ty2, tMin))
+
+		local tz1 = (minBounds.z - origin.z) * inverseDirection.z
+		local tz2 = (maxBounds.z - origin.z) * inverseDirection.z
+
+		tMin = math.max(tMin, math.min(tz1, tz2, tMax))
+		tMax = math.min(tMax, math.max(tz1, tz2, tMin))
+
+		if tMax > tMin and tMin >= 0 then
+			return true, tMin
+		else
+			return false, math.huge
+		end
+	end
+end
+
 return AABB
