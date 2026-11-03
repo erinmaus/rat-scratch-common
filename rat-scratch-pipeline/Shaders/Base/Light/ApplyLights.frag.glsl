@@ -111,7 +111,7 @@ void ratApplyLightsImplEnvironmentProbes(in RatScratchPipelineFragmentOutput fra
 		RatScratchPipelineReflectionProbe probe = rat_ReflectionProbes[probeIndex];
 
 		float w = ratApplyLightsImplCalculateWeight(probe, fragmentOutput.position);
-		if (w > 0.0 || true)
+		if (w > 0.0)
 		{
 			vec4 radianceSample;
 			ratRaymarchReflectionRadianceProbe(probe, fragmentOutput.position, fragmentOutput.roughness, R,
@@ -123,8 +123,6 @@ void ratApplyLightsImplEnvironmentProbes(in RatScratchPipelineFragmentOutput fra
 			radiance += vec3(w) * radianceSample.rgb * vec3(radianceSample.a);
 			irradiance += vec3(w) * irradianceSample.rgb * vec3(irradianceSample.a);
 		}
-
-		break;
 	}
 
 	if (weight <= 0.0)
