@@ -143,4 +143,23 @@ function FlatTable:zero(index, zero)
 	end
 end
 
+--- @generic T
+--- @param self RatScratch.Common.FlatTable<T>
+--- @param count integer
+--- @param zero? T
+function FlatTable:resize(count, zero)
+	zero = zero or 0
+
+	if count > self.length then
+		local i = #self.length + 1
+		local j = Table.indexToStride(count, self.stride)
+
+		for k = i, j do
+			self.array[k] = zero
+		end
+	end
+
+	self.length = count
+end
+
 return FlatTable
