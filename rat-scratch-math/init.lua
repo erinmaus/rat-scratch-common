@@ -4,6 +4,7 @@ return {
 	DualContour = require("rat-scratch-math.DualContour"),
 	Gaussian = require("rat-scratch-math.Gaussian"),
 	Geometry2D = require("rat-scratch-math.Geometry2D"),
+	Geometry3D = require("rat-scratch-math.Geometry3D"),
 	KDTreeNode = require("rat-scratch-math.KDTreeNode"),
 	MarchingSquares = require("rat-scratch-math.MarchingSquares"),
 	Quaternion = require("rat-scratch-math.Quaternion"),
