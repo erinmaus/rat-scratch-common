@@ -85,6 +85,8 @@ function BVH:newNode(index)
 				BVHNode.NODE_FORMAT_INSTANCE:getComponentCount()
 			) - 1
 		)
+	else
+		node:reset(self.nodeCount)
 	end
 
 	return node
@@ -209,6 +211,18 @@ do
 	end
 end
 
+function BVH:flush()
+	for i, node in ipairs(self.nodes) do
+		node:toData(
+			self.data,
+			Table.indexToStride(
+				i,
+				BVHNode.NODE_FORMAT_INSTANCE:getComponentCount()
+			) - 1
+		)
+	end
+end
+
 function BVH:refresh()
 	local wasDirty = false
 
@@ -273,23 +287,27 @@ do
 	local _leftMin, _leftMax = Vector3(), Vector3()
 	local _rightMin, _rightMax = Vector3(), Vector3()
 
+	--- @param strategy RatScratch.Graphics.BVH.SAHBuildStrategy
 	--- @param node RatScratch.Graphics.BVHNode
 	--- @param axis integer | RatScratch.Math.Vector3.Axis
 	--- @return number, integer
-	function BVH:_tryFindBestSplitPlane(node, axis)
+	function BVH:_tryFindBestSplitPlane(strategy, node, axis)
+		local binCount = strategy.binCount
+			or DEFAULT_SAH_BUILD_STRATEGY.binCount
+
 		local index, count = node:getIndexCount()
 		if count == 0 then
 			return math.huge, 2
 		end
 
-		local minSpan, maxSpan = node:getBoundsAxis(axis)
+		local minSpan, maxSpan = node:getCenterBoundsAxis(axis)
 		if minSpan == maxSpan then
 			return math.huge, 2
 		end
 
 		local minBins, maxBins, countBins = _minBins, _maxBins, _countBins
 		local leftArea, rightArea = _leftArea, _rightArea
-		for i = 1, self.binCount do
+		for i = 1, binCount do
 			minBins[i] = minBins[i] or Vector3()
 			minBins[i]:from(math.huge)
 
@@ -302,7 +320,7 @@ do
 			rightArea[i] = 0
 		end
 
-		local inverseScale = self.binCount / (maxSpan - minSpan)
+		local inverseScale = binCount / (maxSpan - minSpan)
 		local startIndex, stopIndex = index, index + count - 1
 		for i = startIndex, stopIndex do
 			local objectIndex = self.objectIndices[i]
@@ -313,7 +331,7 @@ do
 			local binIndex = Common.clamp(
 				math.floor((objectCenterAxis - minSpan) * inverseScale) + 1,
 				1,
-				self.binCount
+				binCount
 			)
 
 			countBins[binIndex] = countBins[binIndex] + 1
@@ -331,8 +349,8 @@ do
 			_rightMin:from(math.huge), _rightMax:from(-math.huge)
 
 		local leftSum, rightSum = 0, 0
-		for i = 1, self.binCount - 1 do
-			local leftIndex, rightIndex = i, self.binCount - i + 1
+		for i = 1, binCount - 1 do
+			local leftIndex, rightIndex = i, binCount - i + 1
 
 			leftSum = leftSum + countBins[leftIndex]
 			AABB.union(leftMin, leftMax, minBins[leftIndex], maxBins[leftIndex])
@@ -351,7 +369,7 @@ do
 		end
 
 		local bestCost, bestBin = math.huge, 1
-		for i = 1, self.binCount - 1 do
+		for i = 1, binCount - 1 do
 			local currentCost = leftArea[i] + rightArea[i]
 			if currentCost < bestCost then
 				bestCost = currentCost
@@ -362,12 +380,14 @@ do
 		return bestCost, bestBin
 	end
 
+	--- @param strategy RatScratch.Graphics.BVH.SAHBuildStrategy
 	--- @param node RatScratch.Graphics.BVHNode
-	function BVH:_findBestSplitPlane(node)
+	function BVH:_findBestSplitPlane(strategy, node)
 		local bestCost = math.huge
 		local bestAxis, bestSplit = 1, 2
 		for axis = 1, Vector3.AXIS_COUNT do
-			local cost, split = self:_tryFindBestSplitPlane(node, axis)
+			local cost, split =
+				self:_tryFindBestSplitPlane(strategy, node, axis)
 			if cost < bestCost then
 				bestCost = cost
 				bestAxis = axis
@@ -382,31 +402,38 @@ do
 	--- @param node RatScratch.Graphics.BVHNode
 	--- @return RatScratch.Graphics.BVHNode?, RatScratch.Graphics.BVHNode?
 	function BVH:_subdivide(strategy, node)
-		if
-			node:getDepth()
-			>= (strategy.maxDepth or DEFAULT_SAH_BUILD_STRATEGY.maxDepth)
-		then
+		local maxDepth = strategy.maxDepth
+			or DEFAULT_SAH_BUILD_STRATEGY.maxDepth
+		local minObjectCount = strategy.minObjectCount
+			or DEFAULT_SAH_BUILD_STRATEGY.minObjectCount
+		local maxObjectCount = strategy.maxObjectCount
+			or DEFAULT_SAH_BUILD_STRATEGY.maxObjectCount
+		local binCount = strategy.binCount
+			or DEFAULT_SAH_BUILD_STRATEGY.binCount
+
+		if node:getDepth() >= maxDepth then
 			return
 		end
 
 		local objectIndex, objectCount = node:getIndexCount()
-		if objectCount <= strategy.minObjectCount then
+		if objectCount <= minObjectCount then
 			return nil, nil
 		end
 
 		local splitAxis, splitBinIndex, splitCost =
-			self:_findBestSplitPlane(node)
+			self:_findBestSplitPlane(strategy, node)
 		local inverseScale, minSpan, maxSpan = 1, 0, 0
-		if objectCount <= strategy.maxObjectCount then
+		do
 			local nodeMin, nodeMax = node:getBounds()
 			local nodeCost = AABB.calculateSurfaceArea(nodeMin, nodeMax)
 				* objectCount
-			if splitCost >= nodeCost then
+
+			if objectCount <= maxObjectCount and splitCost >= nodeCost then
 				return nil, nil
 			end
 
-			minSpan, maxSpan = node:getBoundsAxis(splitAxis)
-			inverseScale = self.binCount / (maxSpan - minSpan)
+			minSpan, maxSpan = node:getCenterBoundsAxis(splitAxis)
+			inverseScale = binCount / (maxSpan - minSpan)
 		end
 
 		local i, j = objectIndex, objectIndex + objectCount - 1
@@ -417,7 +444,7 @@ do
 			local binIndex = Common.clamp(
 				math.floor((objectCenterAxis - minSpan) * inverseScale) + 1,
 				1,
-				self.binCount
+				binCount
 			)
 
 			if binIndex < splitBinIndex then
@@ -502,6 +529,8 @@ function BVH:rebuild(strategy)
 	elseif strategy.strategy == "stackless" then
 		assert(false, "stackless strategy not-yet-implemented")
 	end
+
+	self:flush()
 end
 
 do
@@ -528,9 +557,9 @@ do
 			head = head + 1
 
 			local nodeMin, nodeMax = node:getBounds()
-			local nodeHitSuccess = node:getIsLeaf()
-			AABB.raycast(nodeMin, nodeMax, origin, direction)
-			if nodeHitSuccess then
+			local nodeHitSuccess, nodeT =
+				AABB.raycast(nodeMin, nodeMax, origin, direction)
+			if nodeHitSuccess and nodeT < (t or math.huge) then
 				if node:getIsLeaf() then
 					local index, count = node:getIndexCount()
 					local startIndex, stopIndex = index, index + count - 1

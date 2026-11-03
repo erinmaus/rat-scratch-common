@@ -51,6 +51,29 @@ function BVHNode:new(nodeIndex)
 	self.tag = 0
 end
 
+--- @param nodeIndex? integer
+function BVHNode:reset(nodeIndex)
+	self.parent = false
+
+	self.nodeIndex = nodeIndex or 1
+	self.depth = 1
+	self.axis = 1
+
+	self.minBounds:from(0)
+	self.maxBounds:from(0)
+
+	self.centerMinBounds:from(0)
+	self.centerMaxBounds:from(0)
+
+	self.leftNode = false
+	self.rightNode = false
+
+	self.index = 1
+	self.count = 0
+
+	self.tag = 0
+end
+
 --- @param node RatScratch.Graphics.BVHNode
 --- @return RatScratch.Graphics.BVHNode
 function BVHNode.makeReadOnly(node)
@@ -92,6 +115,11 @@ function BVHNode:toData(data, offset)
 
 	if self:getIsLeaf() then
 		local index, count = self:getIndexCount()
+		assert(
+			count >= 1,
+			"logic error: count is %d < 1, should be >= 1",
+			count
+		)
 
 		BufferFormat.setValue(
 			BVHNode.NODE_FORMAT_INSTANCE,
@@ -130,14 +158,14 @@ function BVHNode:toData(data, offset)
 		data,
 		"tag",
 		offset,
-		self.tag
+		self:getTag()
 	)
 end
 
 --- @return RatScratch.Math.Vector3, RatScratch.Math.Vector3
 function BVHNode:getBounds()
 	return self.parent and self.parent.minBounds or self.minBounds,
-		self.parent and self.parent.minBounds or self.maxBounds
+		self.parent and self.parent.maxBounds or self.maxBounds
 end
 
 --- @param axis integer | RatScratch.Math.Vector3.Axis
@@ -180,12 +208,12 @@ end
 
 --- @return RatScratch.Graphics.BVHNode?
 function BVHNode:getLeftNode()
-	return self.leftNode or nil
+	return (self.parent and self.parent.leftNode) or self.leftNode or nil
 end
 
 --- @return RatScratch.Graphics.BVHNode?
 function BVHNode:getRightNode()
-	return self.rightNode or nil
+	return (self.parent and self.parent.leftNode) or self.rightNode or nil
 end
 
 --- @param left RatScratch.Graphics.BVHNode
@@ -247,7 +275,8 @@ function BVHNode:setAxis(value)
 end
 
 function BVHNode:getIsLeaf()
-	return not (self.leftNode or self.rightNode)
+	local n = self.parent or self
+	return not (n.leftNode or n.rightNode)
 end
 
 function BVHNode:getIndexCount()
@@ -266,6 +295,16 @@ function BVHNode:setIndexCount(index, count)
 
 	self.index = math.max(index, 1)
 	self.count = math.max(count, 0)
+end
+
+function BVHNode:getTag()
+	return self.parent and self.parent.tag or self.tag
+end
+
+--- @param value integer
+function BVHNode:setTag(value)
+	assert(not self.parent, "node is read-only")
+	self.tag = value
 end
 
 return BVHNode

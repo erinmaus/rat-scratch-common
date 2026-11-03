@@ -5,7 +5,7 @@ local AABB = require("rat-scratch-math").Geometry3D.AABB
 local Triangle = require("rat-scratch-math").Geometry3D.Triangle
 local BVH = require("rat-scratch-graphics.BVH")
 local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
-local FlatTable = require("rat-scratch-commo").FlatTable
+local FlatTable = require("rat-scratch-common").FlatTable
 local Vector3 = require("rat-scratch-math").Vector3
 local ffi = require("ffi")
 
@@ -66,6 +66,8 @@ do
 	}, true)
 
 	local _position = Vector3()
+
+	--- @private
 	function MeshBVH:_initTriangles()
 		self.triangles = Table.new(self:getObjectCount(), 0)
 
@@ -79,21 +81,21 @@ do
 			}
 
 			local ti, tj, tk = self.indexData:get(i)
-			triangle.centroid:from(self.vertexPositions:get(ti))
-			triangle.minBounds:from(self.vertexPositions:get(ti))
-			triangle.maxBounds:from(self.vertexPositions:get(ti))
+			triangle.centroid:from(self.vertexPositions:get(ti + 1))
+			triangle.minBounds:from(self.vertexPositions:get(ti + 1))
+			triangle.maxBounds:from(self.vertexPositions:get(ti + 1))
 
 			AABB.expand(
 				triangle.minBounds,
 				triangle.maxBounds,
-				position:from(self.vertexPositions:get(tj))
+				position:from(self.vertexPositions:get(tj + 1))
 			)
 			triangle.centroid:add(position, triangle.centroid)
 
 			AABB.expand(
 				triangle.minBounds,
 				triangle.maxBounds,
-				position:from(self.vertexPositions:get(tk))
+				position:from(self.vertexPositions:get(tk + 1))
 			)
 			triangle.centroid:add(position, triangle.centroid)
 
@@ -103,10 +105,11 @@ do
 		end
 	end
 
+	--- @param strategy? RatScratch.Graphics.BVH.BuildStrategy
 	--- @param vertexFormat RatScratch.Graphics.Graphics3D.MeshFormatAttribute[] | RatScratch.Graphics.Graphics3D.BufferFormat
 	--- @param vertexData love.ByteData
 	--- @param indexData love.ByteData
-	function MeshBVH.fromData(vertexFormat, vertexData, indexData)
+	function MeshBVH.fromData(strategy, vertexFormat, vertexData, indexData)
 		local vertexFormatInstance = BufferFormat.get(vertexFormat)
 		assert(
 			vertexFormatInstance:hasAttribute("VertexPosition"),
@@ -157,12 +160,14 @@ do
 		)
 
 		bvh:_initTriangles()
+		bvh:rebuild(strategy or BVH.DEFAULT_SAH_BUILD_STRATEGY)
 
 		return bvh
 	end
 
+	--- @param strategy? RatScratch.Graphics.BVH.BuildStrategy
 	--- @param meshDefinition RatScratch.Graphics.Graphics3D.MeshDefinition
-	function MeshBVH.fromMeshDefinition(meshDefinition)
+	function MeshBVH.fromMeshDefinition(strategy, meshDefinition)
 		assert(
 			type(meshDefinition.indices) == "table",
 			"indices must be table of indices"
@@ -203,6 +208,9 @@ do
 			meshDefinition.indices,
 			#meshDefinition.indices
 		)
+
+		bvh:_initTriangles()
+		bvh:rebuild(strategy or BVH.DEFAULT_SAH_BUILD_STRATEGY)
 
 		return bvh
 	end
