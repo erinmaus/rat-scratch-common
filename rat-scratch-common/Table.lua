@@ -384,6 +384,38 @@ end
 --- @param right integer
 --- @param pivot integer
 --- @param func RatScratch.Common.Search.CompareFunc<T, T>
+--- @return integer, integer
+function Table.threeWayPartition(t, left, right, pivot, func)
+	local pivotValue = t[pivot]
+	Table.swap(t, pivot, right)
+
+	local lessThanIndex = left
+	local i = left
+	local greaterThanIndex = right
+
+	while i <= greaterThanIndex do
+		local comparisonValue = func(t[i], pivotValue)
+		if comparisonValue < 0 then
+			Table.swap(t, lessThanIndex, i)
+			lessThanIndex = lessThanIndex + 1
+			i = i + 1
+		elseif comparisonValue > 0 then
+			Table.swap(t, i, greaterThanIndex)
+			greaterThanIndex = greaterThanIndex - 1
+		else
+			i = i + 1
+		end
+	end
+
+	return lessThanIndex, greaterThanIndex
+end
+
+--- @generic T
+--- @param t T[]
+--- @param left integer
+--- @param right integer
+--- @param pivot integer
+--- @param func RatScratch.Common.Search.CompareFunc<T, T>
 function Table.partition(t, left, right, pivot, func)
 	local pivotValue = t[pivot]
 	Table.swap(t, pivot, right)
@@ -427,14 +459,15 @@ function Table.select(t, left, right, k, func)
 	local pivotPointIndex =
 		Table.select(t, left, left + medianCount - 1, midOfMediansIndex, func)
 
-	local finalIndex = Table.partition(t, left, right, pivotPointIndex, func)
-	if k == finalIndex then
+	local lessThanIndex, greaterThanIndex =
+		Table.threeWayPartition(t, left, right, pivotPointIndex, func)
+	if k >= lessThanIndex and k <= greaterThanIndex then
 		return k
-	elseif k < finalIndex then
-		return Table.select(t, left, finalIndex - 1, k, func)
+	elseif k < lessThanIndex then
+		return Table.select(t, left, lessThanIndex - 1, k, func)
 	end
 
-	return Table.select(t, finalIndex + 1, right, k, func)
+	return Table.select(t, greaterThanIndex + 1, right, k, func)
 end
 
 return Table
