@@ -299,6 +299,74 @@ end
 --- @param right integer
 --- @param func RatScratch.Common.Search.CompareFunc<T, T>
 function Table.sort(t, left, right, func)
+	Table.mergeSort(t, left, right, func)
+end
+
+do
+	local _o = {}
+
+	--- @generic T
+	--- @param t T[]
+	--- @param left integer
+	--- @param right integer
+	--- @param func RatScratch.Common.Search.CompareFunc<T, T>
+	function Table.mergeSort(t, left, right, func)
+		local width = 1
+		local n = right - left + 1
+		local o = _o
+
+		while width < n do
+			local i = left
+			while i + width <= right do
+				local midPoint = i + width - 1
+				local endPoint = math.min(i + 2 * width - 1, right)
+
+				local a = i
+				local b = midPoint + 1
+				local k = 1
+
+				while a <= midPoint and b <= endPoint do
+					if func(t[a], t[b]) <= 0 then
+						o[k] = t[a]
+						a = a + 1
+					else
+						o[k] = t[b]
+						b = b + 1
+					end
+					k = k + 1
+				end
+
+				while a <= midPoint do
+					o[k] = t[a]
+					a = a + 1
+					k = k + 1
+				end
+
+				while b <= endPoint do
+					o[k] = t[b]
+					b = b + 1
+					k = k + 1
+				end
+
+				for idx = 1, k - 1 do
+					t[i + idx - 1] = o[idx]
+				end
+
+				i = i + 2 * width
+			end
+			width = width * 2
+		end
+
+		Table.clear(o)
+	end
+end
+
+--- @generic T
+--- @param t T[]
+--- @param left integer
+--- @param right integer
+--- @param func RatScratch.Common.Search.CompareFunc<T, T>
+function Table.insertionSort(t, left, right, func)
 	for i = left + 1, right do
 		local key = t[i]
 		local j = i - 1
