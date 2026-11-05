@@ -76,12 +76,13 @@ end
 
 --- @param node RatScratch.Graphics.BVHNode
 --- @return RatScratch.Graphics.BVHNode
-function BVHNode.makeReadOnly(node)
+function BVHNode.makeReadOnly(node, result)
 	if node.parent then
 		return node
 	end
 
-	local result = BVHNode()
+	result = result or BVHNode()
+	result:reset()
 	result.parent = node
 
 	return result
@@ -286,10 +287,6 @@ function BVHNode:getIsLeaf()
 end
 
 function BVHNode:getIndexCount()
-	if not self:getIsLeaf() then
-		return 0, 0
-	end
-
 	return self.index, self.count
 end
 
@@ -297,7 +294,6 @@ end
 --- @param count integer
 function BVHNode:setIndexCount(index, count)
 	assert(not self.parent, "node is read-only")
-	assert(self:getIsLeaf(), "can only set index/count on leaf nodes")
 
 	self.index = math.max(index, 1)
 	self.count = math.max(count, 0)

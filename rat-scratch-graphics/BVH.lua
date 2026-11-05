@@ -6,10 +6,12 @@ local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
 local Common = require("rat-scratch-math").Common
 local Vector3 = require("rat-scratch-math").Vector3
 local AABB = require("rat-scratch-math").Geometry3D.AABB
+local bit = require("bit")
 
 --- @class RatScratch.Graphics.BVH : RatScratch.Common.BaseObject
 --- @field private nodeCount integer
 --- @field private nodes RatScratch.Graphics.BVHNode[]
+--- @field private rootNode RatScratch.Graphics.BVHNode | false
 --- @field private readonlyNodes RatScratch.Graphics.BVHNode[]
 --- @field private data number[]
 --- @field private objectCount integer
@@ -24,6 +26,8 @@ function BVH:new(nodeCount, objectCount)
 	objectCount = math.max(objectCount or 0, 0)
 
 	self.nodeCount = nodeCount
+	self.rootNode = false
+	self.readonlyRootNode = BVHNode()
 	self.nodes = Table.new(nodeCount, 0)
 	self.readonlyNodes = Table.new(nodeCount, 0)
 	self.data = Table.new(
@@ -60,35 +64,54 @@ function BVH:getNode(index)
 	return self.readonlyNodes[index]
 end
 
+--- @return RatScratch.Graphics.BVHNode?
+function BVH:getRootNode()
+	return self.rootNode and self.readonlyRootNode or nil
+end
+
+--- @protected
+--- @return RatScratch.Graphics.BVHNode?
+function BVH:getProtectedRootNode()
+	return self.rootNode or nil
+end
+
+--- @protected
+--- @param node RatScratch.Graphics.BVHNode?
+function BVH:setProtectedRootNode(node)
+	self.rootNode = node or false
+	BVHNode.makeReadOnly(self.rootNode, self.readonlyRootNode)
+end
+
 --- @protected
 --- @param index integer
 function BVH:newNode(index)
-	self.nodeCount = self.nodeCount + 1
+	local nextNodeCount = self.nodeCount + 1
 	assert(
-		index == self.nodeCount,
+		index == nextNodeCount,
 		"expected to create node %d, got %d instead",
 		index,
 		self.nodeCount
 	)
 
-	local node = self.nodes[self.nodeCount]
+	local node = self.nodes[nextNodeCount]
 	if not node then
-		node = BVHNode(self.nodeCount)
-		self.nodes[self.nodeCount] = node
-		self.readonlyNodes[self.nodeCount] = BVHNode.makeReadOnly(node)
+		node = BVHNode(nextNodeCount)
+		self.nodes[nextNodeCount] = node
+		self.readonlyNodes[nextNodeCount] = BVHNode.makeReadOnly(node)
 
 		BufferFormat.resetValue(
 			BVHNode.NODE_FORMAT_INSTANCE,
 			self.data,
 			Table.indexToStride(
-				self.nodeCount,
+				nextNodeCount,
 				BVHNode.NODE_FORMAT_INSTANCE:getComponentCount()
 			) - 1
 		)
 	else
-		node:reset(self.nodeCount)
+		node:reset(nextNodeCount)
 	end
 
+	self.nodeCount = nextNodeCount
 	return node
 end
 
@@ -97,6 +120,10 @@ end
 --- @return RatScratch.Graphics.BVHNode
 function BVH:getProtectedNode(index)
 	return self.nodes[index]
+end
+
+function BVH:getNodeCount()
+	return self.nodeCount
 end
 
 function BVH:getObjectCount()
@@ -202,6 +229,8 @@ do
 		end
 	end
 
+	--- @private
+	--- @param node RatScratch.Graphics.BVHNode
 	function BVH:_refreshNode(node)
 		if node:getIsLeaf() then
 			return self:_refreshNodeFromObjects(node)
@@ -258,8 +287,7 @@ local DEFAULT_STACKLESS_BUILD_STRATEGY = {
 }
 
 --- @type RatScratch.Graphics.BVH.StacklessBuildStrategy
-StacklessBuildStrategy.DEFAULT_STACKLESS_BUILD_STRATEGY =
-	DEFAULT_STACKLESS_BUILD_STRATEGY
+BVH.DEFAULT_STACKLESS_BUILD_STRATEGY = DEFAULT_STACKLESS_BUILD_STRATEGY
 
 --- @class RatScratch.Graphics.BVH.SAHBuildStrategy
 --- @field public strategy "sah"
@@ -289,6 +317,7 @@ do
 	local _leftMin, _leftMax = Vector3(), Vector3()
 	local _rightMin, _rightMax = Vector3(), Vector3()
 
+	--- @private
 	--- @param strategy RatScratch.Graphics.BVH.SAHBuildStrategy
 	--- @param node RatScratch.Graphics.BVHNode
 	--- @param axis integer | RatScratch.Math.Vector3.Axis
@@ -382,6 +411,7 @@ do
 		return bestCost, bestBin
 	end
 
+	--- @private
 	--- @param strategy RatScratch.Graphics.BVH.SAHBuildStrategy
 	--- @param node RatScratch.Graphics.BVHNode
 	function BVH:_findBestSplitPlane(strategy, node)
@@ -400,6 +430,7 @@ do
 		return bestAxis, bestSplit, bestCost
 	end
 
+	--- @private
 	--- @param strategy RatScratch.Graphics.BVH.SAHBuildStrategy
 	--- @param node RatScratch.Graphics.BVHNode
 	--- @return RatScratch.Graphics.BVHNode?, RatScratch.Graphics.BVHNode?
@@ -494,6 +525,7 @@ do
 
 	local _queue = {}
 
+	--- @private
 	--- @param strategy RatScratch.Graphics.BVH.SAHBuildStrategy
 	--- @param rootNode RatScratch.Graphics.BVHNode
 	function BVH:_rebuildSAH(strategy, rootNode)
@@ -523,13 +555,177 @@ do
 	end
 end
 
+do
+	--- @type integer
+	local _axis = nil
+
+	--- @type RatScratch.Graphics.BVH
+	local _bvh = nil
+
+	--- @private
+	--- @param a integer
+	--- @param b integer
+	function BVH._stacklessCompare(a, b)
+		local axis = _axis
+		local self = _bvh
+
+		local objectAAxis = self:getObjectCenter(a):getAxis(axis)
+		local objectBAxis = self:getObjectCenter(b):getAxis(axis)
+
+		return Common.zerosign(objectAAxis - objectBAxis)
+	end
+
+	--- @private
+	function BVH:_partitionStackless(node, axis, splitCount)
+		_axis = axis
+		_bvh = self
+
+		local index, count = node:getIndexCount()
+		local i, j = index, index + count - 1
+
+		Table.select(
+			self.objectIndices,
+			i,
+			j,
+			i + splitCount - 1,
+			BVH._stacklessCompare
+		)
+	end
+
+	local _size = Vector3()
+
+	--- @private
+	--- @param node RatScratch.Graphics.BVHNode
+	function BVH:_findBestSplitPlaneStackless(node)
+		local minBounds, maxBounds = node:getCenterBounds()
+		local size = maxBounds:subtract(minBounds, _size)
+		size:abs(size)
+
+		local x, y, z = size:get()
+		if Common.greaterThanEqual(x, y) and Common.greaterThanEqual(x, z) then
+			return Vector3.AXIS_X
+		elseif
+			Common.greaterThanEqual(y, x) and Common.greaterThanEqual(y, z)
+		then
+			return Vector3.AXIS_Y
+		end
+
+		return Vector3.AXIS_Z
+	end
+
+	local function _makeCount(N)
+		local A = 0b10
+		local B = 0b11
+
+		local k = math.max(Common.countBits(N) - 1, 0)
+		local r = N - (2 ^ k)
+
+		local leftCount, rightCount
+		do
+			local flag = bit.rshift(N, math.max(k - 1, 0))
+			if flag == A then
+				local twoKMinusOne = 2 ^ (k - 1)
+				leftCount = twoKMinusOne + r
+				rightCount = twoKMinusOne
+			elseif flag == B then
+				leftCount = 2 ^ k
+
+				if r >= 2 ^ (k - 1) then
+					rightCount = r
+				else
+					rightCount = 0
+				end
+			else
+				leftCount = N
+				rightCount = 0
+			end
+		end
+
+		return leftCount, rightCount
+	end
+
+	--- @private
+	--- @param node RatScratch.Graphics.BVHNode
+	function BVH:_subdivideStackless(node)
+		self:_refreshNodeFromObjects(node)
+
+		local axis = self:_findBestSplitPlaneStackless(node)
+		node:setAxis(axis)
+
+		local index, count = node:getIndexCount()
+		local leftCount, rightCount = _makeCount(count)
+		local leftIndex, rightIndex = index, index + leftCount
+
+		self:_partitionStackless(node, axis, leftCount)
+
+		if rightCount == 0 then
+			return nil, nil
+		end
+
+		local leftNode = self:newNode(2 * node:getNodeIndex())
+		leftNode:setDepth(node:getDepth() + 1)
+		leftNode:setIndexCount(leftIndex, leftCount)
+
+		local rightNode = self:newNode(2 * node:getNodeIndex() + 1)
+		rightNode:setDepth(node:getDepth() + 1)
+		rightNode:setIndexCount(rightIndex, rightCount)
+
+		node:setChildren(leftNode, rightNode)
+		return leftNode, rightNode
+	end
+
+	--- @type RatScratch.Graphics.BVHNode[]
+	local _queue = {}
+
+	--- @private
+	--- @param strategy RatScratch.Graphics.BVH.StacklessBuildStrategy
+	--- @param rootNode RatScratch.Graphics.BVHNode
+	function BVH:_rebuildStackless(strategy, rootNode)
+		rootNode:setIndexCount(1, self:getObjectCount())
+
+		local queue = _queue
+		table.insert(queue, rootNode)
+		local head = 1
+		local tail = 1
+
+		while head <= tail do
+			local node = queue[head]
+			head = head + 1
+
+			local left, right = self:_subdivideStackless(node)
+			if left and right then
+				table.insert(queue, left)
+				table.insert(queue, right)
+				tail = tail + 2
+			end
+		end
+
+		Table.clear(queue)
+
+		assert(
+			self.nodeCount == 2 * self.objectCount - 1,
+			"expected %d (2 * object_count [%d] - 1) nodes for stackless build strategy, got %d",
+			self.objectCount * 2 - 1,
+			self.objectCount,
+			self.nodeCount
+		)
+	end
+end
+
 --- @param strategy RatScratch.Graphics.BVH.BuildStrategy
 function BVH:rebuild(strategy)
 	if strategy.strategy == "sah" then
 		self.nodeCount = 0
-		self:_rebuildSAH(strategy, self:newNode(1))
+		local rootNode = self:newNode(1)
+
+		self:_rebuildSAH(strategy, rootNode)
+		self:setProtectedRootNode(rootNode)
 	elseif strategy.strategy == "stackless" then
-		assert(false, "stackless strategy not-yet-implemented")
+		self.nodeCount = 0
+		local rootNode = self:newNode(1)
+
+		self:_rebuildStackless(strategy, rootNode)
+		self:setProtectedRootNode(rootNode)
 	end
 
 	self:flush()

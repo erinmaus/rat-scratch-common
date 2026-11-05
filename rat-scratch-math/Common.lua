@@ -158,6 +158,18 @@ function Common.isMultipleOf(value, base)
 	return value % base == 0
 end
 
+--- @param n integer
+--- @return integer
+function Common.countBits(n)
+	local c = 0
+	while n > 0 do
+		n = bit.rshift(n, 1)
+		c = c + 1
+	end
+
+	return c
+end
+
 function Common.isOdd(value)
 	return value % 2 == 1
 end
