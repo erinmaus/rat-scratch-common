@@ -14,6 +14,8 @@ local function attachDebugger()
 		function love.errorhandler(msg)
 			error(msg, 2)
 		end
+
+		io.stdout:setvbuf("line")
 	end
 end
 
