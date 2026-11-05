@@ -22,6 +22,7 @@ local Table = require("rat-scratch-common").Table
 --- @field public animationsNodesMap table<integer, table<integer, true>>
 --- @field public images table<integer, love.ImageData>
 --- @field public attributes RatScratch.GLTF.GLTFAttributes
+--- @overload fun(filename: string, root?: RatScratch.GLTF.GLTF, data?: love.Data): RatScratch.GLTF.GLTFParser
 local GLTFParser = Object()
 
 local DEFAULT_WHITE_IMAGE_DATA = love.image.newImageData(1, 1)
@@ -229,19 +230,41 @@ function GLTFParser:getBufferDataFromURI(uri)
 	return result
 end
 
+--- @param index integer
+--- @param data love.Data
+function GLTFParser:setBufferData(index, data)
+	local realIndex = index + 1
+
+	local buffer = self.root.buffers and self.root.buffers[realIndex]
+	assert(buffer, "no buffer at index %d", index)
+
+	self.buffers[realIndex] = love.data.newByteData(data)
+end
+
+--- @param index integer
+--- @return boolean
+function GLTFParser:hasCachedBufferData(index)
+	local realIndex = index + 1
+
+	local buffer = self.root.buffers and self.root.buffers[realIndex]
+	assert(buffer, "no buffer at index %d", index)
+
+	return self.buffers[realIndex] ~= nil
+end
+
 function GLTFParser:getBufferData(index)
 	local realIndex = index + 1
 
 	local buffer = self.root.buffers and self.root.buffers[realIndex]
 	assert(buffer, "no buffer at index %d", index)
 
-	if not buffer.uri then
-		assert(self.data, "buffer without URI and no default data")
-		return self.data
-	end
-
 	local data = self.buffers[realIndex]
 	if not data then
+		if not buffer.uri then
+			assert(self.data, "buffer without URI and no default data")
+			return self.data
+		end
+
 		data = self:getBufferDataFromURI(buffer.uri)
 		self.buffers[realIndex] = data
 	end

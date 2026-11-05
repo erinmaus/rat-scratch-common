@@ -11,11 +11,14 @@ local Types = require("rat-scratch-gltf.GLTF.Types")
 local ffi = require("ffi")
 
 --- @class RatScratch.GLTF.GLTFBuilder : RatScratch.Common.BaseObject
---- @overload fun(root?: RatScratch.GLTF.GLTF, data?: love.Data): RatScratch.GLTF.GLTFBuilder
 --- @field private root RatScratch.GLTF.GLTF
 --- @field private data love.ByteData[]
+--- @field private currentData love.ByteData[]
+--- @field private currentDataSize integer
 --- @field private workingBufferViews table<integer, RatScratch.GLTF.WorkingBufferView>
 --- @field private attributes RatScratch.GLTF.GLTFAttributes
+--- @field private imageDataPool table<love.ImageData, integer>
+--- @overload fun(root?: RatScratch.GLTF.GLTF, data?: love.Data): RatScratch.GLTF.GLTFBuilder
 local GLTFBuilder = Object()
 
 GLTFBuilder.INVERSE_BIND_POSE_FORMAT = {
@@ -57,13 +60,17 @@ function GLTFBuilder:new(root, data)
 	end
 
 	self.data = {}
+	self.currentData = {}
+	self.currentDataSize = 0
+
 	if data then
-		table.insert(self.data, love.data.newByteData(data))
+		self:addData(data)
 	end
 
 	self.attributes = GLTFAttributes.makeDefault()
 
 	self.workingBufferViews = {}
+	self.imageDataPool = setmetatable({}, { __mode = "k" })
 end
 
 --- @param accessor RatScratch.GLTF.Accessor
@@ -482,13 +489,68 @@ function GLTFBuilder:setDefaultScene(index)
 	end
 end
 
+--- @private
+function GLTFBuilder:_flushData()
+	local data
+	do
+		local dataOffset = {}
+
+		local totalDataSize = 0
+		for _, subdata in ipairs(self.currentData) do
+			totalDataSize = totalDataSize + subdata:getSize()
+		end
+
+		data = love.data.newByteData(totalDataSize)
+
+		local offset = 0
+		for _, subdata in ipairs(self.currentData) do
+			ffi.copy(
+				ffi.cast("uint8_t *", data:getFFIPointer()) + offset,
+				subdata:getFFIPointer(),
+				subdata:getSize()
+			)
+
+			dataOffset[subdata] = offset
+
+			offset = offset + subdata:getSize()
+		end
+
+		for bufferViewIndex, workingBufferView in pairs(self.workingBufferViews) do
+			local bufferView = self:getBufferView(bufferViewIndex)
+			local bufferViewOffset = dataOffset[workingBufferView.data]
+			bufferView.buffer = #self.data
+			bufferView.byteOffset = bufferViewOffset
+		end
+		Table.clear(self.workingBufferViews)
+	end
+	table.insert(self.data, data)
+
+	self.currentDataSize = 0
+	Table.clear(self.currentData)
+
+	return data
+end
+
+--- @private
+--- @param data love.ByteData
+--- @return love.ByteData
+function GLTFBuilder:_addData(data)
+	local nextDataSize = self.currentDataSize + data:getSize()
+	if nextDataSize > GLTF.MAX_DATA_SIZE then
+		self:_flushData()
+		nextDataSize = data:getSize()
+	end
+
+	table.insert(self.currentData, data)
+	self.currentDataSize = nextDataSize
+
+	return data
+end
+
 --- @param data love.Data
 --- @return love.ByteData
 function GLTFBuilder:addData(data)
-	local result = love.data.newByteData(data)
-	table.insert(self.data, result)
-
-	return result
+	return self:_addData(love.data.newByteData(data))
 end
 
 --- @param format RatScratch.Graphics.Graphics3D.BufferFormat
@@ -507,7 +569,8 @@ function GLTFBuilder:addDataFromFlatTable(format, tableData)
 		result
 	)
 
-	table.insert(self.data, result)
+	self:_addData(result)
+
 	return result
 end
 
@@ -785,18 +848,15 @@ local function _marshalVertexFormat(format)
 	return BufferFormat.getFormatFromScalarComponentCount(scalar, count)
 end
 
---- @private
---- @param materialDefinitionTexture RatScratch.Graphics.Graphics3D.MaterialDefinitionTexture
---- @return integer?
-function GLTFBuilder:_addMaterialDefinitionTexture(materialDefinitionTexture)
-	if
-		not (materialDefinitionTexture and materialDefinitionTexture.texture)
-	then
-		return nil
+--- @param image love.ImageData
+--- @return integer
+function GLTFBuilder:_encode(texture)
+	local textureIndex = self.imageDataPool[texture]
+	if textureIndex then
+		return textureIndex
 	end
 
-	local imageData =
-		self:addData(materialDefinitionTexture.texture:encode("png"))
+	local imageData = self:addData(texture:encode("png"))
 
 	local bufferViewIndex = self:addWorkingBufferView({
 		data = imageData,
@@ -813,7 +873,22 @@ function GLTFBuilder:_addMaterialDefinitionTexture(materialDefinitionTexture)
 		source = imageSource,
 	})
 
+	self.imageDataPool[texture] = textureIndex
+
 	return textureIndex
+end
+
+--- @private
+--- @param materialDefinitionTexture RatScratch.Graphics.Graphics3D.MaterialDefinitionTexture
+--- @return integer?
+function GLTFBuilder:_addMaterialDefinitionTexture(materialDefinitionTexture)
+	if
+		not (materialDefinitionTexture and materialDefinitionTexture.texture)
+	then
+		return nil
+	end
+
+	return self:_encode(materialDefinitionTexture.texture)
 end
 
 --- @private
@@ -1038,49 +1113,22 @@ end
 --- @param filename string
 --- @return RatScratch.GLTF.GLTFParser
 function GLTFBuilder:build(filename)
-	local data
-	do
-		local dataOffset = {}
-
-		local totalDataSize = 0
-		for _, subdata in ipairs(self.data) do
-			totalDataSize = totalDataSize + subdata:getSize()
-		end
-
-		data = love.data.newByteData(totalDataSize)
-
-		local offset = 0
-		for _, subdata in ipairs(self.data) do
-			ffi.copy(
-				ffi.cast("uint8_t *", data:getFFIPointer()) + offset,
-				subdata:getFFIPointer(),
-				subdata:getSize()
-			)
-
-			dataOffset[subdata] = offset
-
-			offset = offset + subdata:getSize()
-		end
-
-		for bufferViewIndex, workingBufferView in pairs(self.workingBufferViews) do
-			local bufferView = self:getBufferView(bufferViewIndex)
-			local bufferViewOffset = dataOffset[workingBufferView.data]
-			bufferView.byteOffset = bufferViewOffset
-		end
-		Table.clear(self.workingBufferViews)
-
-		Table.clear(self.data)
-		self.data[1] = data
-	end
+	self:_flushData()
 
 	local root = Table.deepClone(self.root)
-	root.buffers = {
-		{
-			byteLength = data:getSize(),
-		},
-	}
+	root.buffers = {}
 
-	return GLTFParser(filename, root, data)
+	for i = 1, #self.data do
+		root.buffers[i] = { byteLength = self.data[i]:getSize() }
+	end
+
+	local parser =
+		GLTFParser(filename, root, #self.data == 1 and self.data[1] or nil)
+	for i = 1, #self.data do
+		parser:setBufferData(i - 1, self.data[i])
+	end
+
+	return parser
 end
 
 return GLTFBuilder

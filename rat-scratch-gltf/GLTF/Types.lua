@@ -330,4 +330,5 @@ return {
 	GLB_VERSION = 2,
 	GLTF_VERSION = "2.0",
 	GLBChunkTypes = GLBChunkTypes,
+	MAX_DATA_SIZE = 0x7FFFFFFF,
 }

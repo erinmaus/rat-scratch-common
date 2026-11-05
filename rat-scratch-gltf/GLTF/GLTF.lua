@@ -80,6 +80,8 @@ function GLTF.toGLB(parser)
 	ffi.copy(jsonData:getFFIPointer(), json)
 
 	local binaryData = parser:getData()
+	assert(binaryData, "GLTF is not GLB-ready; missing binary data")
+
 	local binaryDataSize = binaryData:getSize()
 	if not Common.isMultipleOf(binaryDataSize, 4) then
 		binaryDataSize = Common.nextMultiple(binaryDataSize, 4)
@@ -129,19 +131,28 @@ function GLTF.saveGLB(filename, parser)
 end
 
 --- @param gltfFilename string
---- @param binaryFilename string
+--- @param binaryFilenamePattern string
 --- @param parser RatScratch.GLTF.GLTFParser
 --- @return boolean, string?
-function GLTF.saveGLTF(gltfFilename, binaryFilename, parser)
+function GLTF.saveGLTF(gltfFilename, binaryFilenamePattern, parser)
 	local root = Table.deepClone(parser:getJSON())
-	local bin = parser:getData()
 
-	root.buffers = {
-		{
-			uri = Path.makeRelative(gltfFilename, binaryFilename),
-			byteLength = bin:getSize(),
-		},
-	}
+	local index = 1
+	for i, buffer in ipairs(root.buffers) do
+		local gltfIndex = i - 1
+		if
+			not (buffer.uri and buffer.uri:match("^data"))
+			and parser:hasCachedBufferData(gltfIndex)
+		then
+			buffer.uri = Path.makeRelative(
+				gltfFilename,
+				binaryFilenamePattern:format(index)
+			)
+			buffer.byteLength = parser:getBufferData(gltfIndex):getSize()
+
+			index = index + 1
+		end
+	end
 
 	local success, message =
 		love.filesystem.write(gltfFilename, json.encode(root))
@@ -149,9 +160,20 @@ function GLTF.saveGLTF(gltfFilename, binaryFilename, parser)
 		return success, message
 	end
 
-	success, message = love.filesystem.write(binaryFilename, bin)
-	if not success then
-		return success, message
+	for i, buffer in ipairs(root.buffers) do
+		local gltfIndex = i - 1
+		if
+			not (buffer.uri and buffer.uri:match("^data"))
+			and parser:hasCachedBufferData(gltfIndex)
+		then
+			success, message = love.filesystem.write(
+				buffer.uri,
+				parser:getBufferData(gltfIndex)
+			)
+			if not success then
+				return success, message
+			end
+		end
 	end
 
 	return true
