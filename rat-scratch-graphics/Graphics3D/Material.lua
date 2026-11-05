@@ -145,6 +145,10 @@ end
 function Material.fromDefinition(materialDefinition)
 	local material = Material()
 
+	if not materialDefinition then
+		return material
+	end
+
 	if
 		materialDefinition.texture and materialDefinition.texture.albedoFactor
 	then
