@@ -21,6 +21,8 @@ local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local IndirectDraw = require("rat-scratch-pipeline").IndirectDraw
 local ForwardRendererPass = require("rat-scratch-pipeline").ForwardRendererPass
 local Table = require("rat-scratch-common").Table
+local MeshBVH = require("rat-scratch-graphics").MeshBVH
+local BVH = require("rat-scratch-graphics").BVH
 local ReflectionRenderPass =
 	require("rat-scratch-pipeline").ReflectionRenderPass
 local ReflectionProbe = require("rat-scratch-pipeline").ReflectionProbe
@@ -39,7 +41,7 @@ local demo = {}
 local function makeGLB()
 	local pipelineConfig = PipelineConfig.loadDefault()
 
-	local parser = GLTF.loadFromFilesystem("samples/assets/gltf/room.glb")
+	local parser = GLTF.loadFromFilesystem("samples/assets/gltf/sponza.gltf")
 	local scene = parser:loadScene(1, {
 		attributes = {
 			static = {
@@ -52,15 +54,39 @@ local function makeGLB()
 
 	local builder = GLTF.Builder()
 	extendedScene:serialize(builder)
-	GLTF.saveGLB("shoe_pipeline.glb", builder:build("room.glb"))
+
+	local parser = builder:build("shoe_pipeline.glb")
+	local s, r = pcall(GLTF.saveGLB, "shoe_pipeline.glb", parser)
+	if not s then
+		print(r)
+
+		s, r = pcall(
+			GLTF.saveGLTF,
+			"shoe_pipeline.gltf",
+			"shoe_pipeline%d.bin",
+			parser
+		)
+		assert(s, r)
+
+		return "shoe_pipeline.gltf"
+	end
+
+	return "shoe_pipeline.glb"
 end
 
 function demo.load()
-	if not love.filesystem.getInfo("shoe_pipeline.glb") then
-		makeGLB()
+	local filename
+	if love.filesystem.getInfo("shoe_pipeline.gltf") then
+		filename = "shoe_pipeline.gltf"
+	else
+		filename = "shoe_pipeline.glb"
 	end
 
-	--ResourceLoader.toggleDebug(true)
+	if not love.filesystem.getInfo(filename) then
+		filename = makeGLB()
+	end
+
+	ResourceLoader.toggleDebug(true)
 
 	local pipelineRuntime = PipelineRuntime.loadDefault()
 	demo.runtime = pipelineRuntime
@@ -71,8 +97,19 @@ function demo.load()
 	local object = world:newStaticObject()
 	object:move(scene)
 
+	demo.bvh = {}
+	-- local sceneDefinition = GLTF.loadFromFilesystem("shoe_pipeline.gltf"):loadScene()
+	-- for i = 1, #sceneDefinition.models do
+	-- 	for j = 1, #sceneDefinition.models[i].meshes do
+	-- 		table.insert(demo.bvh, {
+	-- 			transform = sceneDefinition.models[i].transform,
+	-- 			bvh = MeshBVH.fromMeshDefinition(BVH.DEFAULT_SAH_BUILD_STRATEGY, sceneDefinition.models[i].meshes[j])
+	-- 		})
+	-- 	end
+	-- end
+
 	local sceneResource =
-		ResourceLoader.load(PipelineSceneResourceType, "shoe_pipeline.glb")
+		ResourceLoader.load(PipelineSceneResourceType, filename)
 	sceneResource:listen(ResourceEvent.MODIFY, function(event, resource)
 		--- @type RatScratch.Pipeline.Graphics3D.PipelineScene
 		local scene = resource:get()
@@ -154,16 +191,16 @@ function demo.load()
 	)
 
 	demo.reflectionRenderPass = ReflectionRenderPass()
-	demo.reflectionRenderPass:addDependency(demo.shadowRenderPass)
-	demo.reflectionRenderPass:attach(
-		demo.runtime:getDefaultQualityPreset(),
-		demo.world,
-		demo.scene
-	)
+	-- demo.reflectionRenderPass:addDependency(demo.shadowRenderPass)
+	-- demo.reflectionRenderPass:attach(
+	-- 	demo.runtime:getDefaultQualityPreset(),
+	-- 	demo.world,
+	-- 	demo.scene
+	-- )
 
 	demo.forwardRenderPass = ForwardRendererPass()
-	demo.forwardRenderPass:addDependency(demo.shadowRenderPass)
-	demo.forwardRenderPass:addDependency(demo.reflectionRenderPass)
+	--demo.forwardRenderPass:addDependency(demo.shadowRenderPass)
+	--demo.forwardRenderPass:addDependency(demo.reflectionRenderPass)
 	demo.forwardRenderPass:attach(
 		demo.runtime:getDefaultQualityPreset(),
 		demo.world,
@@ -214,6 +251,50 @@ function demo.keypressed(key)
 	elseif key == "3" then
 		demo.isElevating = true
 		demo.isKeyboard = true
+	end
+
+	if key == "space" then
+		local mx, my = love.mouse.getPosition()
+
+		local v1 = Vector3(mx, my, 0)
+		local v2 = Vector3(mx, my, 0.001)
+
+		local p1 = demo.camera:unproject(v1, love.graphics.getDimensions())
+		local p2 = demo.camera:unproject(v2, love.graphics.getDimensions())
+
+		local origin = p1
+		local direction = p1:direction(p2):normalize()
+
+		local bestT = math.huge
+		local bestPosition = Vector3()
+		local before = love.timer.getTime()
+		for _, bvhInfo in ipairs(demo.bvh) do
+			--- @type RatScratch.Graphics.Graphics3D.MeshBVH
+			local bvh = bvhInfo.bvh
+
+			local transformedOrigin = origin:transform(bvhInfo.transform)
+			local transformedDirection =
+				direction:perspectiveTransform(bvhInfo.transform, 0):normalize()
+
+			local success, t =
+				bvh:raycast(transformedOrigin, transformedDirection)
+			if success and t < bestT then
+				origin:add(direction:scale(t), bestPosition)
+				bestT = t
+			end
+		end
+		local after = love.timer.getTime()
+
+		if bestT < math.huge then
+			demo.hit = bestPosition
+			print(
+				"hit",
+				bestPosition:get(),
+				"time",
+				(after - before) * 1000,
+				"ms"
+			)
+		end
 	end
 end
 
@@ -480,25 +561,27 @@ function demo.draw()
 	love.graphics.push("all")
 	love.graphics.setDepthMode("lequal", true)
 
-	demo.renderer:cull(
-		demo.runtime:getDefaultQualityPreset(),
-		demo.scene,
-		demo.shadowRenderPass:getCullResult()
-	)
-	demo.renderer:draw(demo.shadowRenderPass)
+	-- demo.renderer:cull(
+	-- 	demo.runtime:getDefaultQualityPreset(),
+	-- 	demo.scene,
+	-- 	demo.shadowRenderPass:getCullResult()
+	-- )
+	-- demo.renderer:draw(demo.shadowRenderPass)
 
-	demo.renderer:cull(
-		demo.runtime:getDefaultQualityPreset(),
-		demo.scene,
-		demo.reflectionRenderPass:getCullResult()
-	)
-	demo.renderer:draw(demo.reflectionRenderPass)
+	-- demo.renderer:cull(
+	-- 	demo.runtime:getDefaultQualityPreset(),
+	-- 	demo.scene,
+	-- 	demo.reflectionRenderPass:getCullResult()
+	-- )
+	-- demo.renderer:draw(demo.reflectionRenderPass)
 
-	demo.renderer:cull(
-		demo.runtime:getDefaultQualityPreset(),
-		demo.scene,
-		demo.forwardRenderPass:getCullResult()
-	)
+	if not love.keyboard.isDown("space") then
+		demo.renderer:cull(
+			demo.runtime:getDefaultQualityPreset(),
+			demo.scene,
+			demo.forwardRenderPass:getCullResult()
+		)
+	end
 	demo.renderer:draw(demo.forwardRenderPass)
 	love.graphics.pop()
 
@@ -527,6 +610,34 @@ function demo.draw()
 				love.graphics.getHeight() - position.y,
 				8
 			)
+		end
+	end
+
+	do
+		if demo.hit then
+			local position = demo.camera:project(
+				demo.hit,
+				love.graphics.getWidth(),
+				love.graphics.getHeight()
+			)
+
+			position.y = love.graphics.getHeight() - position.y
+
+			love.graphics.push("all")
+			love.graphics.setColor(1, 0, 1, 1)
+			love.graphics.rectangle(
+				"fill",
+				position.x - 4,
+				position.y - 4,
+				8,
+				8
+			)
+			love.graphics.print(
+				("%f, %f, %f"):format(demo.hit:get()),
+				position.x + 16,
+				position.y
+			)
+			love.graphics.pop()
 		end
 	end
 
