@@ -43,7 +43,7 @@ void computemain()
 
 	mat4 viewWorldLocalTransform = viewTransform * worldTransform * localTransform;
 	vec4 clusterPosition =
-		viewWorldLocalTransform * vec4(rat_MeshClusters[draw.clusterIndex].boundsPositionRadius.xyz, 1.0);
+		viewWorldLocalTransform * vec4(rat_MeshClusters[draw.clusterIndex].center, 1.0);
 
 	float depthValue = rat_DepthSign * clusterPosition.z;
 	uint depthKey = depthToDepthKey(depthValue);

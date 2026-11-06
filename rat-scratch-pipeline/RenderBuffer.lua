@@ -24,16 +24,16 @@ local RenderBuffer = Object()
 
 local COMPUTE_WRITABLE_TEXTURE_FORMATS = love.graphics.getTextureFormats({
 	canvas = true,
-	computewrite = true
+	computewrite = true,
 })
 
 local COMPUTE_READABLE_TEXTURE_FORMATS = love.graphics.getTextureFormats({
 	canvas = true,
-	readable = true
+	readable = true,
 })
 
 local CANVAS_TEXTURE_FORMATS = love.graphics.getTextureFormats({
-	canvas = true
+	canvas = true,
 })
 
 --- @param format love.PixelFormat[]
@@ -133,6 +133,7 @@ function RenderBuffer:newDepthCanvasPointer()
 	return { renderBuffer = self, canvas = "depth" }
 end
 
+--- @private
 function RenderBuffer:_applyFilter()
 	for _, canvas in ipairs(self.canvases) do
 		canvas:setFilter(self.minFilter, self.maxFilter)
@@ -144,8 +145,8 @@ function RenderBuffer:_applyFilter()
 		end
 	end
 
-	if self.depthCanvas then
-		self.depthCanvas:setFilter(self.minFilter, self.maxFilter)
+	if self.depth then
+		self.depth:setFilter(self.minFilter, self.maxFilter)
 	end
 
 	for _, mipmap in ipairs(self.depthCanvasMipmapViews) do
@@ -201,7 +202,12 @@ function RenderBuffer:resize(width, height, layers)
 			self.canvases[i]:release()
 		end
 
-		assert(CANVAS_TEXTURE_FORMATS[format], "pixel format '%s' for target '%d' not supported as canvas", format, i)
+		assert(
+			CANVAS_TEXTURE_FORMATS[format],
+			"pixel format '%s' for target '%d' not supported as canvas",
+			format,
+			i
+		)
 
 		--- @type love.Texture
 		local canvas = love.graphics.newTexture(width, height, layers, {

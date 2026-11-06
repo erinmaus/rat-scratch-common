@@ -16,7 +16,7 @@ void ratDiscard(out RatScratchPipelineFragmentOutput fragmentOutput)
 
 #include "@Pipeline/Base/Light/ApplyLights.frag.glsl"
 
-layout(location = 0) out vec4 rat_Color;
+#include "./OIT.frag.glsl"
 
 void pixelmain()
 {
@@ -30,22 +30,19 @@ void pixelmain()
 	fragmentOutput.cameraIndex = fragmentInput.cameraIndex;
 
 	ratFragmentApplyMaterial(fragmentInput, fragmentOutput);
-
 	if (fragmentOutput.discardFragment != 0)
 	{
-		rat_Color = vec4(0.0);
-	}
-	else
-	{
-		RatScratchPipelineLightResult result;
-		ratClearLightResult(result);
-		result.occlusion = fragmentOutput.occlusion;
-
-		ratApplyLights(fragmentOutput, result);
-		rat_Color = vec4(fragmentOutput.albedo.rgb * result.diffuse + result.specular + result.fluorescence +
-							 fragmentOutput.emissive,
-						 fragmentOutput.albedo.a);
+		return;
 	}
 
-	// TODO: OIT
+	RatScratchPipelineLightResult result;
+	ratClearLightResult(result);
+	result.occlusion = fragmentOutput.occlusion;
+
+	ratApplyLights(fragmentOutput, result);
+	vec4 color = vec4(fragmentOutput.albedo.rgb * result.diffuse + result.specular + result.fluorescence +
+						  fragmentOutput.emissive,
+					  fragmentOutput.albedo.a);
+
+	ratForwardOITWrite(ivec3(gl_FragCoord.xy, fragmentOutput.cameraIndex), color, fragmentOutput.position.z);
 }
