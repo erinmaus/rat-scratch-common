@@ -15,7 +15,7 @@ local function attachDebugger()
 			error(msg, 2)
 		end
 
-		io.stdout:setvbuf("line")
+		io.stdout:setvbuf("no")
 	end
 end
 
