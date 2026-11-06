@@ -22,6 +22,20 @@ local Table = require("rat-scratch-common").Table
 --- @overload fun(format: love.PixelFormat[], depthStencilFormat?: love.PixelFormat): RatScratch.Pipeline.RenderBuffer
 local RenderBuffer = Object()
 
+local COMPUTE_WRITABLE_TEXTURE_FORMATS = love.graphics.getTextureFormats({
+	canvas = true,
+	computewrite = true
+})
+
+local COMPUTE_READABLE_TEXTURE_FORMATS = love.graphics.getTextureFormats({
+	canvas = true,
+	readable = true
+})
+
+local CANVAS_TEXTURE_FORMATS = love.graphics.getTextureFormats({
+	canvas = true
+})
+
 --- @param format love.PixelFormat[]
 --- @param depth? love.PixelFormat
 function RenderBuffer:new(format, depth)
@@ -187,13 +201,15 @@ function RenderBuffer:resize(width, height, layers)
 			self.canvases[i]:release()
 		end
 
+		assert(CANVAS_TEXTURE_FORMATS[format], "pixel format '%s' for target '%d' not supported as canvas", format, i)
+
 		--- @type love.Texture
 		local canvas = love.graphics.newTexture(width, height, layers, {
 			type = "array",
 			format = format,
 			canvas = true,
-			readable = true,
-			computewrite = true,
+			readable = COMPUTE_READABLE_TEXTURE_FORMATS[format],
+			computewrite = COMPUTE_WRITABLE_TEXTURE_FORMATS[format],
 			mipmaps = "manual",
 		})
 		self.canvases[i] = canvas
