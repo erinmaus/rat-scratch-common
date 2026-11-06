@@ -55,11 +55,10 @@ do
 	--- @param result? RatScratch.Math.Quaternion
 	--- @return RatScratch.Math.Quaternion
 	function CubeMap.getRotation(faceIndex, result)
-		-- local N = CubeMap.NORMALS[faceIndex]
-		-- local T = CubeMap.TANGENTS[faceIndex]:negate(_t)
-		-- local B = CubeMap.BITANGENTS[faceIndex]:negate(_b)
-		-- return Quaternion.fromTBN(N, T, B, result)
-		return CubeMap.ROTATIONS[faceIndex]
+		local N = CubeMap.NORMALS[faceIndex]
+		local T = CubeMap.TANGENTS[faceIndex]:negate(_t)
+		local B = CubeMap.BITANGENTS[faceIndex]:negate(_b)
+		return Quaternion.fromTBN(N, T, B, result)
 	end
 end
 

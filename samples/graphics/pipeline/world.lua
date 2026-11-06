@@ -128,7 +128,7 @@ function demo.load()
 	directionalLight:setColor(GammaColor(0.85098, 0.326, 0.556863, 1))
 
 	local pointLights = {}
-	for i = 1, 10 do
+	for i = 1, 5 do
 		local pointLightInfo = {
 			offsets = {
 				x = {},
@@ -145,12 +145,10 @@ function demo.load()
 
 		local pointLight = scene:newLight(PointLight)
 		pointLight:setIsShadowCaster(true)
-		pointLight:setAttenuation(love.math.random(10, 20))
+		pointLight:setAttenuation(love.math.random(5, 10))
 
 		pointLightInfo.light = pointLight
 		table.insert(pointLights, pointLightInfo)
-
-		break
 	end
 
 	demo.projection = PerspectiveFOVCameraProjection()
@@ -378,8 +376,8 @@ function demo.update()
 			end
 		end
 
-		local minY = Vector3(-math.huge, 0.5, -math.huge)
-		pointLightInfo.light:setPosition(position:scale(5):max(minY))
+		local minY = Vector3(-math.huge, 5, -math.huge)
+		pointLightInfo.light:setPosition(position:scale(10):max(minY))
 	end
 
 	ResourceLoader.update()

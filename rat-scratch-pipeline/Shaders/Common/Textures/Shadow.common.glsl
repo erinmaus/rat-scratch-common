@@ -42,6 +42,7 @@ bool ratSampleShadowImplGetTextureSpaceCoordinate(uint cameraIndex, vec3 worldPo
 float ratSampleShadowTextureDirect(sampler2DArray atlasTexture, uint shadowTextureIndex, vec3 textureSpacePosition)
 {
 	textureSpacePosition.xy = clamp(textureSpacePosition.xy, vec2(0.0), vec2(1.0));
+	textureSpacePosition.y = 1.0 - textureSpacePosition.y;
 
 	RatScratchPipelineShadowTexture textureAtlasInfo = rat_ShadowTextures[shadowTextureIndex];
 	vec2 atlasTextureCoordinate = textureSpacePosition.xy * textureAtlasInfo.size + textureAtlasInfo.position;
@@ -70,7 +71,7 @@ float ratSampleCubeShadowTexture(uvec2 shadowTextureIndex, vec3 worldPosition, v
 
 	uint i;
 	vec3 textureCoordinate;
-	ratCalculateCubeMapFaceTextureCoordinate(-lightToSurface, i, textureCoordinate.xy);
+	ratCalculateCubeMapFaceTextureCoordinate(lightToSurface, i, textureCoordinate.xy);
 	uint currentShadowTextureIndex = shadowTextureIndex.x + i;
 	uint cameraIndex = rat_ShadowTextures[currentShadowTextureIndex].cameraIndex;
 	textureCoordinate.z = ratSampleShadowImplGetViewZ(cameraIndex, worldPosition);
