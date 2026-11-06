@@ -21,4 +21,6 @@ void computemain()
 {
 	rat_IndirectDispatches[0].dispatchX =
 		(rat_IndirectDraws[0].instanceCount + rat_LocalThreadgroupSizeX - 1) / rat_LocalThreadgroupSizeX;
+	rat_IndirectDispatches[0].dispatchY = 1;
+	rat_IndirectDispatches[0].dispatchZ = 1;
 }

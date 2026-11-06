@@ -1,6 +1,7 @@
 struct RatScratchPipelineSortedCluster
 {
 	uint depthKey;
+	float depthValue;
 	uint drawIndex;
 };
 

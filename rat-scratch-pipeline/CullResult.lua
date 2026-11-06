@@ -16,7 +16,8 @@ local CullResult = Object()
 
 CullResult.SORT_CLUSTER_FORMAT = {
 	{ location = 0, name = "depthKey", format = "uint32" },
-	{ location = 1, name = "drawIndex", format = "uint32" },
+	{ location = 1, name = "depthValue", format = "float" },
+	{ location = 2, name = "drawIndex", format = "uint32" },
 }
 
 CullResult.DEFAULT_DRAW_PADDING = 16
