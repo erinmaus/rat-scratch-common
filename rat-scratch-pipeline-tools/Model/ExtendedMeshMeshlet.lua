@@ -8,6 +8,7 @@ local Common = require("rat-scratch-math").Common
 local BoneInstance = require("rat-scratch-graphics").Graphics3D.BoneInstance
 local Quaternion = require("rat-scratch-math").Quaternion
 local Table = require("rat-scratch-common").Table
+local AABB = require("rat-scratch-math").Geometry3D.AABB
 
 --- @class RatScratch.Pipeline.SerializedExtendedMeshMeshlet
 --- @field public indexData love.ByteData
@@ -30,6 +31,9 @@ local SerializedExtendedMeshMeshlet = {}
 --- @field private primaryBone integer
 --- @field private staticBoundsPosition RatScratch.Math.Vector3
 --- @field private staticBoundsRadius number
+--- @field private minBounds RatScratch.Math.Vector3
+--- @field private maxBounds RatScratch.Math.Vector3
+--- @field private center RatScratch.Math.Vector3
 --- @field private error number
 --- @field private refinedIndex integer
 local ExtendedMeshMeshlet = Object()
@@ -44,6 +48,9 @@ function ExtendedMeshMeshlet:new(indexData)
 	self.primaryBone = 0
 	self.staticBoundsPosition = Vector3()
 	self.staticBoundsRadius = 0
+	self.minBounds = Vector3()
+	self.maxBounds = Vector3()
+	self.center = Vector3()
 	self.error = 0
 	self.refinedIndex = -1
 end
@@ -67,15 +74,39 @@ function ExtendedMeshMeshlet:serialize()
 	}
 end
 
-function ExtendedMeshMeshlet:getStaticBounds()
+function ExtendedMeshMeshlet:getStaticRadialBounds()
 	return self.staticBoundsPosition, self.staticBoundsRadius
 end
 
 --- @param position RatScratch.Math.Vector3
 --- @param radius number
-function ExtendedMeshMeshlet:setStaticBounds(position, radius)
+function ExtendedMeshMeshlet:setStaticRadialBounds(position, radius)
 	self.staticBoundsPosition:from(position:get())
 	self.staticBoundsRadius = radius
+end
+
+function ExtendedMeshMeshlet:getStaticBounds()
+	return self.minBounds, self.maxBounds
+end
+
+function ExtendedMeshMeshlet:getStaticCenter()
+	return self.center
+end
+
+do
+	local _size = Vector3()
+
+	--- @param minBounds RatScratch.Math.Vector3
+	--- @param maxBounds RatScratch.Math.Vector3
+	function ExtendedMeshMeshlet:setStaticBounds(minBounds, maxBounds)
+		self.minBounds:from(minBounds:get())
+		self.maxBounds:from(maxBounds:get())
+
+		local size = self.maxBounds:subtract(self.minBounds, _size)
+		size:scale(1 / 2, size)
+
+		self.minBounds:add(size, self.center)
+	end
 end
 
 function ExtendedMeshMeshlet:getError()
@@ -197,6 +228,42 @@ function ExtendedMeshMeshlet.fromMesh(pipelineConfig, indexData, meshDefinition)
 		end)
 	end
 
+	local minBounds, maxBounds = Vector3(), Vector3()
+	if meshFormat:hasAttribute("VertexPosition") then
+		minBounds:from(math.huge)
+		maxBounds:from(-math.huge)
+
+		local positionIndexCount, positionIndexOffset =
+			meshFormat:getCountOffset("VertexPosition")
+		local positionI = positionIndexOffset
+		local positionJ = positionIndexOffset + positionIndexCount - 1
+
+		local visitedIndices = {}
+		local position = Vector3()
+		local count = 0
+		for i = 1, indexCount do
+			local index = indexDataPointer[i - 1]
+			if not visitedIndices[index] then
+				local vertex = meshDefinition.vertices[index + 1]
+
+				local x, y, z = Table.unpack(vertex, positionI, positionJ)
+				x, y, z = x or 0, y or 0, z or 0
+
+				position:from(x, y, z)
+				AABB.expand(minBounds, maxBounds, position)
+
+				visitedIndices[index] = true
+
+				count = count + 1
+			end
+		end
+
+		if count == 0 then
+			minBounds:from(0)
+			maxBounds:from(0)
+		end
+	end
+
 	local verticesByIndex = {}
 	for i = 1, indexCount do
 		local index = indexDataPointer[i - 1]
@@ -259,6 +326,7 @@ function ExtendedMeshMeshlet.fromMesh(pipelineConfig, indexData, meshDefinition)
 	mesh.vertices = vertices
 	mesh.vertexBones = vertexBones
 	mesh.primaryBone = mesh.boneIndices[#mesh.boneIndices]
+	mesh:setStaticBounds(minBounds, maxBounds)
 
 	return mesh
 end

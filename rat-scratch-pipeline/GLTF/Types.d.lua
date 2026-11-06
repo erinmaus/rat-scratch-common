@@ -23,16 +23,22 @@ local RATMeshMeshletPrimitive = {}
 --- @field public rootNodeCount integer
 local RATMeshPrimitiveCluster = {}
 
---- @class RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets.Bounds
+--- @class RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets.RadialBounds
 --- @field public center number[]
 --- @field public radius number
 
---- @class RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets.SkinnedBounds : RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets.Bounds
+--- @class RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets.Bounds
+--- @field public center number[]
+--- @field public min number[]
+--- @field public max number[]
+
+--- @class RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets.SkinnedBounds : RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets.RadialBounds
 --- @field public animation integer
 --- @field public bone integer
 
 --- @class RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets.PrimitiveMeshlet
 --- @field public indices integer
+--- @field public staticRadialBounds RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets.RadialBounds
 --- @field public staticBounds RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets.Bounds
 --- @field public skinnedBounds? RatScratch.Pipeline.GLTF.RAT_mesh_primitive_meshlets.SkinnedBounds[]
 local RATMeshMeshletPrimitiveMeshlets = {}

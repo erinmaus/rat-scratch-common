@@ -283,7 +283,7 @@ function ExtendedModelSerializer:_buildClusterMeshletData(
 			offset
 		)
 
-		local boundsPosition, boundsRadius = meshlet:getStaticBounds()
+		local boundsPosition, boundsRadius = meshlet:getStaticRadialBounds()
 		BufferFormat.setValue(
 			clusterMeshletFormatInstance,
 			clusterMeshlets,
@@ -293,6 +293,31 @@ function ExtendedModelSerializer:_buildClusterMeshletData(
 			boundsPosition.y,
 			boundsPosition.z,
 			boundsRadius
+		)
+
+		local minBounds, maxBounds = meshlet:getStaticBounds()
+		BufferFormat.setValue(
+			clusterMeshletFormatInstance,
+			clusterMeshlets,
+			"minBounds",
+			offset,
+			minBounds:get()
+		)
+		BufferFormat.setValue(
+			clusterMeshletFormatInstance,
+			clusterMeshlets,
+			"maxBounds",
+			offset,
+			maxBounds:get()
+		)
+
+		local center = meshlet:getStaticCenter()
+		BufferFormat.setValue(
+			clusterMeshletFormatInstance,
+			clusterMeshlets,
+			"center",
+			offset,
+			center:get()
 		)
 
 		BufferFormat.setValue(
@@ -560,12 +585,19 @@ function ExtendedModelSerializer:_serializeModel(builder, node)
 			})
 
 			local staticCenter, staticRadius =
-				extendedMeshMeshlet:getStaticBounds()
+				extendedMeshMeshlet:getStaticRadialBounds()
+			local minBounds, maxBounds = extendedMeshMeshlet:getStaticBounds()
+			local center = extendedMeshMeshlet:getStaticCenter()
 			local meshlet = {
 				indices = indexBufferViewIndex,
-				staticBounds = {
+				staticRadialBounds = {
 					center = { staticCenter:get() },
 					radius = staticRadius,
+				},
+				staticBounds = {
+					min = { minBounds:get() },
+					max = { maxBounds:get() },
+					center = { center:get() },
 				},
 			}
 

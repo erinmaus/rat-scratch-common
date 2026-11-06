@@ -36,6 +36,9 @@ struct RatScratchPipelineMesh
 struct RatScratchPipelineMeshCluster
 {
 	vec4 boundsPositionRadius;
+	vec3 minBounds;
+	vec3 maxBounds;
+	vec3 center;
 	float error;
 	int refinedIndex;
 	uvec2 indexOffsetCount;
