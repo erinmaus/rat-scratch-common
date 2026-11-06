@@ -121,7 +121,7 @@ function demo.load()
 	world:getPipeline(AnimationPipeline):loadDefaultShaders()
 
 	local ambientLight = scene:newLight(AmbientLight)
-	ambientLight:setAmbience(0.4)
+	ambientLight:setAmbience(0.1)
 	ambientLight:setColor(GammaColor(0.85098, 0.713725, 0.556863, 1))
 
 	local directionalLight = scene:newLight(DirectionalLight)
@@ -145,7 +145,7 @@ function demo.load()
 
 		local pointLight = scene:newLight(PointLight)
 		pointLight:setIsShadowCaster(true)
-		pointLight:setAttenuation(30) --love.math.random(5, 10))
+		pointLight:setAttenuation(love.math.random(10, 20))
 
 		pointLightInfo.light = pointLight
 		table.insert(pointLights, pointLightInfo)
@@ -193,7 +193,7 @@ function demo.load()
 	-- )
 
 	demo.forwardRenderPass = ForwardRendererPass()
-	--demo.forwardRenderPass:addDependency(demo.shadowRenderPass)
+	demo.forwardRenderPass:addDependency(demo.shadowRenderPass)
 	--demo.forwardRenderPass:addDependency(demo.reflectionRenderPass)
 	demo.forwardRenderPass:attach(
 		demo.runtime:getDefaultQualityPreset(),
@@ -555,12 +555,12 @@ function demo.draw()
 	love.graphics.push("all")
 	love.graphics.setDepthMode("lequal", true)
 
-	-- demo.renderer:cull(
-	-- 	demo.runtime:getDefaultQualityPreset(),
-	-- 	demo.scene,
-	-- 	demo.shadowRenderPass:getCullResult()
-	-- )
-	-- demo.renderer:draw(demo.shadowRenderPass)
+	demo.renderer:cull(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.scene,
+		demo.shadowRenderPass:getCullResult()
+	)
+	demo.renderer:draw(demo.shadowRenderPass)
 
 	-- demo.renderer:cull(
 	-- 	demo.runtime:getDefaultQualityPreset(),
