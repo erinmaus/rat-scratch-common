@@ -365,6 +365,8 @@ function GLTFParser:getImageData(index)
 			self:getImageFilenameFromMimeType(image.mimeType, image.name)
 		local fileData = love.filesystem.newFileData(data, filename)
 		imageData = love.image.newImageData(fileData)
+
+		fileData:release()
 	end
 
 	self.images[realIndex] = imageData
