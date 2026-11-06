@@ -556,7 +556,7 @@ function ModelPipeline:_updateModelBuffers()
 	for model in pairs(self.dirtyModelBuffers) do
 		self:_updateModelBuffer(model)
 
-		self.dirtyModels[model] = nil
+		self.dirtyModelBuffers[model] = nil
 	end
 
 	self.staticVertexBuffer:flush()
