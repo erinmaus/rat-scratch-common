@@ -10,12 +10,6 @@
         "default": [16]
       },
       {
-        "key": "pipeline.properties.forward.oitOpaqueCutoff",
-        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_FORWARD_OIT_OPAQUE_CUTOFF",
-        "format": "float",
-        "default": [0.98]
-      },
-      {
         "key": "pipeline.properties.shadow.cascadeSizeInPixels",
         "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_SHADOW_CASCADE_SIZE_IN_PIXELS",
         "format": "uint32vec2",

@@ -21,11 +21,13 @@ void pixelmain()
 	ivec2 position = ivec2(frag_TextureCoordinate * vec2(imageSize(rat_OITABufferCount).xy));
 
 	uint count = imageLoad(rat_OITABufferCount, ivec3(position, gl_Layer)).x;
+	count = min(count, RAT_SCRATCH_PIPELINE_CONFIG_FORWARD_OIT_SAMPLE_COUNT - 1);
 
 	vec4 result = vec4(0.0);
 	for (uint i = 0; i < count; ++i)
 	{
-		uvec4 coordinate = uvec4(i, position, gl_Layer);
+		uint j = count - i - 1;
+		uvec4 coordinate = uvec4(j, position, gl_Layer);
 		uint index = coordinateToIndex(coordinate, dimensions);
 		vec4 color = unpackUnorm4x8(rat_OITFragments[index].color);
 		result = alphaBlend(result, color);

@@ -33,22 +33,23 @@ void ratForwardOITWrite(ivec3 coordinate, vec4 color, float depth)
 				uvec4(RAT_SCRATCH_PIPELINE_CONFIG_FORWARD_OIT_SAMPLE_COUNT, imageSize(rat_OITABufferCount));
 			uint currentSampleCount = imageLoad(rat_OITABufferCount, coordinate).x;
 
-			uint target = currentSampleCount + 1;
+			uint target = currentSampleCount;
 			for (uint i = 0; i < currentSampleCount; ++i)
 			{
 				uint index = coordinateToIndex(uvec4(i, coordinate), dimensions);
 
 				RatScratchPipelineForwardOITFragment currentFragment = rat_OITFragments[index];
-				if (depth < currentFragment.depth)
+				if (depth <= currentFragment.depth)
 				{
 					target = i;
 					break;
 				}
 			}
 
-			for (uint i = currentSampleCount; i > target; --i)
+			for (int i = int(min(currentSampleCount - 1, RAT_SCRATCH_PIPELINE_CONFIG_FORWARD_OIT_SAMPLE_COUNT - 1));
+				 i >= int(target); --i)
 			{
-				uint j = max(i + 1, RAT_SCRATCH_PIPELINE_CONFIG_FORWARD_OIT_SAMPLE_COUNT - 1);
+				uint j = min(i + 1, RAT_SCRATCH_PIPELINE_CONFIG_FORWARD_OIT_SAMPLE_COUNT - 1);
 				uint iIndex = coordinateToIndex(uvec4(i, coordinate), dimensions);
 				uint jIndex = coordinateToIndex(uvec4(j, coordinate), dimensions);
 
@@ -65,8 +66,9 @@ void ratForwardOITWrite(ivec3 coordinate, vec4 color, float depth)
 				rat_OITFragments[index].color = packUnorm4x8(color);
 			}
 
-			imageStore(rat_OITABufferCount, coordinate,
-					   uvec4(min(target, RAT_SCRATCH_PIPELINE_CONFIG_FORWARD_OIT_SAMPLE_COUNT), 0, 0, 0));
+			imageStore(
+				rat_OITABufferCount, coordinate,
+				uvec4(min(currentSampleCount + 1, RAT_SCRATCH_PIPELINE_CONFIG_FORWARD_OIT_SAMPLE_COUNT), 0, 0, 0));
 
 			imageAtomicExchange(rat_OITABufferLock, coordinate, 0);
 			done = true;

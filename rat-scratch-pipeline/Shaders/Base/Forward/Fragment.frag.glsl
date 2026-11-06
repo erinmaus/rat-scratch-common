@@ -43,6 +43,5 @@ void pixelmain()
 	vec4 color = vec4(fragmentOutput.albedo.rgb * result.diffuse + result.specular + result.fluorescence +
 						  fragmentOutput.emissive,
 					  fragmentOutput.albedo.a);
-
 	ratForwardOITWrite(ivec3(gl_FragCoord.xy, fragmentOutput.cameraIndex), color, fragmentOutput.screenPosition.z);
 }
