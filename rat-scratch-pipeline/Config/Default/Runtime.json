@@ -4,6 +4,12 @@
     "defaultQualityPreset": "main",
     "properties": [
       {
+        "key": "pipeline.properties.forward.oitSampleCount",
+        "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_FORWARD_OIT_SAMPLE_COUNT",
+        "format": "uint32",
+        "default": [16]
+      },
+      {
         "key": "pipeline.properties.shadow.cascadeSizeInPixels",
         "identifier": "RAT_SCRATCH_PIPELINE_CONFIG_SHADOW_CASCADE_SIZE_IN_PIXELS",
         "format": "uint32vec2",
