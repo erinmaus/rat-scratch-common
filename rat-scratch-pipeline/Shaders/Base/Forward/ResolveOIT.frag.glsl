@@ -6,7 +6,7 @@
 #include "@Pipeline/Common/Blend.common.glsl"
 #include "@Pipeline/Common/Index.common.glsl"
 
-layout(r8ui) uniform uimage2DArray rat_ABufferCount;
+layout(r8ui) uniform uimage2DArray rat_OITABufferCount;
 
 restrict readonly buffer rat_OITFragmentsBuffer
 {
@@ -17,10 +17,10 @@ layout(location = 0) out vec4 rat_Fragment;
 
 void pixelmain()
 {
-	uvec4 dimensions = uvec4(RAT_SCRATCH_PIPELINE_CONFIG_FORWARD_OIT_SAMPLE_COUNT, imageSize(rat_ABufferCount));
-	ivec2 position = ivec2(frag_TextureCoordinate * vec2(imageSize(rat_ABufferCount).xy));
+	uvec4 dimensions = uvec4(RAT_SCRATCH_PIPELINE_CONFIG_FORWARD_OIT_SAMPLE_COUNT, imageSize(rat_OITABufferCount));
+	ivec2 position = ivec2(frag_TextureCoordinate * vec2(imageSize(rat_OITABufferCount).xy));
 
-	uint count = imageLoad(rat_ABufferCount, ivec3(position, gl_Layer)).x;
+	uint count = imageLoad(rat_OITABufferCount, ivec3(position, gl_Layer)).x;
 
 	vec4 result = vec4(0.0);
 	for (uint i = 0; i < count; ++i)

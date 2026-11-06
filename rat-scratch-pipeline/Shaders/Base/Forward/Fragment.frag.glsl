@@ -44,5 +44,5 @@ void pixelmain()
 						  fragmentOutput.emissive,
 					  fragmentOutput.albedo.a);
 
-	ratForwardOITWrite(ivec3(gl_FragCoord.xy, fragmentOutput.cameraIndex), color, fragmentOutput.position.z);
+	ratForwardOITWrite(ivec3(gl_FragCoord.xy, fragmentOutput.cameraIndex), color, fragmentOutput.screenPosition.z);
 }

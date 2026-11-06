@@ -8,6 +8,7 @@ local Table = require("rat-scratch-common").Table
 --- @field private width integer
 --- @field private height integer
 --- @field private layers integer
+--- @field private mipmaps string | false
 --- @field private mipmapCount integer
 --- @field private format love.PixelFormat[]
 --- @field private depthStencilFormat? love.PixelFormat
@@ -38,7 +39,8 @@ local CANVAS_TEXTURE_FORMATS = love.graphics.getTextureFormats({
 
 --- @param format love.PixelFormat[]
 --- @param depth? love.PixelFormat
-function RenderBuffer:new(format, depth)
+--- @param mipmaps? string | false
+function RenderBuffer:new(format, depth, mipmaps)
 	assert(
 		#format > 0 or depth,
 		"render buffer must have at least one attachment"
@@ -47,6 +49,7 @@ function RenderBuffer:new(format, depth)
 	self.width = 0
 	self.height = 0
 	self.layers = 0
+	self.mipmaps = mipmaps or false
 	self.mipmapCount = 0
 
 	self.format = Table.clone(format)
@@ -216,7 +219,7 @@ function RenderBuffer:resize(width, height, layers)
 			canvas = true,
 			readable = COMPUTE_READABLE_TEXTURE_FORMATS[format],
 			computewrite = COMPUTE_WRITABLE_TEXTURE_FORMATS[format],
-			mipmaps = "manual",
+			mipmaps = self.mipmaps,
 		})
 		self.canvases[i] = canvas
 
@@ -247,7 +250,7 @@ function RenderBuffer:resize(width, height, layers)
 			format = self.depthStencilFormat,
 			canvas = true,
 			readable = true,
-			mipmaps = "manual",
+			mipmaps = self.mipmaps,
 		})
 
 		for i = 1, self.depth:getMipmapCount() do

@@ -66,7 +66,7 @@ void ratForwardOITWrite(ivec3 coordinate, vec4 color, float depth)
 			}
 
 			imageStore(rat_OITABufferCount, coordinate,
-					   uvec4(max(target, RAT_SCRATCH_PIPELINE_CONFIG_FORWARD_OIT_SAMPLE_COUNT), 0, 0, 0));
+					   uvec4(min(target, RAT_SCRATCH_PIPELINE_CONFIG_FORWARD_OIT_SAMPLE_COUNT), 0, 0, 0));
 
 			imageAtomicExchange(rat_OITABufferLock, coordinate, 0);
 			done = true;

@@ -269,9 +269,19 @@ end
 --- @private
 --- @param drawShader love.Shader
 function ForwardRenderPass:_drawForward(drawShader)
-	love.graphics.setBlendMode("alpha", "alphamultiply")
+	love.graphics.push("all")
 	love.graphics.setShader(drawShader)
+	love.graphics.setDepthMode()
 
+	if drawShader:hasUniform("rat_OITABufferLock") then
+		drawShader:send(
+			"rat_OITABufferLock",
+			self.oitRenderBuffer:getCanvas(
+				ForwardRenderPass.OIT_A_BUFFER_FRAGMENT_LOCK
+			)
+		)
+	end
+	
 	self:getRenderBuffer():bind(nil, true)
 	love.graphics.clear(0, 0, 0, 0)
 
@@ -279,6 +289,8 @@ function ForwardRenderPass:_drawForward(drawShader)
 		"triangles",
 		self.cullResult:getIndirectDrawBuffer()
 	)
+
+	love.graphics.pop()
 end
 
 function ForwardRenderPass:_prepareOIT()
@@ -289,7 +301,10 @@ function ForwardRenderPass:_prepareOIT()
 	local shader = self.prepareOITShader:get()
 
 	local camerasBuffer = self.cullResult:getCamerasBuffer()
-	camerasBuffer:bind(shader)
+	local activeCameraBuffer = camerasBuffer:getActiveCameraBuffer()
+	if shader:hasUniform("rat_LayersBuffer") then
+		shader:send("rat_LayersBuffer", activeCameraBuffer:getBuffer())
+	end
 
 	if shader:hasUniform("rat_OITABufferCount") then
 		shader:send(
@@ -322,10 +337,14 @@ function ForwardRenderPass:_resolveOIT()
 
 	local shader = self.resolveOITShader:get()
 	love.graphics.setShader(shader)
-	self:getRenderBuffer():bind(nil, false)
+	self:getRenderBuffer():bind()
+	love.graphics.clear(0, 0, 0, 0)
 
 	local camerasBuffer = self.cullResult:getCamerasBuffer()
-	camerasBuffer:bind(shader)
+	local activeCameraBuffer = camerasBuffer:getActiveCameraBuffer()
+	if shader:hasUniform("rat_LayersBuffer") then
+		shader:send("rat_LayersBuffer", activeCameraBuffer:getBuffer())
+	end
 
 	if shader:hasUniform("rat_OITABufferCount") then
 		shader:send(
@@ -333,6 +352,13 @@ function ForwardRenderPass:_resolveOIT()
 			self.oitRenderBuffer:getCanvas(
 				ForwardRenderPass.OIT_A_BUFFER_FRAGMENT_COUNT
 			)
+		)
+	end
+
+	if shader:hasUniform("rat_OITFragmentsBuffer") then
+		shader:send(
+			"rat_OITFragmentsBuffer",
+			self.aBuffer
 		)
 	end
 

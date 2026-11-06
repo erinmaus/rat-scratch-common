@@ -38,15 +38,18 @@ function ReflectionRenderPass:new()
 
 	self.renderBuffer = RenderBuffer(
 		ReflectionRenderPass.RENDER_BUFFER_FORMAT,
-		ReflectionRenderPass.RENDER_BUFFER_DEPTH_FORMAT
+		ReflectionRenderPass.RENDER_BUFFER_DEPTH_FORMAT,
+		"manual"
 	)
 	self.sourceRenderBuffer = RenderBuffer(
 		ReflectionRenderPass.RENDER_BUFFER_FORMAT,
-		ReflectionRenderPass.RENDER_BUFFER_DEPTH_FORMAT
+		ReflectionRenderPass.RENDER_BUFFER_DEPTH_FORMAT,
+		"manual"
 	)
 	self.otherRenderBuffer = RenderBuffer(
 		ReflectionRenderPass.RENDER_BUFFER_FORMAT,
-		ReflectionRenderPass.RENDER_BUFFER_DEPTH_FORMAT
+		ReflectionRenderPass.RENDER_BUFFER_DEPTH_FORMAT,
+		"manual"
 	)
 	self.blurDoubleBufferResult = DoubleBufferResult(
 		self.sourceRenderBuffer,
