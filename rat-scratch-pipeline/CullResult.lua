@@ -1,13 +1,23 @@
 local Object = require("rat-scratch-common").Object
 local Draw = require("rat-scratch-pipeline.Draw")
+local IndirectDispatch = require("rat-scratch-pipeline.IndirectDispatch")
 local IndirectDraw = require("rat-scratch-pipeline.IndirectDraw")
 
 --- @class RatScratch.Pipeline.CullResult : RatScratch.Common.BaseObject
 --- @field private camerasBuffer RatScratch.Pipeline.CameraBuffer
---- @field private drawsBuffer love.GraphicsBuffer
+--- @field private inputDrawsBuffer love.GraphicsBuffer
+--- @field private outputDrawsBuffer love.GraphicsBuffer
 --- @field private indirectDrawBuffer love.GraphicsBuffer
+--- @field private indirectDispatchBuffer love.GraphicsBuffer
+--- @field private sortDepthBuffer love.GraphicsBuffer
+--- @field private sortDepthScratchBuffer love.GraphicsBuffer
 --- @overload fun(camerasBuffer: RatScratch.Pipeline.CameraBuffer): RatScratch.Pipeline.CullResult
 local CullResult = Object()
+
+CullResult.SORT_CLUSTER_FORMAT = {
+	{ location = 0, name = "depthKey", format = "uint32" },
+	{ location = 1, name = "drawIndex", format = "uint32" },
+}
 
 CullResult.DEFAULT_DRAW_PADDING = 16
 
@@ -20,6 +30,12 @@ function CullResult:new(camerasBuffer)
 		1,
 		{ shaderstorage = true, indirectarguments = true }
 	)
+
+	self.indirectDispatchBuffer = love.graphics.newBuffer(
+		IndirectDispatch.INDIRECT_DISPATCH_FORMAT,
+		1,
+		{ shaderstorage = true, indirectarguments = true }
+	)
 end
 
 --- @return RatScratch.Pipeline.CameraBuffer
@@ -29,12 +45,35 @@ end
 
 --- @return love.GraphicsBuffer
 function CullResult:getDrawsBuffer()
-	return self.drawsBuffer
+	return self.inputDrawsBuffer
 end
 
 --- @return love.GraphicsBuffer
-function CullResult:getIndirectBuffer()
+function CullResult:getOtherDrawsBuffer()
+	return self.outputDrawsBuffer
+end
+
+function CullResult:swapDrawBuffers()
+	self.inputDrawsBuffer, self.outputDrawsBuffer =
+		self.outputDrawsBuffer, self.inputDrawsBuffer
+end
+
+function CullResult:getSortBuffer()
+	return self.sortDepthBuffer
+end
+
+function CullResult:getSortScratchBuffer()
+	return self.sortDepthScratchBuffer
+end
+
+--- @return love.GraphicsBuffer
+function CullResult:getIndirectDrawBuffer()
 	return self.indirectDrawBuffer
+end
+
+--- @return love.GraphicsBuffer
+function CullResult:getIndirectDispatchBuffer()
+	return self.indirectDispatchBuffer
 end
 
 function CullResult:hasResult()
@@ -46,15 +85,38 @@ function CullResult:reserveDraws(drawCount)
 	local cameraCount = self.camerasBuffer:getActiveCameraCount()
 	local count = drawCount * cameraCount * CullResult.DEFAULT_DRAW_PADDING
 
-	if not self.drawsBuffer or count > self.drawsBuffer:getElementCount() then
-		self.drawsBuffer = love.graphics.newBuffer(
+	if
+		not self.inputDrawsBuffer
+		or count > self.inputDrawsBuffer:getElementCount()
+	then
+		count = math.max(count, 1)
+
+		self.inputDrawsBuffer = love.graphics.newBuffer(
 			Draw.DRAW_FORMAT,
-			math.max(count, 1),
+			count,
+			{ shaderstorage = true }
+		)
+
+		self.outputDrawsBuffer = love.graphics.newBuffer(
+			Draw.DRAW_FORMAT,
+			count,
+			{ shaderstorage = true }
+		)
+
+		self.sortDepthBuffer = love.graphics.newBuffer(
+			CullResult.SORT_CLUSTER_FORMAT,
+			count,
+			{ shaderstorage = true }
+		)
+
+		self.sortDepthScratchBuffer = love.graphics.newBuffer(
+			CullResult.SORT_CLUSTER_FORMAT,
+			count,
 			{ shaderstorage = true }
 		)
 	end
 
-	return self.drawsBuffer
+	return self.inputDrawsBuffer
 end
 
 return CullResult

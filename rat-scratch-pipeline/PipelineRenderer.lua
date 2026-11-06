@@ -1,4 +1,5 @@
 local Object = require("rat-scratch-common").Object
+local assert = require("rat-scratch-common").Debug.assert
 local AnimationPipeline = require("rat-scratch-pipeline.AnimationPipeline")
 local DrawPipeline = require("rat-scratch-pipeline.DrawPipeline")
 local LightPipeline = require("rat-scratch-pipeline.LightPipeline")
@@ -49,6 +50,26 @@ function PipelineRenderer:new(pipelineRuntime)
 	self.prepareCubeMapHiZShader = pipelineRuntime:loadShader(
 		"@Pipeline/HiZ/PrepareCubeMap.frag.glsl",
 		"@Pipeline/PostProcess/SubsetLayeredVertex.vert.glsl",
+		pipelineRuntime:getDefaultQualityPreset()
+	)
+
+	self.prepareDepthSortIndirectShader = pipelineRuntime:loadComputeShader(
+		"@Pipeline/SortDraws/PrepareIndirect.compute.glsl",
+		pipelineRuntime:getDefaultQualityPreset()
+	)
+
+	self.prepareDepthSortShader = pipelineRuntime:loadComputeShader(
+		"@Pipeline/SortDraws/PrepareSort.compute.glsl",
+		pipelineRuntime:getDefaultQualityPreset()
+	)
+
+	self.depthSortDrawsShader = pipelineRuntime:loadComputeShader(
+		"@Pipeline/SortDraws/SortDraws.compute.glsl",
+		pipelineRuntime:getDefaultQualityPreset()
+	)
+
+	self.finishDepthSortShader = pipelineRuntime:loadComputeShader(
+		"@Pipeline/SortDraws/FinishSort.compute.glsl",
 		pipelineRuntime:getDefaultQualityPreset()
 	)
 end
@@ -210,7 +231,7 @@ function PipelineRenderer:cull(qualityPreset, scene, result)
 	self:_bindWorldUniforms(cullShader, qualityPreset)
 	self:_bindSceneUniforms(cullShader, scene, qualityPreset)
 
-	result:getIndirectBuffer():setArrayData(self.indirectDrawBufferData)
+	result:getIndirectDrawBuffer():setArrayData(self.indirectDrawBufferData)
 
 	local draw = scene:getPipeline(DrawPipeline)
 	local inputDrawsBuffer = draw:getDrawsBuffer()
@@ -228,7 +249,10 @@ function PipelineRenderer:cull(qualityPreset, scene, result)
 	end
 
 	if cullShader:hasUniform("rat_IndirectDrawsBuffer") then
-		cullShader:send("rat_IndirectDrawsBuffer", result:getIndirectBuffer())
+		cullShader:send(
+			"rat_IndirectDrawsBuffer",
+			result:getIndirectDrawBuffer()
+		)
 	end
 
 	if cullShader:hasUniform("rat_DrawCount") then
@@ -243,6 +267,160 @@ function PipelineRenderer:cull(qualityPreset, scene, result)
 		math.max(math.ceil(inputDrawCount / localX), 1),
 		math.max(math.ceil(cameraCount / localY), 1)
 	)
+end
+
+PipelineRenderer.SORT_SIGN_FORWARD = 1
+PipelineRenderer.SORT_SIGN_DEFERRED = -1
+
+--- @private
+--- @param result RatScratch.Pipeline.CullResult
+function PipelineRenderer:_prepareSortIndirect(result)
+	if not self.prepareDepthSortIndirectShader:getIsReady() then
+		return
+	end
+
+	if not self.prepareDepthSortShader:getIsReady() then
+		return
+	end
+
+	if not self.finishDepthSortShader:getIsReady() then
+		return
+	end
+
+	local localX1 = self.prepareDepthSortShader:get():getLocalThreadgroupSize()
+	local localX2 = self.finishDepthSortShader:get():getLocalThreadgroupSize()
+
+	assert(
+		localX1 == localX2,
+		"'@Pipeline/SortDraws/PrepareSort.compute.glsl' (local size x = %d) and '@Pipeline/SortDraws/FinishSort.compute.glsl' (local size x = %d) local size mis-match",
+		localX1,
+		localX2
+	)
+
+	local shader = self.prepareDepthSortIndirectShader:get()
+	local minLocalX = math.min(localX1, localX2)
+
+	if shader:hasUniform("rat_LocalThreadgroupSizeX") then
+		shader:send("rat_LocalThreadgroupSizeX", minLocalX)
+	end
+
+	if shader:hasUniform("rat_IndirectDrawsBuffer") then
+		shader:send("rat_IndirectDrawsBuffer", result:getIndirectDrawBuffer())
+	end
+
+	if shader:hasUniform("rat_IndirectDispatchesBuffer") then
+		shader:send(
+			"rat_IndirectDispatchesBuffer",
+			result:getIndirectDispatchBuffer()
+		)
+	end
+
+	love.graphics.dispatchThreadgroups(shader, 1)
+end
+
+--- @private
+--- @param qualityPreset string
+--- @param scene RatScratch.Pipeline.Scene
+--- @param result RatScratch.Pipeline.CullResult
+--- @param sign -1 | 1
+function PipelineRenderer:_prepareSort(qualityPreset, scene, result, sign)
+	if not self.prepareDepthSortShader:getIsReady() then
+		return
+	end
+
+	local shader = self.prepareDepthSortShader:get()
+	self:_bindWorldUniforms(shader, qualityPreset)
+	self:_bindSceneUniforms(shader, scene, qualityPreset)
+
+	if shader:hasUniform("rat_DepthSign") then
+		shader:send("rat_DepthSign", sign)
+	end
+
+	if shader:hasUniform("rat_IndirectDrawsBuffer") then
+		shader:send("rat_IndirectDrawsBuffer", result:getIndirectDrawBuffer())
+	end
+
+	if shader:hasUniform("rat_DrawsBuffer") then
+		shader:send("rat_DrawsBuffer", result:getDrawsBuffer())
+	end
+
+	if shader:hasUniform("rat_SortedClusterElementsBuffer") then
+		shader:send("rat_SortedClusterElementsBuffer", result:getSortBuffer())
+	end
+
+	love.graphics.dispatchIndirect(shader, result:getIndirectDispatchBuffer())
+end
+
+--- @private
+--- @param result RatScratch.Pipeline.CullResult
+function PipelineRenderer:_sort(result)
+	if not self.depthSortDrawsShader:getIsReady() then
+		return
+	end
+
+	local shader = self.depthSortDrawsShader:get()
+
+	if shader:hasUniform("rat_IndirectDrawsBuffer") then
+		shader:send("rat_IndirectDrawsBuffer", result:getIndirectDrawBuffer())
+	end
+
+	if shader:hasUniform("rat_DrawsBuffer") then
+		shader:send("rat_DrawsBuffer", result:getDrawsBuffer())
+	end
+
+	if shader:hasUniform("rat_SortedClusterElementsBuffer") then
+		shader:send("rat_SortedClusterElementsBuffer", result:getSortBuffer())
+	end
+
+	if shader:hasUniform("rat_SortedClusterElementsScratchBuffer") then
+		shader:send(
+			"rat_SortedClusterElementsScratchBuffer",
+			result:getSortScratchBuffer()
+		)
+	end
+
+	love.graphics.dispatchThreadgroups(shader, 1)
+end
+
+--- @private
+--- @param result RatScratch.Pipeline.CullResult
+function PipelineRenderer:_finishSort(result)
+	if not self.finishDepthSortShader:getIsReady() then
+		return
+	end
+
+	local shader = self.finishDepthSortShader:get()
+
+	if shader:hasUniform("rat_IndirectDrawsBuffer") then
+		shader:send("rat_IndirectDrawsBuffer", result:getIndirectDrawBuffer())
+	end
+
+	if shader:hasUniform("rat_InputDrawsBuffer") then
+		shader:send("rat_InputDrawsBuffer", result:getDrawsBuffer())
+	end
+
+	if shader:hasUniform("rat_OutputDrawsBuffer") then
+		shader:send("rat_OutputDrawsBuffer", result:getOtherDrawsBuffer())
+	end
+
+	if shader:hasUniform("rat_SortedClusterElementsBuffer") then
+		shader:send("rat_SortedClusterElementsBuffer", result:getSortBuffer())
+	end
+
+	love.graphics.dispatchIndirect(shader, result:getIndirectDispatchBuffer())
+
+	result:swapDrawBuffers()
+end
+
+--- @param qualityPreset string
+--- @param scene RatScratch.Pipeline.Scene
+--- @param result RatScratch.Pipeline.CullResult
+--- @param sign -1 | 1
+function PipelineRenderer:sort(qualityPreset, scene, result, sign)
+	self:_prepareSortIndirect(result)
+	self:_prepareSort(qualityPreset, scene, result, sign)
+	self:_sort(result)
+	self:_finishSort(result)
 end
 
 --- @param shader love.Shader

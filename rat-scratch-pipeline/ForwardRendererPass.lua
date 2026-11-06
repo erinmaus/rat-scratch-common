@@ -164,7 +164,9 @@ do
 		local screenSize = _screenSize
 		screenSize[1], screenSize[2] =
 			self.renderBuffer:getWidth(), self.renderBuffer:getHeight()
-		drawShader:send("rat_ScreenSize", screenSize)
+		if drawShader:hasUniform("rat_ScreenSize") then
+			drawShader:send("rat_ScreenSize", screenSize)
+		end
 
 		if self:hasDependency(ShadowRenderPass) then
 			self:getDependency(ShadowRenderPass):bind(drawShader)
@@ -202,7 +204,7 @@ function ForwardRenderPass:_drawForward(drawShader)
 
 	love.graphics.drawFromShaderIndirect(
 		"triangles",
-		self.cullResult:getIndirectBuffer()
+		self.cullResult:getIndirectDrawBuffer()
 	)
 end
 

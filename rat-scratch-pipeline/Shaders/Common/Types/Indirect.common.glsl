@@ -5,3 +5,10 @@ struct RatScratchPipelineIndirectDraw
 	uint firstVertex;
 	uint firstInstance;
 };
+
+struct RatScratchPipelineIndirectDispatch
+{
+	uint dispatchX;
+	uint dispatchY;
+	uint dispatchZ;
+};

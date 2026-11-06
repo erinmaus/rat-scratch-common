@@ -230,7 +230,7 @@ function ReflectionRenderPass:_drawForward(drawShader)
 
 	love.graphics.drawFromShaderIndirect(
 		"triangles",
-		self.cullResult:getIndirectBuffer()
+		self.cullResult:getIndirectDrawBuffer()
 	)
 end
 

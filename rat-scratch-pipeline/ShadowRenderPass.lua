@@ -177,7 +177,7 @@ function ShadowRenderPass:_drawShadows(drawShader, pipelineRenderer)
 
 		love.graphics.drawFromShaderIndirect(
 			"triangles",
-			self.cullResult:getIndirectBuffer()
+			self.cullResult:getIndirectDrawBuffer()
 		)
 	end
 	love.graphics.pop()

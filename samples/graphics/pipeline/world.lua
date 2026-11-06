@@ -75,13 +75,7 @@ local function makeGLB()
 end
 
 function demo.load()
-	local filename
-	if love.filesystem.getInfo("shoe_pipeline.gltf") then
-		filename = "shoe_pipeline.gltf"
-	else
-		filename = "shoe_pipeline.glb"
-	end
-
+	local filename = os.getenv("FILENAME") or "shoe_pipeline.glb"
 	if not love.filesystem.getInfo(filename) then
 		filename = makeGLB()
 	end
@@ -396,10 +390,10 @@ function demo.update()
 	if not demo.readbacks then
 		demo.readbacks = {
 			love.graphics.readbackBufferAsync(
-				demo.forwardRenderPass:getCullResult():getIndirectBuffer()
+				demo.forwardRenderPass:getCullResult():getIndirectDrawBuffer()
 			),
 			love.graphics.readbackBufferAsync(
-				demo.shadowRenderPass:getCullResult():getIndirectBuffer()
+				demo.shadowRenderPass:getCullResult():getIndirectDrawBuffer()
 			),
 		}
 	else
@@ -575,13 +569,17 @@ function demo.draw()
 	-- )
 	-- demo.renderer:draw(demo.reflectionRenderPass)
 
-	if not love.keyboard.isDown("space") then
-		demo.renderer:cull(
-			demo.runtime:getDefaultQualityPreset(),
-			demo.scene,
-			demo.forwardRenderPass:getCullResult()
-		)
-	end
+	demo.renderer:cull(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.scene,
+		demo.forwardRenderPass:getCullResult()
+	)
+	demo.renderer:sort(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.scene,
+		demo.forwardRenderPass:getCullResult(),
+		PipelineRenderer.SORT_SIGN_FORWARD
+	)
 	demo.renderer:draw(demo.forwardRenderPass)
 	love.graphics.pop()
 
