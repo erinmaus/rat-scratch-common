@@ -239,7 +239,7 @@ end
 function ShadowRenderPass:draw(pipelineRenderer)
 	local material = self:getWorld():getPipeline(MaterialPipeline)
 	local drawShaderResource =
-		material:getShader(self:getQualityPreset(), "shadow", "draw")
+		material:getShader(self:getQualityPreset(), "shadow", "opaque", "draw")
 
 	if not drawShaderResource:getIsReady() then
 		return

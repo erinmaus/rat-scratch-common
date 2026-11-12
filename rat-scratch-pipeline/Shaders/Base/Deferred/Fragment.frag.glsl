@@ -14,6 +14,7 @@ layout(location = 1) out vec4 rat_GBufferEmissive;
 layout(location = 2) out vec4 rat_GBufferFluorescence;
 layout(location = 3) out vec4 rat_GBufferNormal;
 layout(location = 4) out vec4 rat_GBufferProperties;
+layout(location = 5) out uint rat_GBufferMaterialInstance;
 
 void pixelmain()
 {
@@ -39,7 +40,6 @@ void pixelmain()
 	rat_GBufferEmissive = vec4(fragmentOutput.emissive, fragmentOutput.heat);
 	rat_GBufferFluorescence = vec4(fragmentOutput.fluorescence, fragmentOutput.albedo.a);
 	rat_GBufferNormal = vec4(encodeNormal(clampNormal(fragmentOutput.normal)), 0.0, fragmentOutput.albedo.a);
-	rat_GBufferProperties =
-		vec4(fragmentOutput.metal, fragmentOutput.roughness, fragmentOutput.occlusion,
-			 float(rat_MaterialInstances[fragmentInput.materialInstance].materialDefinitionIndex) / 255.0);
+	rat_GBufferProperties = vec4(fragmentOutput.metal, fragmentOutput.roughness, fragmentOutput.occlusion, 1.0);
+	rat_GBufferMaterialInstance = fragmentInput.materialInstance;
 }

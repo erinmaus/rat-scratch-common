@@ -1,6 +1,8 @@
 local Object = require("rat-scratch-common").Object
 local Table = require("rat-scratch-common").Table
 
+--- @alias RatScratch.Graphics.Graphics3D.MaterialAlphaMode "opaque" | "mask" | "blend"
+
 --- @class RatScratch.Graphics.Graphics3D.Material : RatScratch.Common.BaseObject
 --- @overload fun(): RatScratch.Graphics.Graphics3D.Material
 --- @field private color number[]
@@ -15,6 +17,7 @@ local Table = require("rat-scratch-common").Table
 --- @field private occlusionTexture? love.Texture | love.ImageData
 --- @field private metalRoughnessTexture? love.Texture | love.ImageData
 --- @field private emissiveTexture? love.Texture | love.ImageData
+--- @field private alphaMode RatScratch.Graphics.Graphics3D.MaterialAlphaMode
 local Material = Object()
 
 function Material:new()
@@ -25,6 +28,7 @@ function Material:new()
 	self.normalScale = 1
 	self.emissive = { 0, 0, 0 }
 	self.alphaCutoff = 0.5
+	self.alphaMode = "opaque"
 end
 
 function Material:getColor()
@@ -85,6 +89,14 @@ end
 --- @param b number
 function Material:setEmissive(r, g, b)
 	Table.copy(self.emissive, 1, 3, r, g, b)
+end
+
+function Material:getAlphaMode()
+	return self.alphaMode
+end
+
+function Material:setAlphaMode(value)
+	self.alphaMode = value
 end
 
 function Material:getAlphaCutoff()

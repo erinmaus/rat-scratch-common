@@ -236,6 +236,10 @@ function Scene.fromDefinition(sceneDefinition, yield)
 					material:setAlphaCutoff(materialDefinition.alphaCutoff)
 				end
 
+				if materialDefinition.alphaMode then
+					material:setAlphaMode(materialDefinition.alphaMode)
+				end
+
 				material:setTexture(albedoTexture)
 				material:setNormalTexture(normalTexture)
 				material:setOcclusionTexture(occlusionTexture)

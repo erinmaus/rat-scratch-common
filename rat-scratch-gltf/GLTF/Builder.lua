@@ -891,6 +891,12 @@ function GLTFBuilder:_addMaterialDefinitionTexture(materialDefinitionTexture)
 	return self:_encode(materialDefinitionTexture.texture)
 end
 
+local RAT_SCRATCH_ALPHA_MODE_TO_GLTF_ALPHA_MODE = {
+	opaque = "OPAQUE",
+	blend = "BLEND",
+	mask = "MASK",
+}
+
 --- @private
 --- @param materialDefinition RatScratch.Graphics.Graphics3D.MaterialDefinition
 function GLTFBuilder:_addMaterialDefinition(materialDefinition)
@@ -942,6 +948,12 @@ function GLTFBuilder:_addMaterialDefinition(materialDefinition)
 		emissiveFactor = materialDefinition.emissiveTexture
 			and materialDefinition.emissiveTexture.emissiveFactor
 			and { unpack(materialDefinition.emissiveTexture.emissiveFactor) },
+		alphaCutoff = materialDefinition and materialDefinition.alphaCutoff
+			or nil,
+		alphaMode = (
+			materialDefinition
+			and RAT_SCRATCH_ALPHA_MODE_TO_GLTF_ALPHA_MODE[materialDefinition.alphaMode]
+		) or nil,
 	})
 
 	self:_trySerialize(material, materialIndex, materialDefinition)

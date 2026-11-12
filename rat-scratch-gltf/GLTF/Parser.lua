@@ -1376,6 +1376,12 @@ function GLTFParser:_loadTexture(index)
 	}
 end
 
+local GLTF_ALPHA_MODE_TO_RAT_SCRATCH = {
+	OPAQUE = "opaque",
+	BLEND = "blend",
+	MASK = "mask",
+}
+
 --- @private
 --- @param index integer
 --- @return RatScratch.Graphics.Graphics3D.MaterialDefinition
@@ -1479,6 +1485,9 @@ function GLTFParser:_loadMaterial(index)
 	materialDefinition.emissiveTexture = emissiveTexture
 
 	materialDefinition.alphaCutoff = material.alphaCutoff
+	materialDefinition.alphaMode = GLTF_ALPHA_MODE_TO_RAT_SCRATCH[material.alphaMode]
+		or "opaque"
+
 	return materialDefinition
 end
 
