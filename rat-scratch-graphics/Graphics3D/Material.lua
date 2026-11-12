@@ -253,6 +253,14 @@ function Material.fromDefinition(materialDefinition)
 		material:setEmissiveTexture(materialDefinition.emissiveTexture.texture)
 	end
 
+	if materialDefinition.alphaCutoff then
+		material:setAlphaCutoff(materialDefinition.alphaCutoff)
+	end
+
+	if materialDefinition.alphaMode then
+		material:setAlphaMode(materialDefinition.alphaMode)
+	end
+
 	return material
 end
 
