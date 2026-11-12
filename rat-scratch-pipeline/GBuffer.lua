@@ -10,7 +10,8 @@ GBuffer.FORMAT = {
 	"rgba8", -- emissive (rgb) + alpha (heat)
 	"rgb5a1", -- ultraviolet fluorescence (rgb) + alpha unused
 	"rg16f", -- encoded normals
-	"rgba8", -- metal, roughness, occlusion + alpha (material)
+	"rgba8", -- metal, roughness, occlusion
+	"r32ui", -- material instance
 }
 
 GBuffer.DEPTH_STENCIL_FORMAT = "depth32f"

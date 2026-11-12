@@ -13,6 +13,7 @@ return {
 	DirectionalLight = require("rat-scratch-pipeline.DirectionalLight"),
 	Draw = require("rat-scratch-pipeline.Draw"),
 	DrawPipeline = require("rat-scratch-pipeline.DrawPipeline"),
+	FilteredCullResult = require("rat-scratch-pipeline.FilteredCullResult"),
 	ForwardRendererPass = require("rat-scratch-pipeline.ForwardRendererPass"),
 	GLTF = require("rat-scratch-pipeline.GLTF"),
 	HiZResult = require("rat-scratch-pipeline.HiZResult"),
@@ -34,6 +35,9 @@ return {
 	),
 	ObjectHandleEvent = require("rat-scratch-pipeline.ObjectHandleEvent"),
 	ObjectPipeline = require("rat-scratch-pipeline.ObjectPipeline"),
+	OITForwardRendererPass = require(
+		"rat-scratch-pipeline.OITForwardRendererPass"
+	),
 	PerspectiveFOVCameraProjection = require(
 		"rat-scratch-pipeline.PerspectiveFOVCameraProjection"
 	),
@@ -62,6 +66,7 @@ return {
 	Resources = require("rat-scratch-pipeline.Resources"),
 	Scene = require("rat-scratch-pipeline.Scene"),
 	ShadowRenderPass = require("rat-scratch-pipeline.ShadowRenderPass"),
+	SortedCullResult = require("rat-scratch-pipeline.SortedCullResult"),
 	SpotLight = require("rat-scratch-pipeline.SpotLight"),
 	Utility = require("rat-scratch-pipeline.Utility"),
 	VertexBufferInfo = require("rat-scratch-pipeline.VertexBufferInfo"),
