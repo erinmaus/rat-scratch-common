@@ -115,6 +115,8 @@ function ForwardRenderPass:_updateRenderBuffer()
 
 			self.renderBuffer:resize(self.width, self.height, cameraCount)
 		end
+
+		self.isRenderBufferDirty = false
 	end
 end
 

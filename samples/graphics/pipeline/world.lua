@@ -684,10 +684,10 @@ function demo.draw()
 			love.graphics.pop()
 		end
 	end
-
 	local d = love.graphics.getStats()
+	local s = love.graphics.getDPIScale()
 	love.graphics.print(
-		("draw calls = %d (%s [%s triangles] scene, %s [%s triangles] lights, %s [%s triangles] total)\ncanvas switches = %d\nframe time = %f ms (%d FPS)"):format(
+		("draw calls = %d (%s [%s triangles] scene, %s [%s triangles] lights, %s [%s triangles] total)\ncanvas switches = %d\nframe time = %f ms (%d FPS)\nscreen size = %d x %d"):format(
 			prettyNumber(d.drawcalls),
 			prettyNumber(demo.instancedDraws[1]),
 			prettyNumber(
@@ -715,7 +715,9 @@ function demo.draw()
 			),
 			d.canvasswitches,
 			love.timer.getAverageDelta() * 1000,
-			love.timer.getFPS()
+			love.timer.getFPS(),
+			love.graphics.getWidth() * s,
+			love.graphics.getHeight() * s
 		),
 		8,
 		8

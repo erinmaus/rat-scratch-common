@@ -130,6 +130,8 @@ function OITForwardRenderPass:_updateRenderBuffer()
 			count,
 			{ shaderstorage = true }
 		)
+
+		self.isRenderBufferDirty = false
 	end
 end
 
