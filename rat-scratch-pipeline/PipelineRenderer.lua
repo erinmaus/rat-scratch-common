@@ -389,6 +389,16 @@ function PipelineRenderer:filter(qualityPreset, scene, result)
 
 	self:_prepareFilter(result)
 	self:_filter(qualityPreset, scene, result)
+
+	local stride = IndirectDraw.INDIRECT_DRAW_FORMAT_INSTANCE:getStride()
+	local source = result:getMultiIndirectDrawBuffer()
+
+	for i = 1, FilteredCullResult.MAX_PASS_BUFFER_COUNT do
+		local sourceOffset = (i - 1) * stride
+		local destination = result:getIndirectDrawBuffer(i)
+
+		love.graphics.copyBuffer(source, destination, sourceOffset, 0, stride)
+	end
 end
 
 PipelineRenderer.SORT_SIGN_FORWARD = 1

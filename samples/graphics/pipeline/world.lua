@@ -208,6 +208,7 @@ function demo.load()
 	)
 
 	demo.opaqueForwardRenderPass = ForwardRendererPass()
+	demo.opaqueForwardRenderPass:setIsOpaque(true)
 	demo.opaqueForwardRenderPass:addDependency(demo.shadowRenderPass)
 	demo.opaqueForwardRenderPass:setCullResult(demo.opaqueSortedCullResult)
 	demo.opaqueForwardRenderPass:attach(

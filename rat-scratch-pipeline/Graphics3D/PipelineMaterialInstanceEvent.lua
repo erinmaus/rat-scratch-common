@@ -8,6 +8,7 @@ local EventScope = require("rat-scratch-common").EventScope
 local PipelineMaterialInstanceEvent = Object(Event)
 
 PipelineMaterialInstanceEvent.SET = EventScope.create()
+PipelineMaterialInstanceEvent.MODIFY = EventScope.create()
 
 function PipelineMaterialInstanceEvent:new(scope)
 	Event.new(self, scope)
@@ -27,6 +28,14 @@ function PipelineMaterialInstanceEvent.fromSet(uniform)
 	result.uniform = uniform
 
 	return result
+end
+
+--- @return RatScratch.Pipeline.Graphics3D.PipelineMaterialInstanceEvent
+function PipelineMaterialInstanceEvent.fromModify()
+	return Event.get(
+		PipelineMaterialInstanceEvent,
+		PipelineMaterialInstanceEvent.MODIFY
+	)
 end
 
 return PipelineMaterialInstanceEvent

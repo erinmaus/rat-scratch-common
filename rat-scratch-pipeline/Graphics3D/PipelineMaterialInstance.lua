@@ -41,7 +41,7 @@ function PipelineMaterialInstance:new(material, materialPipeline)
 		)
 	end
 
-	self.eventSource = EventSource()
+	self.eventSource = EventSource(self)
 end
 
 PipelineMaterialInstance.listen, PipelineMaterialInstance.silence =
@@ -140,6 +140,8 @@ end
 --- @param value RatScratch.Graphics.Graphics3D.MaterialAlphaMode
 function PipelineMaterialInstance:setAlphaMode(value)
 	self.alphaMode = value
+
+	self.eventSource:process(PipelineMaterialInstanceEvent.fromModify())
 end
 
 function PipelineMaterialInstance:getAlphaMode()

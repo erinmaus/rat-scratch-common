@@ -56,7 +56,7 @@ local json = require("lib.json")
 --- @field private materialsDirty boolean
 --- @field private materialsByIndex RatScratch.Pipeline.Graphics3D.PipelineMaterial[]
 --- @field private materialsToIndex table<RatScratch.Pipeline.Graphics3D.PipelineMaterial, integer>
---- @field private materialInstances table<RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance, { setEventID: integer }>
+--- @field private materialInstances table<RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance, { setEventID: integer, modifyEventID: integer }>
 --- @field private materialInstancesByIndex RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance[]
 --- @field private materialInstancesBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance>
 --- @field private materialInstanceValuesBuffer RatScratch.Pipeline.Buffer.PipelineMultiBuffer<RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance>
@@ -432,14 +432,20 @@ function MaterialPipeline:newMaterialInstance(material)
 		)
 	end
 
-	local id = materialInstance:listen(
+	local setEventID = materialInstance:listen(
 		PipelineMaterialInstanceEvent.SET,
 		self._onMaterialSetUniform,
 		self
 	)
 
+	local modifyEventID = materialInstance:listen(
+		PipelineMaterialInstanceEvent.MODIFY,
+		self._onMaterialModify,
+		self
+	)
+
 	self.dirtyMaterialInstances[materialInstance] = true
-	self.materialInstances[materialInstance] = { setEventID = id }
+	self.materialInstances[materialInstance] = { setEventID = setEventID, modifyEventID = modifyEventID }
 	table.insert(self.materialInstancesByIndex, materialInstance)
 
 	return materialInstance
@@ -449,6 +455,13 @@ end
 --- @param event RatScratch.Pipeline.Graphics3D.PipelineMaterialInstanceEvent
 --- @param materialInstance RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
 function MaterialPipeline:_onMaterialSetUniform(event, materialInstance)
+	self.dirtyMaterialInstances[materialInstance] = true
+end
+
+--- @private
+--- @param event RatScratch.Pipeline.Graphics3D.PipelineMaterialInstanceEvent
+--- @param materialInstance RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
+function MaterialPipeline:_onMaterialModify(event, materialInstance)
 	self.dirtyMaterialInstances[materialInstance] = true
 end
 
@@ -465,6 +478,7 @@ function MaterialPipeline:freeMaterialInstance(materialInstance)
 
 	local materialInfo = self.materialInstances[materialInstance]
 	materialInstance:silence(materialInfo.setEventID)
+	materialInstance:silence(materialInfo.modifyEventID)
 
 	self.dirtyMaterialInstances[materialInstance] = nil
 	self.materialInstances[materialInstance] = nil
@@ -1320,6 +1334,7 @@ function MaterialPipeline:_flushMaterialInstances()
 		self.dirtyMaterialInstances[materialInstance] = nil
 	end
 
+	self.materialInstancesBuffer:flush()
 	self.materialInstanceValuesBuffer:flush()
 end
 
