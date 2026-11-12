@@ -84,7 +84,7 @@ end
 
 function PipelineMaterialUniform:getIsInteger()
 	return self.format == "texture"
-		or BufferFormat.isFormatScalarFloat(
+		or BufferFormat.isFormatScalarInteger(
 			BufferFormat.getFormatScalar(self.format)
 		)
 end

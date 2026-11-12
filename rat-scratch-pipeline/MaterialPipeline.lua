@@ -32,16 +32,19 @@ local json = require("lib.json")
 --- | "deferred"
 --- | "forward"
 --- | "depth"
---- | "depthDiscard"
 --- | "shadow"
---- | "shadowDiscard"
+
+--- @alias RatScratch.Pipeline.MaterialPipeline.ShaderTechnique
+--- | "blend"
+--- | "opaque"
+--- | "mask"
 
 --- @alias RatScratch.Pipeline.MaterialPipeline.ShaderType
 --- | "draw"
 --- | "light"
 
 --- @class RatScratch.Pipeline.MaterialPipeline : RatScratch.Pipeline.impl.Pipeline
---- @field private shaders table<string, table<RatScratch.Pipeline.MaterialPipeline.ShaderPass, table<RatScratch.Pipeline.MaterialPipeline.ShaderType, RatScratch.Resource.Resource<love.Shader>>>>
+--- @field private shaders table<string, table<RatScratch.Pipeline.MaterialPipeline.ShaderPass, table<RatScratch.Pipeline.MaterialPipeline.ShaderTechnique, table<RatScratch.Pipeline.MaterialPipeline.ShaderType, RatScratch.Resource.Resource<love.Shader>>>>>
 --- @field private virtualShaders table<RatScratch.Pipeline.MaterialPipeline.ShaderPass, table<string, RatScratch.Resource.Resource<RatScratch.Pipeline.ShaderFragment>>>
 --- @field private virtualShadersDirty boolean
 --- @field private stagingMaterialData love.ByteData
@@ -53,7 +56,7 @@ local json = require("lib.json")
 --- @field private materialsDirty boolean
 --- @field private materialsByIndex RatScratch.Pipeline.Graphics3D.PipelineMaterial[]
 --- @field private materialsToIndex table<RatScratch.Pipeline.Graphics3D.PipelineMaterial, integer>
---- @field private materialInstances table<RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance, { setEventID: integer }>
+--- @field private materialInstances table<RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance, { setEventID: integer, modifyEventID: integer }>
 --- @field private materialInstancesByIndex RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance[]
 --- @field private materialInstancesBuffer RatScratch.Pipeline.Buffer.PipelineBuffer<RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance>
 --- @field private materialInstanceValuesBuffer RatScratch.Pipeline.Buffer.PipelineMultiBuffer<RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance>
@@ -88,7 +91,7 @@ MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT = {
 
 MaterialPipeline.MATERIAL_INSTANCES_FORMAT = {
 	{ location = 0, name = "materialDefinitionIndex", format = "uint32" },
-	{ location = 1, name = "hasAlphaDiscard", format = "uint32" },
+	{ location = 1, name = "hasAlphaMode", format = "uint32" },
 }
 
 MaterialPipeline.MATERIAL_INSTANCE_MULTI_FORMAT_INTEGER_BUFFER = 1
@@ -429,14 +432,21 @@ function MaterialPipeline:newMaterialInstance(material)
 		)
 	end
 
-	local id = materialInstance:listen(
+	local setEventID = materialInstance:listen(
 		PipelineMaterialInstanceEvent.SET,
 		self._onMaterialSetUniform,
 		self
 	)
 
+	local modifyEventID = materialInstance:listen(
+		PipelineMaterialInstanceEvent.MODIFY,
+		self._onMaterialModify,
+		self
+	)
+
 	self.dirtyMaterialInstances[materialInstance] = true
-	self.materialInstances[materialInstance] = { setEventID = id }
+	self.materialInstances[materialInstance] =
+		{ setEventID = setEventID, modifyEventID = modifyEventID }
 	table.insert(self.materialInstancesByIndex, materialInstance)
 
 	return materialInstance
@@ -446,6 +456,13 @@ end
 --- @param event RatScratch.Pipeline.Graphics3D.PipelineMaterialInstanceEvent
 --- @param materialInstance RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
 function MaterialPipeline:_onMaterialSetUniform(event, materialInstance)
+	self.dirtyMaterialInstances[materialInstance] = true
+end
+
+--- @private
+--- @param event RatScratch.Pipeline.Graphics3D.PipelineMaterialInstanceEvent
+--- @param materialInstance RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
+function MaterialPipeline:_onMaterialModify(event, materialInstance)
 	self.dirtyMaterialInstances[materialInstance] = true
 end
 
@@ -462,6 +479,7 @@ function MaterialPipeline:freeMaterialInstance(materialInstance)
 
 	local materialInfo = self.materialInstances[materialInstance]
 	materialInstance:silence(materialInfo.setEventID)
+	materialInstance:silence(materialInfo.modifyEventID)
 
 	self.dirtyMaterialInstances[materialInstance] = nil
 	self.materialInstances[materialInstance] = nil
@@ -762,6 +780,7 @@ function MaterialPipeline:_getMaterialVariables()
 	return {
 		deferred = deferredVariables,
 		forward = forwardVariables,
+		oitForward = forwardVariables,
 		depth = depthVariables,
 		depthDiscard = depthDiscardVariables,
 	}
@@ -909,14 +928,22 @@ function MaterialPipeline:_rebuildDeferredShaders(
 	}
 end
 
+local FORWARD_PATHS_BY_TECHNIQUE = {
+	opaque = "@Pipeline/Base/Forward/Technique/Opaque.frag.glsl",
+	blend = "@Pipeline/Base/Forward/Technique/Blend.frag.glsl",
+	mask = "@Pipeline/Base/Forward/Technique/Mask.frag.glsl",
+}
+
 --- @private
 --- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
 --- @param virtualPaths table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>
+--- @param technique RatScratch.Pipeline.MaterialPipeline.ShaderTechnique
 function MaterialPipeline:_rebuildForwardShaders(
 	qualityPreset,
 	baseConfig,
-	virtualPaths
+	virtualPaths,
+	technique
 )
 	--- @type RatScratch.Graphics.ShaderPreprocessOptions
 	local config = {
@@ -927,7 +954,7 @@ function MaterialPipeline:_rebuildForwardShaders(
 
 	return {
 		draw = self:getPipelineRuntime():loadShader(
-			"@Pipeline/Base/Forward/Fragment.frag.glsl",
+			FORWARD_PATHS_BY_TECHNIQUE[technique],
 			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
 			qualityPreset,
 			config
@@ -935,14 +962,21 @@ function MaterialPipeline:_rebuildForwardShaders(
 	}
 end
 
+local DEPTH_PATHS_BY_TECHNIQUE = {
+	opaque = "@Pipeline/Base/Depth/Technique/Opaque.frag.glsl",
+	mask = "@Pipeline/Base/Depth/Technique/Mask.frag.glsl",
+}
+
 --- @private
 --- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
 --- @param virtualPaths table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>
+--- @param technique RatScratch.Pipeline.MaterialPipeline.ShaderTechnique
 function MaterialPipeline:_rebuildDepthShaders(
 	qualityPreset,
 	baseConfig,
-	virtualPaths
+	virtualPaths,
+	technique
 )
 	--- @type RatScratch.Graphics.ShaderPreprocessOptions
 	local config = {
@@ -953,7 +987,7 @@ function MaterialPipeline:_rebuildDepthShaders(
 
 	return {
 		draw = self:getPipelineRuntime():loadShader(
-			"@Pipeline/Base/Deferred/Depth.frag.glsl",
+			DEPTH_PATHS_BY_TECHNIQUE[technique],
 			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
 			qualityPreset,
 			config
@@ -961,40 +995,21 @@ function MaterialPipeline:_rebuildDepthShaders(
 	}
 end
 
---- @private
---- @param qualityPreset string
---- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
---- @param virtualPaths table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>
-function MaterialPipeline:_rebuildDepthDiscardShaders(
-	qualityPreset,
-	baseConfig,
-	virtualPaths
-)
-	--- @type RatScratch.Graphics.ShaderPreprocessOptions
-	local config = {
-		rootPath = baseConfig.rootPath,
-		rootPaths = baseConfig.rootPaths,
-		virtualPaths = virtualPaths,
-	}
-
-	return {
-		draw = self:getPipelineRuntime():loadShader(
-			"@Pipeline/Base/Deferred/DepthDiscard.frag.glsl",
-			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
-			qualityPreset,
-			config
-		),
-	}
-end
+local SHADOW_PATHS_BY_TECHNIQUE = {
+	opaque = "@Pipeline/Base/Shadow/Technique/Opaque.frag.glsl",
+	mask = "@Pipeline/Base/Shadow/Technique/Mask.frag.glsl",
+}
 
 --- @private
 --- @param qualityPreset string
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
 --- @param virtualPaths table<string, RatScratch.Graphics.ShaderPreprocessOptionsVirtualPathWithDependencies>
+--- @param technique RatScratch.Pipeline.MaterialPipeline.ShaderTechnique
 function MaterialPipeline:_rebuildShadowDepthShaders(
 	qualityPreset,
 	baseConfig,
-	virtualPaths
+	virtualPaths,
+	technique
 )
 	--- @type RatScratch.Graphics.ShaderPreprocessOptions
 	local config = {
@@ -1005,7 +1020,7 @@ function MaterialPipeline:_rebuildShadowDepthShaders(
 
 	return {
 		draw = self:getPipelineRuntime():loadShader(
-			"@Pipeline/Base/Shadow/Depth.frag.glsl",
+			SHADOW_PATHS_BY_TECHNIQUE[technique],
 			"@Pipeline/Base/Vertex/Vertex.vert.glsl",
 			qualityPreset,
 			config
@@ -1044,36 +1059,62 @@ end
 --- @param baseConfig RatScratch.Graphics.ShaderPreprocessOptions
 function MaterialPipeline:_rebuildShaders(qualityPreset, baseConfig)
 	self.shaders[qualityPreset] = {
-		deferred = self:_rebuildDeferredShaders(
-			qualityPreset,
-			baseConfig,
-			self:_getVirtualPaths(self.virtualShaders.deferred)
-		),
-		forward = self:_rebuildForwardShaders(
-			qualityPreset,
-			baseConfig,
-			self:_getVirtualPaths(self.virtualShaders.forward)
-		),
-		depth = self:_rebuildDepthShaders(
-			qualityPreset,
-			baseConfig,
-			self:_getVirtualPaths(self.virtualShaders.depth)
-		),
-		depthDiscard = self:_rebuildDepthDiscardShaders(
-			qualityPreset,
-			baseConfig,
-			self:_getVirtualPaths(self.virtualShaders.depthDiscard)
-		),
-		shadow = self:_rebuildShadowDepthShaders(
-			qualityPreset,
-			baseConfig,
-			self:_getVirtualPaths(self.virtualShaders.depth)
-		),
-		shadowDiscard = self:_rebuildShadowDepthDiscardShaders(
-			qualityPreset,
-			baseConfig,
-			self:_getVirtualPaths(self.virtualShaders.depthDiscard)
-		),
+		deferred = {
+			opaque = self:_rebuildDeferredShaders(
+				qualityPreset,
+				baseConfig,
+				self:_getVirtualPaths(self.virtualShaders.deferred)
+			),
+		},
+		forward = {
+			opaque = self:_rebuildForwardShaders(
+				qualityPreset,
+				baseConfig,
+				self:_getVirtualPaths(self.virtualShaders.forward),
+				"opaque"
+			),
+			blend = self:_rebuildForwardShaders(
+				qualityPreset,
+				baseConfig,
+				self:_getVirtualPaths(self.virtualShaders.forward),
+				"blend"
+			),
+			mask = self:_rebuildForwardShaders(
+				qualityPreset,
+				baseConfig,
+				self:_getVirtualPaths(self.virtualShaders.forward),
+				"mask"
+			),
+		},
+		depth = {
+			opaque = self:_rebuildDepthShaders(
+				qualityPreset,
+				baseConfig,
+				self:_getVirtualPaths(self.virtualShaders.depth),
+				"opaque"
+			),
+			mask = self:_rebuildDepthShaders(
+				qualityPreset,
+				baseConfig,
+				self:_getVirtualPaths(self.virtualShaders.depth),
+				"mask"
+			),
+		},
+		shadow = {
+			opaque = self:_rebuildShadowDepthShaders(
+				qualityPreset,
+				baseConfig,
+				self:_getVirtualPaths(self.virtualShaders.depth),
+				"opaque"
+			),
+
+			mask = self:_rebuildShadowDepthShaders(
+				qualityPreset,
+				baseConfig,
+				self:_getVirtualPaths(self.virtualShaders.depth),
+				"mask"
+			),
+		},
 	}
 end
 
@@ -1134,13 +1175,15 @@ MaterialPipeline.DUMMY_SHADER_RESOURCE = Resource(-1)
 
 --- @param qualityPreset string
 --- @param pass RatScratch.Pipeline.MaterialPipeline.ShaderPass
+--- @param technique RatScratch.Pipeline.MaterialPipeline.ShaderTechnique
 --- @param name RatScratch.Pipeline.MaterialPipeline.ShaderType
 --- @return RatScratch.Resource.Resource<love.Shader>
-function MaterialPipeline:getShader(qualityPreset, pass, name)
+function MaterialPipeline:getShader(qualityPreset, pass, technique, name)
 	return (
 		self.shaders[qualityPreset]
 		and self.shaders[qualityPreset][pass]
-		and self.shaders[qualityPreset][pass][name]
+		and self.shaders[qualityPreset][pass][technique]
+		and self.shaders[qualityPreset][pass][technique][name]
 	) or MaterialPipeline.DUMMY_SHADER_RESOURCE
 end
 
@@ -1216,7 +1259,7 @@ function MaterialPipeline:_rebuildMaterialInstanceUniforms(materialInstance)
 		1,
 		1,
 		index - 1,
-		material:hasFeature("discard") and 1 or 0
+		PipelineMaterialInstance.ALPHA_MODE[materialInstance:getAlphaMode()]
 	)
 
 	return self:_rebuildMaterialInstanceUniformsImpl(materialInstance)
@@ -1292,6 +1335,7 @@ function MaterialPipeline:_flushMaterialInstances()
 		self.dirtyMaterialInstances[materialInstance] = nil
 	end
 
+	self.materialInstancesBuffer:flush()
 	self.materialInstanceValuesBuffer:flush()
 end
 

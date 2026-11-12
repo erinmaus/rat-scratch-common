@@ -281,7 +281,7 @@ function ForwardRenderPass:_drawForward(drawShader)
 			)
 		)
 	end
-	
+
 	self:getRenderBuffer():bind(nil, true)
 	love.graphics.clear(0, 0, 0, 0)
 
@@ -356,10 +356,7 @@ function ForwardRenderPass:_resolveOIT()
 	end
 
 	if shader:hasUniform("rat_OITFragmentsBuffer") then
-		shader:send(
-			"rat_OITFragmentsBuffer",
-			self.aBuffer
-		)
+		shader:send("rat_OITFragmentsBuffer", self.aBuffer)
 	end
 
 	local activeCameraCount = camerasBuffer:getActiveCameraCount()
@@ -371,7 +368,7 @@ end
 function ForwardRenderPass:draw(pipelineRenderer)
 	local material = self:getWorld():getPipeline(MaterialPipeline)
 	local drawShaderResource =
-		material:getShader(self:getQualityPreset(), "forward", "draw")
+		material:getShader(self:getQualityPreset(), "forward", "opaque", "draw")
 
 	if not drawShaderResource:getIsReady() then
 		return

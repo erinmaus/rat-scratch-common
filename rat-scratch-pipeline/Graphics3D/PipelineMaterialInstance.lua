@@ -11,8 +11,19 @@ local PipelineMaterialUniformsBuffer =
 --- @field private parent? RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
 --- @field private uniformsBuffer RatScratch.Pipeline.Graphics3D.PipelineMaterialUniformsBuffer
 --- @field private eventSource RatScratch.Common.EventSource<RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance>
+--- @field private alphaMode RatScratch.Graphics.Graphics3D.MaterialAlphaMode
 --- @overload fun(material: RatScratch.Pipeline.Graphics3D.PipelineMaterial, materialPipeline: RatScratch.Pipeline.MaterialPipeline): RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
 local PipelineMaterialInstance = Object()
+
+PipelineMaterialInstance.ALPHA_MODE_OPAQUE = 0
+PipelineMaterialInstance.ALPHA_MODE_BLEND = 1
+PipelineMaterialInstance.ALPHA_MODE_MASK = 2
+
+PipelineMaterialInstance.ALPHA_MODE = {
+	opaque = PipelineMaterialInstance.ALPHA_MODE_OPAQUE,
+	blend = PipelineMaterialInstance.ALPHA_MODE_BLEND,
+	mask = PipelineMaterialInstance.ALPHA_MODE_MASK,
+}
 
 --- @param material RatScratch.Pipeline.Graphics3D.PipelineMaterial
 --- @param materialPipeline RatScratch.Pipeline.MaterialPipeline
@@ -21,6 +32,7 @@ function PipelineMaterialInstance:new(material, materialPipeline)
 	self.materialPipeline = materialPipeline
 	self.uniformsBuffer =
 		PipelineMaterialUniformsBuffer(material, materialPipeline)
+	self.alphaMode = "opaque"
 
 	if material:getParentName() then
 		self.parent = PipelineMaterialInstance(
@@ -29,7 +41,7 @@ function PipelineMaterialInstance:new(material, materialPipeline)
 		)
 	end
 
-	self.eventSource = EventSource()
+	self.eventSource = EventSource(self)
 end
 
 PipelineMaterialInstance.listen, PipelineMaterialInstance.silence =
@@ -123,6 +135,17 @@ function PipelineMaterialInstance:setUniformByArguments(uniformKey, ...)
 			)
 		)
 	end
+end
+
+--- @param value RatScratch.Graphics.Graphics3D.MaterialAlphaMode
+function PipelineMaterialInstance:setAlphaMode(value)
+	self.alphaMode = value
+
+	self.eventSource:process(PipelineMaterialInstanceEvent.fromModify())
+end
+
+function PipelineMaterialInstance:getAlphaMode()
+	return self.alphaMode
 end
 
 return PipelineMaterialInstance

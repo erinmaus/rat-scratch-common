@@ -13,6 +13,8 @@ local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
 local ObjectHandleAnimatorProvider =
 	require("rat-scratch-pipeline.ObjectHandleAnimatorProvider")
 local PipelineLOD = require("rat-scratch-pipeline.Graphics3D.PipelineLOD")
+local PipelineMaterialInstance =
+	require("rat-scratch-pipeline.Graphics3D.PipelineMaterialInstance")
 local PipelineModel = require("rat-scratch-pipeline.Graphics3D.PipelineModel")
 local PipelineModelMeshPointer =
 	require("rat-scratch-pipeline.Resources.PipelineModelMeshPointer")
@@ -660,6 +662,11 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 	local overrideMaterial = self.overrideMaterials[meshResource]
 	self.overrideMaterials[meshResource] = nil
 
+	self:setModelMeshMaterialAlphaMode(
+		meshResource,
+		materialProperties:getAlphaMode()
+	)
+
 	self:setModelMeshMaterialUniformByArguments(
 		meshResource,
 		"albedoFactor",
@@ -764,6 +771,19 @@ function ObjectHandle:_newDefaultMaterialInstance(modelResource, meshIndex)
 			materialPipeline:getDefaultPBRTexture("emissive")
 		)
 	end
+
+	self:setModelMeshMaterialUniformByArguments(
+		meshResource,
+		"alphaCutoff",
+		materialProperties:getAlphaCutoff()
+	)
+
+	self:setModelMeshMaterialUniformByArguments(
+		meshResource,
+		"alphaMode",
+		PipelineMaterialInstance.ALPHA_MODE[materialProperties:getAlphaMode()]
+			or 0
+	)
 
 	self.overrideMaterials[meshResource] = overrideMaterial
 
@@ -1004,6 +1024,18 @@ function ObjectHandle:_bindResourceToUniform(mesh, uniform, resource)
 
 	self.uniformsDirty = true
 	self.world:updateObject(self)
+end
+
+--- @param mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>
+--- @param alphaMode RatScratch.Graphics.Graphics3D.MaterialAlphaMode
+function ObjectHandle:setModelMeshMaterialAlphaMode(mesh, alphaMode)
+	local materialInstance = self.overrideMaterials[mesh]
+		or self.defaultMaterials[mesh]
+	if not materialInstance then
+		return
+	end
+
+	materialInstance:setAlphaMode(alphaMode)
 end
 
 --- @param mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>

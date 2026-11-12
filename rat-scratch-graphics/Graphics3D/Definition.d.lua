@@ -101,5 +101,6 @@ local MaterialDefinitionEmissiveTexture = {}
 --- @field public occlusionTexture? RatScratch.Graphics.Graphics3D.MaterialDefinitionOcclusionTexture
 --- @field public metalRoughnessTexture? RatScratch.Graphics.Graphics3D.MaterialDefinitionMetalRoughnessTexture
 --- @field public emissiveTexture? RatScratch.Graphics.Graphics3D.MaterialDefinitionEmissiveTexture
+--- @field public alphaMode? RatScratch.Graphics.Graphics3D.MaterialAlphaMode
 --- @field public alphaCutoff? number
 local MaterialDefinition = {}

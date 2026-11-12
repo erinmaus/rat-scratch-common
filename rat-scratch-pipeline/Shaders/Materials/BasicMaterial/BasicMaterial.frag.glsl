@@ -1,3 +1,4 @@
+#include "@Pipeline/Common/Types/Materials.common.glsl"
 #include "@Pipeline/Common/Textures/Sample.common.glsl"
 
 void ratApplyFragmentMaterial(in RatScratchPipelineFragmentInput fragmentInput,
@@ -8,6 +9,13 @@ void ratApplyFragmentMaterial(in RatScratchPipelineFragmentInput fragmentInput,
 
 	vec4 albedo = ratSampleTexture(materialProperties.albedoTexture, fragmentInput.textureCoordinate);
 	fragmentOutput.albedo = albedo * materialProperties.albedoFactor;
+
+	if (materialProperties.alphaMode == RAT_SCRATCH_PIPELINE_ALPHA_MODE_MASK &&
+		fragmentOutput.albedo.a <= materialProperties.alphaCutoff)
+	{
+		ratDiscard(fragmentOutput);
+		return;
+	}
 
 	float occlusion = ratSampleOcclusionTexture(materialProperties.occlusionTexture, fragmentInput.textureCoordinate);
 	fragmentOutput.occlusion = 1.0 + materialProperties.occlusionStrength * (occlusion - 1.0);

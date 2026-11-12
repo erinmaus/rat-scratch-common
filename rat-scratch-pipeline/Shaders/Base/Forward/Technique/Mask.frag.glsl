@@ -1,0 +1,4 @@
+#define RAT_SCRATCH_PIPELINE_FORWARD_SORTED
+#define RAT_SCRATCH_PIPELINE_FORWARD_MASKED
+
+#include "../Fragment.frag.glsl"

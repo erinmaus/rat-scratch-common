@@ -65,6 +65,16 @@
       {
         "name": "fluorescenceTexture",
         "format": "texture"
+      },
+      {
+        "name": "alphaMode",
+        "format": "uint32",
+        "value": [0]
+      },
+      {
+        "name": "alphaCutoff",
+        "format": "float",
+        "value": [0.5]
       }
     ]
   }

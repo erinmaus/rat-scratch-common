@@ -33,3 +33,8 @@ struct RatScratchPipelineFragmentOutput
 	uint cameraIndex;
 	uint discardFragment;
 };
+
+void ratDiscard(inout RatScratchPipelineFragmentOutput fragmentOutput)
+{
+	fragmentOutput.discardFragment = 1;
+}
