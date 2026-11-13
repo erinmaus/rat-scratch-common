@@ -891,7 +891,7 @@ end
 --- @param destinationOffset integer
 --- @param count integer
 --- @param source number[]
---- @param destination love.ByteData
+--- @param destination love.Data
 function BufferFormat.copyFromFlatTableToByteData(
 	format,
 	sourceIndex,
@@ -939,7 +939,7 @@ end
 --- @param destinationOffset integer
 --- @param count integer
 --- @param source number[][]
---- @param destination love.ByteData
+--- @param destination love.Data
 function BufferFormat.copyFromTableToByteData(
 	format,
 	sourceIndex,
@@ -984,7 +984,7 @@ end
 --- @param sourceOffset integer
 --- @param destinationIndex integer
 --- @param count integer
---- @param source love.ByteData
+--- @param source love.Data
 --- @param destination number[]
 function BufferFormat.copyFromByteDataToFlatTable(
 	format,
@@ -1037,7 +1037,7 @@ end
 --- @param sourceOffset integer
 --- @param destinationIndex integer
 --- @param count integer
---- @param source love.ByteData
+--- @param source love.Data
 --- @param destination number[][]
 function BufferFormat.copyFromByteDataToTable(
 	format,

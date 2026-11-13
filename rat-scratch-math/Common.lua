@@ -160,10 +160,31 @@ end
 
 --- @param n integer
 --- @return integer
-function Common.countBits(n)
+function Common.countMSB(n)
+	if n == 0 then
+		return -1
+	end
+
 	local c = 0
 	while n > 0 do
 		n = bit.rshift(n, 1)
+		c = c + 1
+	end
+
+	return c
+end
+
+--- @param n integer
+--- @return integer
+function Common.countLSB(n)
+	if n == 0 then
+		return -1
+	end
+
+	local c = 1
+	local m = 1
+	while bit.band(n, m) == 0 do
+		m = bit.lshift(m, 1)
 		c = c + 1
 	end
 

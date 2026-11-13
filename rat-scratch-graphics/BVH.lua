@@ -150,6 +150,12 @@ function BVH:raycastObject(objectIndex, origin, direction)
 	return self:ABSTRACT()
 end
 
+--- @param index integer
+--- @return integer
+function BVH:getObjectIndex(index)
+	return self.objectIndices[index]
+end
+
 do
 	local _currentMin, _currentMax = Vector3(), Vector3()
 	local _currentCenterMin, _currentCenterMax = Vector3(), Vector3()
@@ -617,7 +623,7 @@ do
 		local A = 0b10
 		local B = 0b11
 
-		local k = math.max(Common.countBits(N) - 1, 0)
+		local k = math.max(Common.countMSB(N) - 1, 0)
 		local r = N - (2 ^ k)
 
 		local leftCount, rightCount

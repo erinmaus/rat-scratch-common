@@ -1,5 +1,10 @@
 return {
 	Atlas = require("rat-scratch-graphics.Atlas"),
+	AccelerationStructure = require(
+		"rat-scratch-graphics.AccelerationStructure"
+	),
+	BLASInstance = require("rat-scratch-graphics.BLASInstance"),
+	BLASInstanceBVH = require("rat-scratch-graphics.BLASInstanceBVH"),
 	BVH = require("rat-scratch-graphics.BVH"),
 	BVHNode = require("rat-scratch-graphics.BVHNode"),
 	Color = require("rat-scratch-graphics.Color"),

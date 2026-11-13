@@ -199,10 +199,13 @@ function PipelineParser:loadModelDefinition(index)
 		:getTriangleCount() * 3 * indexSize
 
 	local transform = love.math.newTransform()
+	local nodeName
 	do
 		local scene = self.parser:getDefaultScene()
 		local node = self:_findNode(scene, index)
 		self:_getNodeTransform(node, transform)
+
+		nodeName = node and node.name
 	end
 
 	local mesh = self.parser:getMesh(index)
@@ -211,6 +214,7 @@ function PipelineParser:loadModelDefinition(index)
 	local modelDefinition = {
 		meshes = {},
 		transform = transform,
+		name = mesh.name or nodeName or tostring(index),
 	}
 
 	for i, primitive in ipairs(mesh.primitives) do
@@ -234,7 +238,11 @@ function PipelineParser:loadModelDefinition(index)
 			vertices[bufferName] = data
 		end
 
-		local indices = self.parser:getBufferViewData(primitiveMeshlets.indices)
+		local indices = self.parser:getBufferViewData(
+			self.parser:getAccessor(primitive.indices).bufferView
+		)
+		local meshletIndices =
+			self.parser:getBufferViewData(primitiveMeshlets.indices)
 
 		--- @type RatScratch.Pipeline.Graphics3D.PipelineLODDefinition
 		local lodDefinition = {
@@ -250,12 +258,30 @@ function PipelineParser:loadModelDefinition(index)
 			rootNodeCount = primitiveMeshlets.cluster.rootNodeCount,
 		}
 
+		--- @type RatScratch.Pipeline.GLTF.RAT_mesh_primitive_blas?
+		local blasExtra = primitiveExtras
+				and primitiveExtras.RAT_mesh_primitive_blas
+			or nil
+		assert(
+			blasExtra,
+			"GLTF mesh '%s' primitive '%s' does not have BLAS data",
+			mesh.name or index,
+			primitive.name or i
+		)
+
 		table.insert(modelDefinition.meshes, {
 			vertexCount = primitiveMeshlets.vertexCount,
 			indexCount = primitiveMeshlets.indexCount,
 			vertices = vertices,
 			indices = indices,
+			meshletIndices = meshletIndices,
 			lod = lodDefinition,
+			blas = {
+				nodes = self.parser:getBufferViewData(blasExtra.blas),
+				indices = self.parser:getBufferViewData(blasExtra.indices),
+				minBounds = { unpack(blasExtra.minBounds) },
+				maxBounds = { unpack(blasExtra.maxBounds) },
+			},
 			material = primitive.material
 				and self.parser:loadMaterial(primitive.material),
 		})

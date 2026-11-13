@@ -21,6 +21,10 @@ local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local IndirectDraw = require("rat-scratch-pipeline").IndirectDraw
 local RenderBuffer = require("rat-scratch-pipeline").RenderBuffer
 local DepthRendererPass = require("rat-scratch-pipeline").DepthRendererPass
+local BLASInstance = require("rat-scratch-graphics").BLASInstance
+local BLASInstanceBVH = require("rat-scratch-graphics").BLASInstanceBVH
+local AccelerationStructure =
+	require("rat-scratch-graphics").AccelerationStructure
 local OITForwardRendererPass =
 	require("rat-scratch-pipeline").OITForwardRendererPass
 local ForwardRendererPass = require("rat-scratch-pipeline").ForwardRendererPass
@@ -56,6 +60,17 @@ local function makeGLB()
 		},
 	})
 
+	local parser2 = GLTF.loadFromFilesystem("samples/assets/gltf/curtains.gltf")
+	local scene2 = parser2:loadScene(1, {
+		attributes = {
+			static = {
+				output = GLTF.Attributes.makeStaticStandard(),
+			},
+		},
+	})
+
+	Table.append(scene.models, unpack(scene2.models))
+
 	local extendedScene = ExtendedScene(scene, pipelineConfig)
 
 	local builder = GLTF.Builder()
@@ -81,7 +96,7 @@ local function makeGLB()
 end
 
 function demo.load()
-	local filename = os.getenv("FILENAME") or "shoe_pipeline.glb"
+	local filename = os.getenv("FILENAME") or "shoe_pipeline.gltf"
 	if not love.filesystem.getInfo(filename) then
 		filename = makeGLB()
 	end
@@ -114,11 +129,40 @@ function demo.load()
 		--- @type RatScratch.Pipeline.Graphics3D.PipelineScene
 		local scene = resource:get()
 
+		--- @type RatScratch.Graphics.BLASInstance<RatScratch.Pipeline.Graphics3D.PipelineMesh>[]
+		local blasInstances = {}
+
+		local meshToModel = {}
+
 		for i = 1, scene:getModelCount() do
 			local modelResource =
 				PipelineScenePointer.newModelPointer(sceneResource, i)
 			object:attachModel(modelResource)
+
+			local model = scene:getModel(i)
+			for j = 1, model:getMeshCount() do
+				local mesh = model:getMesh(j)
+				local min, max = mesh:getBounds()
+
+				local blasInstance = BLASInstance(mesh, min, max)
+				blasInstance:setTransform(model:getTransform())
+
+				local r, g, b, a = mesh:getMaterial():getColor()
+				table.insert(blasInstances, blasInstance)
+
+				meshToModel[mesh] = model
+			end
 		end
+
+		local bvh = BLASInstanceBVH.fromBLASInstances(
+			BVH.DEFAULT_STACKLESS_BUILD_STRATEGY,
+			blasInstances
+		)
+		local tlas = AccelerationStructure.fromBVH(nil, bvh)
+
+		demo.meshToModel = meshToModel
+		demo.blasInstances = blasInstances
+		demo.tlas = tlas
 	end)
 
 	demo.reflectionProbes = {}
@@ -292,6 +336,40 @@ demo.isPanning = false
 demo.isRotating = false
 demo.isElevating = false
 
+local function hitTriangle(mesh, index, origin, direction)
+	local format = demo.runtime:getConfig():getVertexFormatByRole("static", 1)
+	return mesh:raycast(
+		index,
+		format:getBufferName(),
+		format:getInputFormat(),
+		origin,
+		direction
+	)
+end
+
+local _transformedOrigin = Vector3()
+local _transformedDirection = Vector3()
+local _inverse = love.math.newTransform()
+
+local function hitMesh(index, origin, direction)
+	local blasInstance = demo.blasInstances[index]
+	local mesh = blasInstance:getBLAS()
+
+	local worldToLocal = _inverse:inverseOf(blasInstance:getTransform())
+
+	local transformedOrigin = origin:transform(worldToLocal, _transformedOrigin)
+	local transformedDirection =
+		direction:perspectiveTransform(worldToLocal, 0, _transformedDirection)
+
+	local blas = mesh:getBLAS():getBLAS()
+	return blas:raycast(
+		transformedOrigin,
+		transformedDirection,
+		hitTriangle,
+		mesh
+	)
+end
+
 function demo.keypressed(key)
 	if demo.isMouse or demo.isKeyboard then
 		return
@@ -308,7 +386,7 @@ function demo.keypressed(key)
 		demo.isKeyboard = true
 	end
 
-	if key == "space" then
+	if key == "space" and demo.tlas then
 		local mx, my = love.mouse.getPosition()
 
 		local v1 = Vector3(mx, my, 0)
@@ -320,35 +398,14 @@ function demo.keypressed(key)
 		local origin = p1
 		local direction = p1:direction(p2):normalize()
 
-		local bestT = math.huge
-		local bestPosition = Vector3()
 		local before = love.timer.getTime()
-		for _, bvhInfo in ipairs(demo.bvh) do
-			--- @type RatScratch.Graphics.Graphics3D.MeshBVH
-			local bvh = bvhInfo.bvh
-
-			local transformedOrigin = origin:transform(bvhInfo.transform)
-			local transformedDirection =
-				direction:perspectiveTransform(bvhInfo.transform, 0):normalize()
-
-			local success, t =
-				bvh:raycast(transformedOrigin, transformedDirection)
-			if success and t < bestT then
-				origin:add(direction:scale(t), bestPosition)
-				bestT = t
-			end
-		end
+		local success, t, i = demo.tlas:raycast(origin, direction, hitMesh)
 		local after = love.timer.getTime()
 
-		if bestT < math.huge then
-			demo.hit = bestPosition
-			print(
-				"hit",
-				bestPosition:get(),
-				"time",
-				(after - before) * 1000,
-				"ms"
-			)
+		if success and t < math.huge then
+			print(">>> t", t, "i", i)
+			demo.hit = origin:add(direction:scale(t))
+			demo.hitTime = (after - before) * 1000
 		end
 	end
 end
@@ -706,7 +763,12 @@ function demo.draw()
 				8
 			)
 			love.graphics.print(
-				("%f, %f, %f"):format(demo.hit:get()),
+				("%.2f, %.2f, %.2f (%.2f ms)"):format(
+					demo.hit.x,
+					demo.hit.y,
+					demo.hit.z,
+					demo.hitTime
+				),
 				position.x + 16,
 				position.y
 			)

@@ -9,6 +9,7 @@ local Resource = require("rat-scratch-resource").Resource
 local ResourceEvent = require("rat-scratch-resource").ResourceEvent
 local MaterialPipeline = require("rat-scratch-pipeline.MaterialPipeline")
 local Vector3 = require("rat-scratch-math").Vector3
+local AABB = require("rat-scratch-math.Geometry3D.AABB")
 local BufferFormat = require("rat-scratch-graphics.Graphics3D.BufferFormat")
 local ObjectHandleAnimatorProvider =
 	require("rat-scratch-pipeline.ObjectHandleAnimatorProvider")
@@ -187,22 +188,11 @@ do
 				local model = modelResource:get()
 				for i = 1, model:getMeshCount() do
 					local mesh = model:getMesh(i)
-					local lod = mesh:getLOD()
-					local nodeData = lod:getNodeData()
 
-					local offset = nodePositionRadiusByteOffset
-					for j = 1, lod:getNodeCount() do
-						local x, y, z, radius = nodeData:getFloat(offset, 4)
-						nodeMin:from(x - radius, y - radius, z - radius)
-						nodeMax:from(x + radius, y + radius, z + radius)
+					local meshMin, meshMax = mesh:getBounds()
+					AABB.union(modelMin, modelMax, meshMin, meshMax)
 
-						modelMin:min(nodeMin, modelMin)
-						modelMax:max(nodeMax, modelMax)
-
-						offset = offset + nodeStride
-					end
-
-					hadData = hadData or lod:getNodeCount() > 0
+					hadData = true
 				end
 
 				Transform.transformBounds(

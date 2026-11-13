@@ -101,16 +101,16 @@ do
 		local ty1 = (minBounds.y - origin.y) * inverseDirection.y
 		local ty2 = (maxBounds.y - origin.y) * inverseDirection.y
 
-		tMin = math.max(tMin, math.min(ty1, ty2, tMax))
-		tMax = math.min(tMax, math.max(ty1, ty2, tMin))
+		tMin = math.max(tMin, math.min(ty1, ty2))
+		tMax = math.min(tMax, math.max(ty1, ty2))
 
 		local tz1 = (minBounds.z - origin.z) * inverseDirection.z
 		local tz2 = (maxBounds.z - origin.z) * inverseDirection.z
 
-		tMin = math.max(tMin, math.min(tz1, tz2, tMax))
-		tMax = math.min(tMax, math.max(tz1, tz2, tMin))
+		tMin = math.max(tMin, math.min(tz1, tz2))
+		tMax = math.min(tMax, math.max(tz1, tz2))
 
-		if tMax > math.max(tMin, 0) then
+		if tMax >= math.max(tMin, 0) then
 			return true, tMin
 		else
 			return false, math.huge

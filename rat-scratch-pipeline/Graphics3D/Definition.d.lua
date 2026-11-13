@@ -12,6 +12,7 @@ local PipelineSceneDefinition = {}
 local PipelineSceneSkeletonDefinition = {}
 
 --- @class RatScratch.Pipeline.Graphics3D.PipelineModelDefinition
+--- @field public name string
 --- @field public meshes RatScratch.Pipeline.Graphics3D.PipelineMeshDefinition[]
 --- @field public transform? love.Transform
 --- @field public skeleton? RatScratch.Graphics.Graphics3D.SkeletonDefinition
@@ -22,9 +23,18 @@ local PipelineModelDefinition = {}
 --- @field public indexCount integer
 --- @field public vertices table<string, love.Data>
 --- @field public indices love.Data
+--- @field public meshletIndices love.Data
 --- @field public lod RatScratch.Pipeline.Graphics3D.PipelineLODDefinition[]
 --- @field public material RatScratch.Graphics.Graphics3D.MaterialDefinition
+--- @field public blas RatScratch.Pipeline.Graphics3D.PipelineBLASDefinition
 local PipelineMeshDefinition = {}
+
+--- @class RatScratch.Pipeline.Graphics3D.PipelineBLASDefinition
+--- @field public nodes love.Data
+--- @field public indices love.Data
+--- @field public minBounds RatScratch.Math.Vector3
+--- @field public maxBounds RatScratch.Math.Vector3
+local PipelineBLASDefinition = {}
 
 --- @class RatScratch.Pipeline.Graphics3D.PipelineLODDefinition
 --- @field public clusters love.Data

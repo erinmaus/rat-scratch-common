@@ -13,6 +13,13 @@ local RATPipelineExtra = {}
 --- @field public cluster? RatScratch.Pipeline.GLTF.RAT_mesh_primitive_cluster
 local RATMeshMeshletPrimitive = {}
 
+--- @class RatScratch.Pipeline.GLTF.RAT_mesh_primitive_blas
+--- @field public blas integer
+--- @field public indices integer
+--- @field public minBounds number[]
+--- @field public maxBounds number[]
+local RATMeshPrimitiveBLAS = {}
+
 --- @class RatScratch.Pipeline.GLTF.RAT_mesh_primitive_cluster
 --- @field public clusters integer
 --- @field public clusterCount integer

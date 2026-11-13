@@ -3,18 +3,25 @@ local PipelineMesh = require("rat-scratch-pipeline.Graphics3D.PipelineMesh")
 local Skeleton = require("rat-scratch-graphics.Graphics3D").Skeleton
 
 --- @class RatScratch.Pipeline.Graphics3D.PipelineModel : RatScratch.Common.BaseObject
+--- @field private name string
 --- @field private meshes RatScratch.Pipeline.Graphics3D.PipelineMesh[]
 --- @field private skeleton? RatScratch.Graphics.Graphics3D.Skeleton
 --- @field private transform love.Transform
---- @overload fun(meshes: RatScratch.Pipeline.Graphics3D.PipelineMesh[], transform?: love.Transform, skeleton: RatScratch.Graphics.Graphics3D.Skeleton?): RatScratch.Pipeline.Graphics3D.PipelineModel
+--- @overload fun(name: string, meshes: RatScratch.Pipeline.Graphics3D.PipelineMesh[], transform?: love.Transform, skeleton: RatScratch.Graphics.Graphics3D.Skeleton?): RatScratch.Pipeline.Graphics3D.PipelineModel
 local PipelineModel = Object()
 
+--- @param name string
 --- @param meshes RatScratch.Pipeline.Graphics3D.PipelineMesh[]
 --- @param transform? love.Transform
-function PipelineModel:new(meshes, transform, skeleton)
+function PipelineModel:new(name, meshes, transform, skeleton)
+	self.name = name or ""
 	self.meshes = meshes
 	self.transform = transform or love.math.newTransform()
 	self.skeleton = skeleton
+end
+
+function PipelineModel:getName()
+	return self.name
 end
 
 function PipelineModel:getMeshCount()
@@ -44,6 +51,7 @@ function PipelineModel.fromDefinition(modelDefinition, skeleton)
 	end
 
 	return PipelineModel(
+		modelDefinition.name,
 		meshes,
 		modelDefinition.transform,
 		skeleton

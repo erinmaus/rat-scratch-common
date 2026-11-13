@@ -287,7 +287,8 @@ function BVHNode:getIsLeaf()
 end
 
 function BVHNode:getIndexCount()
-	return self.index, self.count
+	return self.parent and self.parent.index or self.index,
+		self.parent and self.parent.count or self.count
 end
 
 --- @param index integer

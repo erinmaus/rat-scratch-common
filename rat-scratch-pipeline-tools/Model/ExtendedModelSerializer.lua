@@ -7,6 +7,10 @@ local Scene = require("rat-scratch-graphics").Graphics3D.Scene
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local PipelineLOD = require("rat-scratch-pipeline").Graphics3D.PipelineLOD
 local RatScratchModule = require("lib.rat-scratch-module")
+local MeshBVH = require("rat-scratch-graphics").MeshBVH
+local BVH = require("rat-scratch-graphics").BVH
+local AccelerationStructure =
+	require("rat-scratch-graphics").AccelerationStructure
 
 --- @class RatScratch.Pipeline.ExtendedModelSerializer : RatScratch.Common.BaseObject
 --- @overload fun(modelDefinition: RatScratch.Graphics.Graphics3D.ModelDefinition, extendedModel: RatScratch.Pipeline.ExtendedModel): RatScratch.Pipeline.ExtendedModelSerializer
@@ -618,7 +622,37 @@ function ExtendedModelSerializer:_serializeModel(builder, node)
 			primitive.extras = extras
 		end
 
+		--- @type RatScratch.Pipeline.GLTF.RAT_mesh_primitive_blas
+		local blasExtra
+		do
+			local modelDefinition = self.extendedModel:getModelDefinition()
+			local meshDefinition = modelDefinition.meshes[i]
+
+			local bvh = MeshBVH.fromMeshDefinition(
+				BVH.DEFAULT_STACKLESS_BUILD_STRATEGY,
+				meshDefinition
+			)
+			local blas = AccelerationStructure.fromBVH(nil, bvh)
+			local blasNodeData, blasIndexData = blas:toData()
+
+			local minBounds, maxBounds = blas:extractNodeBounds(1)
+			local blasDataViewIndex = builder:addWorkingBufferView({
+				data = blasNodeData,
+			})
+			local blasIndexDataViewIndex = builder:addWorkingBufferView({
+				data = blasIndexData,
+			})
+
+			blasExtra = {
+				blas = blasDataViewIndex,
+				indices = blasIndexDataViewIndex,
+				minBounds = { minBounds:get() },
+				maxBounds = { maxBounds:get() },
+			}
+		end
+
 		extras.RAT_mesh_primitive_meshlets = primitiveExtras
+		extras.RAT_mesh_primitive_blas = blasExtra
 	end
 end
 
