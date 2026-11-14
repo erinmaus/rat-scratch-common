@@ -340,11 +340,11 @@ do
 
 			if pointer.canvas == "depth" then
 				assert(
-					not _binding.depthstencil,
+					not binding.depthstencil,
 					"cannot bind multiple depth/stencil buffers"
 				)
 
-				_binding.depthstencil = pointer.renderBuffer:getDepthCanvas()
+				binding.depthstencil = pointer.renderBuffer:getDepthCanvas()
 			else
 				local index = pointer.canvas
 
@@ -352,6 +352,30 @@ do
 				binding[i] = pointer.renderBuffer:getCanvas(index)
 			end
 		end
+
+		binding.shaderlayer = true
+		love.graphics.setCanvas(binding)
+	end
+
+	--- @param ... RatScratch.Pipeline.RenderBuffer.CanvasPointer
+	function RenderBuffer.multibindDepth(...)
+		local binding = _binding
+		Table.clear(binding)
+
+		for i = 1, select("#", ...) do
+			--- @type RatScratch.Pipeline.RenderBuffer.CanvasPointer
+			local pointer = select(i, ...)
+
+			if pointer.canvas == "depth" then
+				assert(
+					not binding.depthstencil,
+					"cannot bind multiple depth/stencil buffers"
+				)
+
+				binding.depthstencil = pointer.renderBuffer:getDepthCanvas()
+			end
+		end
+		assert(binding.depthstencil, "no depth/stencil buffer provided")
 
 		binding.shaderlayer = true
 		love.graphics.setCanvas(binding)

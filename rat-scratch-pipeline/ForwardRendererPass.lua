@@ -3,7 +3,6 @@ local assert = require("rat-scratch-common").Debug.assert
 local LightClusterResult = require("rat-scratch-pipeline.LightClusterResult")
 local LightPipeline = require("rat-scratch-pipeline.LightPipeline")
 local MaterialPipeline = require("rat-scratch-pipeline.MaterialPipeline")
-local PostProcess = require("rat-scratch-pipeline.PostProcess")
 local ReflectionProbeClusterResult =
 	require("rat-scratch-pipeline.ReflectionProbeClusterResult")
 local ReflectionProbePipeline =
@@ -15,16 +14,15 @@ local RenderPass = require("rat-scratch-pipeline.RenderPass")
 local ShadowRenderPass = require("rat-scratch-pipeline.ShadowRenderPass")
 
 --- @class RatScratch.Pipeline.ForwardRenderPass : RatScratch.Pipeline.RenderPass
+--- @field private renderBufferOverride? RatScratch.Pipeline.RenderBuffer.CanvasPointer[]
 --- @field private renderBuffer RatScratch.Pipeline.RenderBuffer
 --- @field private oitRenderBuffer RatScratch.Pipeline.RenderBuffer
---- @field private cullResult RatScratch.Pipeline.CullResult
+--- @field private sortedCullResult RatScratch.Pipeline.SortedCullResult
 --- @field private lightClusterResult RatScratch.Pipeline.LightClusterResult
 --- @field private reflectionProbeClusterResult? RatScratch.Pipeline.ReflectionProbeClusterResult
 --- @field private width integer
 --- @field private height integer
---- @field private prepareOITShader RatScratch.Resource.Resource<love.Shader>
---- @field private resolveOITShader RatScratch.Resource.Resource<love.Shader>
---- @field private aBuffer love.GraphicsBuffer
+--- @field private isOpaque boolean
 --- @overload fun(): RatScratch.Pipeline.ForwardRenderPass
 local ForwardRenderPass = Object(RenderPass)
 
@@ -55,6 +53,17 @@ function ForwardRenderPass:new()
 
 	self.width, self.height = love.graphics.getDimensions()
 	self.isRenderBufferDirty = true
+
+	self.isOpaque = false
+end
+
+function ForwardRenderPass:getIsOpaque()
+	return self.isOpaque
+end
+
+--- @param value boolean
+function ForwardRenderPass:setIsOpaque(value)
+	self.isOpaque = value
 end
 
 --- @param width integer
@@ -76,65 +85,63 @@ function ForwardRenderPass:getHeight()
 	return self.height
 end
 
+function ForwardRenderPass:setRenderBufferOverride(...)
+	self.renderBufferOverride = { ... }
+end
+
+function ForwardRenderPass:getRenderBufferOverride()
+	return unpack(self.renderBufferOverride)
+end
+
+function ForwardRenderPass:hasRenderBufferOverride()
+	return not not self.renderBufferOverride
+end
+
 --- @private
 function ForwardRenderPass:_updateRenderBuffer()
-	local cameraCount = self.cullResult:getCamerasBuffer():getCameraCount()
+	local cameraCount =
+		self.sortedCullResult:getCamerasBuffer():getCameraCount()
 	if
 		self.isRenderBufferDirty
 		or (self.renderBuffer and self.renderBuffer:getLayers() < cameraCount)
 	then
-		if not self.renderBuffer then
-			self.renderBuffer = RenderBuffer(
-				ForwardRenderPass.RENDER_BUFFER_FORMAT,
-				ForwardRenderPass.RENDER_BUFFER_DEPTH_FORMAT
-			)
+		if not self:hasRenderBufferOverride() then
+			if not self.renderBuffer then
+				self.renderBuffer = RenderBuffer(
+					ForwardRenderPass.RENDER_BUFFER_FORMAT,
+					ForwardRenderPass.RENDER_BUFFER_DEPTH_FORMAT
+				)
+			end
+
+			self.renderBuffer:resize(self.width, self.height, cameraCount)
 		end
-
-		if not self.oitRenderBuffer then
-			self.oitRenderBuffer =
-				RenderBuffer(ForwardRenderPass.OIT_RENDER_BUFFER_FORMAT)
-		end
-
-		self.renderBuffer:resize(self.width, self.height, cameraCount)
-		self.oitRenderBuffer:resize(self.width, self.height, cameraCount)
-
-		if self.aBuffer then
-			self.aBuffer:release()
-		end
-
-		local oitSamples = self:getPipelineRuntime():getCurrentProperty(
-			self:getQualityPreset(),
-			"pipeline.properties.forward.oitSampleCount"
-		)
-
-		local count = self.width * self.height * cameraCount * oitSamples
-		self.aBuffer = love.graphics.newBuffer(
-			ForwardRenderPass.A_BUFFER_FRAGMENT_FORMAT,
-			count,
-			{ shaderstorage = true }
-		)
 	end
 end
 
 --- @return RatScratch.Pipeline.RenderBuffer
 function ForwardRenderPass:getRenderBuffer()
 	assert(self:getIsAttached(), "cannot get render buffer until attached")
+	assert(not self:hasRenderBufferOverride(), "render buffer is overriden")
+
+	self:_updateRenderBuffer()
 	return self.renderBuffer
 end
 
 function ForwardRenderPass:attached()
 	RenderPass.attached(self)
 
-	if not self.cullResult then
-		self.cullResult = self:getScene():newCullResult()
-	end
+	assert(
+		self.sortedCullResult,
+		"expected cull result to be set before being attached"
+	)
 
 	self.lightClusterResult =
-		LightClusterResult(self.cullResult:getCamerasBuffer())
+		LightClusterResult(self.sortedCullResult:getCamerasBuffer())
 
 	if self:hasDependency(ReflectionRenderPass) then
-		self.reflectionProbeClusterResult =
-			ReflectionProbeClusterResult(self.cullResult:getCamerasBuffer())
+		self.reflectionProbeClusterResult = ReflectionProbeClusterResult(
+			self.sortedCullResult:getCamerasBuffer()
+		)
 	end
 
 	self.prepareOITShader = self:getPipelineRuntime():loadComputeShader(
@@ -150,16 +157,16 @@ function ForwardRenderPass:attached()
 end
 
 function ForwardRenderPass:getCullResult()
-	return self.cullResult
+	return self.sortedCullResult
 end
 
---- @param value RatScratch.Pipeline.CullResult
+--- @param value RatScratch.Pipeline.SortedCullResult
 function ForwardRenderPass:setCullResult(value)
 	assert(
-		not self.cullResult,
+		not self.sortedCullResult,
 		"cull result already set; cannot change once set"
 	)
-	self.cullResult = value
+	self.sortedCullResult = value
 end
 
 function ForwardRenderPass:getLightClusterResult()
@@ -199,10 +206,13 @@ do
 	function ForwardRenderPass:_bindDrawShader(drawShader, pipelineRenderer)
 		pipelineRenderer:bind(drawShader, self)
 
-		self.cullResult:getCamerasBuffer():bind(drawShader)
+		self.sortedCullResult:getCamerasBuffer():bind(drawShader)
 
 		if drawShader:hasUniform("rat_DrawsBuffer") then
-			drawShader:send("rat_DrawsBuffer", self.cullResult:getDrawsBuffer())
+			drawShader:send(
+				"rat_DrawsBuffer",
+				self.sortedCullResult:getDrawsBuffer()
+			)
 		end
 
 		if drawShader:hasUniform("rat_LightCountIndicesBuffer") then
@@ -241,28 +251,6 @@ do
 				)
 			end
 		end
-
-		if drawShader:hasUniform("rat_OITABufferCount") then
-			drawShader:send(
-				"rat_OITABufferCount",
-				self.oitRenderBuffer:getCanvas(
-					ForwardRenderPass.OIT_A_BUFFER_FRAGMENT_COUNT
-				)
-			)
-		end
-
-		if drawShader:hasUniform("rat_OITABufferFragmentLock") then
-			drawShader:send(
-				"rat_OITABufferFragmentLock",
-				self.oitRenderBuffer:getCanvas(
-					ForwardRenderPass.OIT_A_BUFFER_FRAGMENT_COUNT
-				)
-			)
-		end
-
-		if drawShader:hasUniform("rat_OITFragmentsBuffer") then
-			drawShader:send("rat_OITFragmentsBuffer", self.aBuffer)
-		end
 	end
 end
 
@@ -271,96 +259,22 @@ end
 function ForwardRenderPass:_drawForward(drawShader)
 	love.graphics.push("all")
 	love.graphics.setShader(drawShader)
-	love.graphics.setDepthMode()
 
-	if drawShader:hasUniform("rat_OITABufferLock") then
-		drawShader:send(
-			"rat_OITABufferLock",
-			self.oitRenderBuffer:getCanvas(
-				ForwardRenderPass.OIT_A_BUFFER_FRAGMENT_LOCK
-			)
-		)
+	local writeDepth = self:getIsOpaque()
+	love.graphics.setDepthMode("lequal", writeDepth)
+
+	if self:hasRenderBufferOverride() then
+		RenderBuffer.multibind(unpack(self.renderBufferOverride))
+	else
+		self:getRenderBuffer():bind()
+		love.graphics.clear(0, 0, 0, 0)
 	end
-
-	self:getRenderBuffer():bind(nil, true)
-	love.graphics.clear(0, 0, 0, 0)
 
 	love.graphics.drawFromShaderIndirect(
 		"triangles",
-		self.cullResult:getIndirectDrawBuffer()
+		self.sortedCullResult:getIndirectDrawBuffer()
 	)
 
-	love.graphics.pop()
-end
-
-function ForwardRenderPass:_prepareOIT()
-	if not self.prepareOITShader:getIsReady() then
-		return
-	end
-
-	local shader = self.prepareOITShader:get()
-
-	local camerasBuffer = self.cullResult:getCamerasBuffer()
-	local activeCameraBuffer = camerasBuffer:getActiveCameraBuffer()
-	if shader:hasUniform("rat_LayersBuffer") then
-		shader:send("rat_LayersBuffer", activeCameraBuffer:getBuffer())
-	end
-
-	if shader:hasUniform("rat_OITABufferCount") then
-		shader:send(
-			"rat_OITABufferCount",
-			self.oitRenderBuffer:getCanvas(
-				ForwardRenderPass.OIT_A_BUFFER_FRAGMENT_COUNT
-			)
-		)
-	end
-
-	local localX, localY = shader:getLocalThreadgroupSize()
-
-	love.graphics.dispatchThreadgroups(
-		shader,
-		math.max(math.ceil(self.width / localX), 1),
-		math.max(math.ceil(self.height / localY), 1),
-		1
-	)
-end
-
---- @private
-function ForwardRenderPass:_resolveOIT()
-	if not self.resolveOITShader:getIsReady() then
-		return
-	end
-
-	love.graphics.push("all")
-	love.graphics.setBlendMode("alpha")
-	love.graphics.setDepthMode()
-
-	local shader = self.resolveOITShader:get()
-	love.graphics.setShader(shader)
-	self:getRenderBuffer():bind()
-	love.graphics.clear(0, 0, 0, 0)
-
-	local camerasBuffer = self.cullResult:getCamerasBuffer()
-	local activeCameraBuffer = camerasBuffer:getActiveCameraBuffer()
-	if shader:hasUniform("rat_LayersBuffer") then
-		shader:send("rat_LayersBuffer", activeCameraBuffer:getBuffer())
-	end
-
-	if shader:hasUniform("rat_OITABufferCount") then
-		shader:send(
-			"rat_OITABufferCount",
-			self.oitRenderBuffer:getCanvas(
-				ForwardRenderPass.OIT_A_BUFFER_FRAGMENT_COUNT
-			)
-		)
-	end
-
-	if shader:hasUniform("rat_OITFragmentsBuffer") then
-		shader:send("rat_OITFragmentsBuffer", self.aBuffer)
-	end
-
-	local activeCameraCount = camerasBuffer:getActiveCameraCount()
-	PostProcess.drawInstanced(activeCameraCount)
 	love.graphics.pop()
 end
 
@@ -374,13 +288,9 @@ function ForwardRenderPass:draw(pipelineRenderer)
 		return
 	end
 
-	self:_prepareOIT()
-
 	local drawShader = drawShaderResource:get()
 	self:_bindDrawShader(drawShader, pipelineRenderer)
 	self:_drawForward(drawShader)
-
-	self:_resolveOIT()
 end
 
 return ForwardRenderPass

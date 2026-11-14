@@ -19,10 +19,14 @@ local ArcballCameraView = require("rat-scratch-pipeline").ArcballCameraView
 local ShadowRenderPass = require("rat-scratch-pipeline").ShadowRenderPass
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local IndirectDraw = require("rat-scratch-pipeline").IndirectDraw
+local OITForwardRendererPass =
+	require("rat-scratch-pipeline").OITForwardRendererPass
 local ForwardRendererPass = require("rat-scratch-pipeline").ForwardRendererPass
 local Table = require("rat-scratch-common").Table
 local MeshBVH = require("rat-scratch-graphics").MeshBVH
 local BVH = require("rat-scratch-graphics").BVH
+local FilteredCullResult = require("rat-scratch-pipeline").FilteredCullResult
+local SortedCullResult = require("rat-scratch-pipeline").SortedCullResult
 local ReflectionRenderPass =
 	require("rat-scratch-pipeline").ReflectionRenderPass
 local ReflectionProbe = require("rat-scratch-pipeline").ReflectionProbe
@@ -190,10 +194,42 @@ function demo.load()
 	-- 	demo.scene
 	-- )
 
-	demo.forwardRenderPass = ForwardRendererPass()
-	demo.forwardRenderPass:addDependency(demo.shadowRenderPass)
-	--demo.forwardRenderPass:addDependency(demo.reflectionRenderPass)
-	demo.forwardRenderPass:attach(
+	demo.forwardCullResult = demo.scene:newCullResult()
+	demo.filteredCullResult = FilteredCullResult(demo.forwardCullResult)
+	demo.blendSortedCullResult = SortedCullResult(
+		demo.filteredCullResult,
+		FilteredCullResult.BLEND_PASS_INDIRECT_BUFFER_INDEX,
+		SortedCullResult.SORT_SIGN_BLEND
+	)
+	demo.opaqueSortedCullResult = SortedCullResult(
+		demo.filteredCullResult,
+		FilteredCullResult.OPAQUE_PASS_INDIRECT_BUFFER_INDEX,
+		SortedCullResult.SORT_SIGN_OPAQUE
+	)
+
+	demo.opaqueForwardRenderPass = ForwardRendererPass()
+	demo.opaqueForwardRenderPass:setIsOpaque(true)
+	demo.opaqueForwardRenderPass:addDependency(demo.shadowRenderPass)
+	demo.opaqueForwardRenderPass:setCullResult(demo.opaqueSortedCullResult)
+	demo.opaqueForwardRenderPass:attach(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.world,
+		demo.scene
+	)
+
+	local opaqueRenderBuffer = demo.opaqueForwardRenderPass:getRenderBuffer()
+	local colorPointer = opaqueRenderBuffer:newCanvasPointer(1)
+	local depthPointer = opaqueRenderBuffer:newDepthCanvasPointer()
+
+	demo.blendForwardRenderPass = OITForwardRendererPass()
+	demo.blendForwardRenderPass:addDependency(demo.shadowRenderPass)
+	demo.blendForwardRenderPass:setCullResult(demo.blendSortedCullResult)
+	demo.blendForwardRenderPass:setRenderBufferOverride(
+		colorPointer,
+		depthPointer
+	)
+	--demo.blendForwardRenderPass:addDependency(demo.reflectionRenderPass)
+	demo.blendForwardRenderPass:attach(
 		demo.runtime:getDefaultQualityPreset(),
 		demo.world,
 		demo.scene
@@ -376,7 +412,7 @@ function demo.update()
 			end
 		end
 
-		local minY = Vector3(-math.huge, 5, -math.huge)
+		local minY = Vector3(-math.huge, 1, -math.huge)
 		pointLightInfo.light:setPosition(position:scale(10):max(minY))
 	end
 
@@ -388,7 +424,9 @@ function demo.update()
 	if not demo.readbacks then
 		demo.readbacks = {
 			love.graphics.readbackBufferAsync(
-				demo.forwardRenderPass:getCullResult():getIndirectDrawBuffer()
+				demo.filteredCullResult:getIndirectDrawBuffer(
+					FilteredCullResult.OPAQUE_PASS_INDIRECT_BUFFER_INDEX
+				)
 			),
 			love.graphics.readbackBufferAsync(
 				demo.shadowRenderPass:getCullResult():getIndirectDrawBuffer()
@@ -570,19 +608,29 @@ function demo.draw()
 	demo.renderer:cull(
 		demo.runtime:getDefaultQualityPreset(),
 		demo.scene,
-		demo.forwardRenderPass:getCullResult()
+		demo.forwardCullResult
+	)
+	demo.renderer:filter(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.scene,
+		demo.filteredCullResult
 	)
 	demo.renderer:sort(
 		demo.runtime:getDefaultQualityPreset(),
 		demo.scene,
-		demo.forwardRenderPass:getCullResult(),
-		PipelineRenderer.SORT_SIGN_FORWARD
+		demo.blendSortedCullResult
 	)
-	demo.renderer:draw(demo.forwardRenderPass)
+	demo.renderer:sort(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.scene,
+		demo.opaqueSortedCullResult
+	)
+	demo.renderer:draw(demo.opaqueForwardRenderPass)
+	demo.renderer:draw(demo.blendForwardRenderPass)
 	love.graphics.pop()
 
 	love.graphics.drawLayer(
-		demo.forwardRenderPass:getRenderBuffer():getCanvas(1),
+		demo.opaqueForwardRenderPass:getRenderBuffer():getCanvas(1),
 		1
 	)
 	for i = 1, #demo.pointLights do
