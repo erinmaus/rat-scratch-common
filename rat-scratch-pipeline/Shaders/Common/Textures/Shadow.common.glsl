@@ -42,7 +42,7 @@ bool ratSampleShadowImplGetTextureSpaceCoordinate(uint cameraIndex, vec3 worldPo
 float ratSampleShadowTextureDirect(sampler2DArray atlasTexture, uint shadowTextureIndex, vec3 textureSpacePosition)
 {
 	textureSpacePosition.xy = clamp(textureSpacePosition.xy, vec2(0.0), vec2(1.0));
-	textureSpacePosition.xy = vec2(1.0) - textureSpacePosition.xy;
+	textureSpacePosition.y = 1.0 - textureSpacePosition.y;
 
 	RatScratchPipelineShadowTexture textureAtlasInfo = rat_ShadowTextures[shadowTextureIndex];
 	vec2 atlasTextureCoordinate = textureSpacePosition.xy * textureAtlasInfo.size + textureAtlasInfo.position;
