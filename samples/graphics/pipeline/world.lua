@@ -19,6 +19,8 @@ local ArcballCameraView = require("rat-scratch-pipeline").ArcballCameraView
 local ShadowRenderPass = require("rat-scratch-pipeline").ShadowRenderPass
 local BufferFormat = require("rat-scratch-graphics").Graphics3D.BufferFormat
 local IndirectDraw = require("rat-scratch-pipeline").IndirectDraw
+local RenderBuffer = require("rat-scratch-pipeline").RenderBuffer
+local DepthRendererPass = require("rat-scratch-pipeline").DepthRendererPass
 local OITForwardRendererPass =
 	require("rat-scratch-pipeline").OITForwardRendererPass
 local ForwardRendererPass = require("rat-scratch-pipeline").ForwardRendererPass
@@ -187,6 +189,15 @@ function demo.load()
 	)
 
 	demo.reflectionRenderPass = ReflectionRenderPass()
+
+	demo.renderBuffer = RenderBuffer({
+		"srgba8",
+	}, "depth32f")
+	demo.renderBuffer:resize(
+		love.graphics.getWidth(),
+		love.graphics.getHeight(),
+		1
+	)
 	-- demo.reflectionRenderPass:addDependency(demo.shadowRenderPass)
 	-- demo.reflectionRenderPass:attach(
 	-- 	demo.runtime:getDefaultQualityPreset(),
@@ -207,8 +218,24 @@ function demo.load()
 		SortedCullResult.SORT_SIGN_OPAQUE
 	)
 
+	local colorPointer = demo.renderBuffer:newCanvasPointer(1)
+	local depthPointer = demo.renderBuffer:newDepthCanvasPointer()
+
+	demo.depthRenderPass = DepthRendererPass()
+	demo.depthRenderPass:setRenderBufferOverride(colorPointer, depthPointer)
+	demo.depthRenderPass:setCullResult(demo.opaqueSortedCullResult)
+	demo.depthRenderPass:attach(
+		demo.runtime:getDefaultQualityPreset(),
+		demo.world,
+		demo.scene
+	)
+
 	demo.opaqueForwardRenderPass = ForwardRendererPass()
-	demo.opaqueForwardRenderPass:setIsOpaque(true)
+	demo.opaqueForwardRenderPass:setIsOpaque(false)
+	demo.opaqueForwardRenderPass:setRenderBufferOverride(
+		colorPointer,
+		depthPointer
+	)
 	demo.opaqueForwardRenderPass:addDependency(demo.shadowRenderPass)
 	demo.opaqueForwardRenderPass:setCullResult(demo.opaqueSortedCullResult)
 	demo.opaqueForwardRenderPass:attach(
@@ -217,11 +244,11 @@ function demo.load()
 		demo.scene
 	)
 
-	local opaqueRenderBuffer = demo.opaqueForwardRenderPass:getRenderBuffer()
-	local colorPointer = opaqueRenderBuffer:newCanvasPointer(1)
-	local depthPointer = opaqueRenderBuffer:newDepthCanvasPointer()
-
 	demo.blendForwardRenderPass = OITForwardRendererPass()
+	demo.blendForwardRenderPass:setRenderBufferOverride(
+		colorPointer,
+		depthPointer
+	)
 	demo.blendForwardRenderPass:addDependency(demo.shadowRenderPass)
 	demo.blendForwardRenderPass:setCullResult(demo.blendSortedCullResult)
 	demo.blendForwardRenderPass:setRenderBufferOverride(
@@ -591,12 +618,17 @@ function demo.draw()
 	love.graphics.push("all")
 	love.graphics.setDepthMode("lequal", true)
 
+	demo.renderBuffer:bind()
+	love.graphics.clear(0, 0, 0, 0)
+
 	demo.renderer:cull(
 		demo.runtime:getDefaultQualityPreset(),
 		demo.scene,
 		demo.shadowRenderPass:getCullResult()
 	)
 	demo.renderer:draw(demo.shadowRenderPass)
+
+	demo.renderer:draw(demo.depthRenderPass)
 
 	-- demo.renderer:cull(
 	-- 	demo.runtime:getDefaultQualityPreset(),
@@ -629,10 +661,7 @@ function demo.draw()
 	demo.renderer:draw(demo.blendForwardRenderPass)
 	love.graphics.pop()
 
-	love.graphics.drawLayer(
-		demo.opaqueForwardRenderPass:getRenderBuffer():getCanvas(1),
-		1
-	)
+	love.graphics.drawLayer(demo.renderBuffer:getCanvas(1), 1)
 	for i = 1, #demo.pointLights do
 		local position = demo.camera:project(
 			demo.pointLights[i].light:getPosition(),

@@ -10,6 +10,7 @@ return {
 	CameraProjection = require("rat-scratch-pipeline.CameraProjection"),
 	CameraView = require("rat-scratch-pipeline.CameraView"),
 	CullResult = require("rat-scratch-pipeline.CullResult"),
+	DepthRendererPass = require("rat-scratch-pipeline.DepthRendererPass"),
 	DirectionalLight = require("rat-scratch-pipeline.DirectionalLight"),
 	Draw = require("rat-scratch-pipeline.Draw"),
 	DrawPipeline = require("rat-scratch-pipeline.DrawPipeline"),

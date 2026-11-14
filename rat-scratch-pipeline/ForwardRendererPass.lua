@@ -26,22 +26,9 @@ local ShadowRenderPass = require("rat-scratch-pipeline.ShadowRenderPass")
 --- @overload fun(): RatScratch.Pipeline.ForwardRenderPass
 local ForwardRenderPass = Object(RenderPass)
 
-ForwardRenderPass.A_BUFFER_FRAGMENT_FORMAT = {
-	{ location = 0, name = "color", format = "uint32" },
-	{ location = 1, name = "depth", format = "float" },
-}
-
 ForwardRenderPass.RENDER_BUFFER_FORMAT = {
 	"srgba8",
 }
-
-ForwardRenderPass.OIT_RENDER_BUFFER_FORMAT = {
-	"r8ui",
-	"r32ui",
-}
-
-ForwardRenderPass.OIT_A_BUFFER_FRAGMENT_COUNT = 1
-ForwardRenderPass.OIT_A_BUFFER_FRAGMENT_LOCK = 2
 
 ForwardRenderPass.RENDER_BUFFER_DEPTH_FORMAT = "depth32f"
 
@@ -145,17 +132,6 @@ function ForwardRenderPass:attached()
 			self.sortedCullResult:getCamerasBuffer()
 		)
 	end
-
-	self.prepareOITShader = self:getPipelineRuntime():loadComputeShader(
-		"@Pipeline/Base/Forward/PrepareOIT.compute.glsl",
-		self:getQualityPreset()
-	)
-
-	self.resolveOITShader = self:getPipelineRuntime():loadShader(
-		"@Pipeline/Base/Forward/ResolveOIT.frag.glsl",
-		"@Pipeline/PostProcess/SubsetLayeredVertex.vert.glsl",
-		self:getQualityPreset()
-	)
 end
 
 function ForwardRenderPass:getCullResult()
@@ -182,8 +158,8 @@ function ForwardRenderPass:start()
 
 	self:getScene():getPipeline(LightPipeline):clusterLights(
 		self:getQualityPreset(),
-		self.renderBuffer:getWidth(),
-		self.renderBuffer:getHeight(),
+		self.width,
+		self.height,
 		self.lightClusterResult
 	)
 
@@ -192,8 +168,8 @@ function ForwardRenderPass:start()
 			:getPipeline(ReflectionProbePipeline)
 			:clusterReflectionProbes(
 				self:getQualityPreset(),
-				self.renderBuffer:getWidth(),
-				self.renderBuffer:getHeight(),
+				self.width,
+				self.height,
 				self.reflectionProbeClusterResult
 			)
 	end
@@ -225,8 +201,7 @@ do
 		end
 
 		local screenSize = _screenSize
-		screenSize[1], screenSize[2] =
-			self.renderBuffer:getWidth(), self.renderBuffer:getHeight()
+		screenSize[1], screenSize[2] = self.width, self.height
 		if drawShader:hasUniform("rat_ScreenSize") then
 			drawShader:send("rat_ScreenSize", screenSize)
 		end
