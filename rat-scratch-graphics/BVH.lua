@@ -58,6 +58,36 @@ function BVH:new(nodeCount, objectCount)
 	end
 end
 
+--- @param nodeCount? integer
+--- @param objectCount? integer
+function BVH:resize(nodeCount, objectCount)
+	nodeCount = nodeCount or self.nodeCount
+	objectCount = objectCount or self.objectCount
+
+	for i = #self.nodes + 1, nodeCount do
+		local node = BVHNode(i)
+
+		self.nodes[i] = node
+		self.readonlyNodes[i] = BVHNode.makeReadOnly(node)
+
+		BufferFormat.resetValue(
+			BVHNode.NODE_FORMAT_INSTANCE,
+			self.data,
+			Table.indexToStride(
+				i,
+				BVHNode.NODE_FORMAT_INSTANCE:getComponentCount()
+			) - 1
+		)
+	end
+
+	for i = #self.objectIndices + 1, objectCount do
+		self.objectIndices[i] = i
+	end
+
+	self.nodeCount = nodeCount
+	self.objectCount = objectCount
+end
+
 --- @param index integer
 --- @return RatScratch.Graphics.BVHNode
 function BVH:getNode(index)

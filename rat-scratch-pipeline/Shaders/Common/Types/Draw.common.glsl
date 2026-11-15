@@ -29,8 +29,11 @@ struct RatScratchPipelineMesh
 	uvec2 clusterNodeIndexCount;
 	uint clusterRootNodeCount;
 	uint indexOffset;
+	uint meshletIndexOffset;
 	uint staticBaseVertexOffset;
 	uint skinnedBaseVertexOffset;
+	uint blasIndex;
+	uint blasIndicesIndex;
 };
 
 struct RatScratchPipelineMeshCluster
@@ -93,6 +96,19 @@ struct RatScratchPipelineCamera
 	vec4 nearPlane;
 	vec4 farPlane;
 	uint projectionType;
+};
+
+struct RatScratchPipelineScene
+{
+	uint tlasIndex;
+};
+
+struct RatScratchPipelineBLASInstance
+{
+	uint tag;
+	uint rootNodeOffset;
+	uint indexOffset;
+	mat4 transform;
 };
 
 struct RatScratchPipelineDraw

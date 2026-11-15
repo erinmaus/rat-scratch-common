@@ -49,9 +49,12 @@ ModelPipeline.MESH_FORMAT = {
 	{ location = 1, name = "clusterGroupIndexCount", format = "uint32vec2" },
 	{ location = 2, name = "clusterNodeIndexCount", format = "uint32vec2" },
 	{ location = 3, name = "clusterRootNodeCount", format = "uint32" },
-	{ location = 4, name = "indexOffset", format = "uint32" },
-	{ location = 5, name = "staticBaseVertexOffset", format = "uint32" },
-	{ location = 6, name = "skinnedBaseVertexOffset", format = "uint32" },
+	{ location = 5, name = "indexOffset", format = "uint32" },
+	{ location = 6, name = "meshletIndexOffset", format = "uint32" },
+	{ location = 7, name = "staticBaseVertexOffset", format = "uint32" },
+	{ location = 8, name = "skinnedBaseVertexOffset", format = "uint32" },
+	{ location = 9, name = "blasIndex", format = "uint32" },
+	{ location = 10, name = "blasIndicesIndex", format = "uint32" },
 }
 
 ModelPipeline.CLUSTER_FORMAT = {
@@ -132,6 +135,8 @@ function ModelPipeline:new(pipelineRuntime)
 		{ shaderstorage = true },
 		ModelPipeline.DEFAULT_MODEL_COUNT
 	)
+
+	self.modelMeshBLASIndexCount = {}
 
 	self.meshesBuffer = PipelineBuffer(
 		ModelPipeline.MESH_FORMAT,
@@ -289,7 +294,8 @@ function ModelPipeline:addModel(model)
 			end
 		end
 
-		self.indexBuffer:register(mesh, mesh:getIndexCount())
+		self.indexBuffer:register(mesh, mesh:getMeshletIndexCount())
+		self.indexBuffer:register(mesh:getBLAS(), mesh:getIndexCount())
 	end
 end
 
@@ -324,7 +330,53 @@ function ModelPipeline:removeModel(model)
 		end
 
 		self.indexBuffer:unregister(mesh)
+		self.indexBuffer:unregister(mesh:getBLAS())
 	end
+end
+
+--- @param model RatScratch.Pipeline.Graphics3D.PipelineModel
+--- @param meshIndex integer
+--- @param blasIndex integer
+--- @param indicesIndex integer
+function ModelPipeline:setModelMeshBLASIndexIndicesIndex(
+	model,
+	meshIndex,
+	blasIndex,
+	indicesIndex
+)
+	local meshBLASIndexCounts = self.modelMeshBLASIndexCount[model]
+	if not meshBLASIndexCounts then
+		meshBLASIndexCounts = {}
+		self.modelMeshBLASIndexCount = meshBLASIndexCounts
+	end
+
+	local indexCount = meshBLASIndexCounts[meshIndex]
+	if not indexCount then
+		indexCount = {}
+		meshBLASIndexCounts[meshIndex] = indexCount
+	end
+
+	if not (indexCount[1] == blasIndex and indexCount[2] == indicesIndex) then
+		indexCount[1], indexCount[2] = blasIndex, indicesIndex
+		self.dirtyModels[model] = true
+	end
+end
+
+--- @param model RatScratch.Pipeline.Graphics3D.PipelineModel
+--- @param meshIndex integer
+--- @return integer, integer
+function ModelPipeline:getModelMeshBLASIndexIndicesIndex(model, meshIndex)
+	local meshBLASIndexCounts = self.modelMeshBLASIndexCount[model]
+	if not meshBLASIndexCounts then
+		return 1, 0
+	end
+
+	local indexCount = meshBLASIndexCounts[meshIndex]
+	if not indexCount then
+		return 1, 0
+	end
+
+	return indexCount[1], indexCount[2]
 end
 
 --- @param model RatScratch.Pipeline.Graphics3D.PipelineModel
@@ -444,7 +496,8 @@ function ModelPipeline:_updateModelBuffer(model)
 			end
 		end
 
-		self.indexBuffer:copyData(1, mesh, mesh:getIndexData())
+		self.indexBuffer:copyData(1, mesh, mesh:getMeshletIndexData())
+		self.indexBuffer:copyData(1, mesh:getBLAS(), mesh:getIndexData())
 	end
 end
 
@@ -485,11 +538,14 @@ function ModelPipeline:_updateMesh(model, mesh, meshIndex)
 		self.meshClusterGroupsBuffer:getIndexCount(mesh)
 	local nodeIndex, nodeCount = self.meshClusterNodesBuffer:getIndexCount(mesh)
 
-	local indexOffset = self.indexBuffer:getIndexCount(mesh)
+	local meshletIndicesIndex = self.indexBuffer:getIndexCount(mesh)
+	local indicesIndex = self.indexBuffer:getIndexCount(mesh:getBLAS())
 	local staticVertexIndex = self.staticVertexBuffer:getIndexCount(mesh)
 	local skinnedVertexIndex = self.skinnedVertexBuffer:has(mesh)
 			and self.skinnedVertexBuffer:getIndexCount(mesh)
 		or 0
+	local blasIndex, blasIndicesIndex =
+		self:getModelMeshBLASIndexIndicesIndex(model, meshIndex)
 
 	self.meshesBuffer:set(
 		model,
@@ -502,9 +558,12 @@ function ModelPipeline:_updateMesh(model, mesh, meshIndex)
 		nodeIndex - 1,
 		nodeCount,
 		lod:getRootNodeCount(),
-		indexOffset - 1,
+		indicesIndex - 1,
+		meshletIndicesIndex - 1,
 		staticVertexIndex - 1,
-		skinnedVertexIndex - 1
+		skinnedVertexIndex - 1,
+		blasIndex - 1,
+		blasIndicesIndex - 1
 	)
 end
 

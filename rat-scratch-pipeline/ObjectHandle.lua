@@ -115,6 +115,8 @@ end
 
 --- @param scene RatScratch.Pipeline.Scene
 function ObjectHandle:move(scene)
+	local previousScene = self.scene
+
 	if self.scene then
 		self.scene:removeObject(self)
 	end
@@ -123,6 +125,10 @@ function ObjectHandle:move(scene)
 	if scene then
 		scene:addObject(self)
 	end
+
+	self.eventSource:process(
+		ObjectHandleEvent.fromSceneUpdated(scene, previousScene)
+	)
 end
 
 function ObjectHandle:getWorld()

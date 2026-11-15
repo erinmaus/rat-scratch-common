@@ -1,5 +1,6 @@
 local Object = require("rat-scratch-common").Object
 local Vector3 = require("rat-scratch-math").Vector3
+local ffi = require("ffi")
 local AccelerationStructure =
 	require("rat-scratch-graphics").AccelerationStructure
 
@@ -18,7 +19,11 @@ local PipelineBLAS = Object()
 --- @param maxBounds RatScratch.Math.Vector3
 function PipelineBLAS:new(nodes, indices, minBounds, maxBounds)
 	self.nodes = nodes
+	self.nodeCount = math.floor(
+		nodes:getSize() / AccelerationStructure.NODE_FORMAT_INSTANCE:getStride()
+	)
 	self.indices = indices
+	self.indexCount = math.floor(indices:getSize() / ffi.sizeof("uint32_t"))
 	self.minBounds = minBounds
 	self.maxBounds = maxBounds
 end
@@ -27,8 +32,16 @@ function PipelineBLAS:getNodeData()
 	return self.nodes
 end
 
+function PipelineBLAS:getNodeCount()
+	return self.nodeCount
+end
+
 function PipelineBLAS:getIndexData()
 	return self.nodes
+end
+
+function PipelineBLAS:getIndexCount()
+	return self.nodeCount
 end
 
 function PipelineBLAS:getBounds()

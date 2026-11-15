@@ -74,7 +74,7 @@ function PipelineBuffer:_resize(event)
 end
 
 function PipelineBuffer:compact()
-	self.context:compact()
+	return self.context:compact()
 end
 
 --- @private

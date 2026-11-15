@@ -1,3 +1,4 @@
+#include "@Pipeline/Common/Types/BVH.common.glsl"
 #include "@Pipeline/Common/Types/Draw.common.glsl"
 
 restrict readonly buffer rat_ObjectInstancesBuffer
@@ -53,4 +54,21 @@ restrict readonly buffer rat_SkinnedMeshletBoundsBuffer
 restrict readonly buffer rat_CamerasBuffer
 {
 	RatScratchPipelineCamera rat_Cameras[];
+};
+
+uniform RatScratchPipelineScene rat_Scene;
+
+restrict readonly buffer rat_BLASInstancesBuffer
+{
+	RatScratchPipelineBLASInstance rat_BLASInstances[];
+};
+
+restrict readonly buffer rat_BVHNodesBuffer
+{
+	RatScratchPipelineRawBVHNode rat_BVHNodes[];
+};
+
+restrict readonly buffer rat_BVHNodeObjectIndicesBuffer
+{
+	uint rat_BVHNodeObjectIndices[];
 };

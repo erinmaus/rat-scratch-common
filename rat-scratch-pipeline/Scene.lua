@@ -154,6 +154,7 @@ end
 --- @param object RatScratch.Pipeline.ObjectHandle
 function Scene:_onObjectTransformed(event, object)
 	self:_makeBoundsDirty(object)
+	self.world:getRaycastWorld():updateBLASInstancesTransform(object)
 end
 
 --- @param object RatScratch.Pipeline.ObjectHandle
@@ -290,6 +291,8 @@ function Scene:getBounds()
 end
 
 function Scene:update()
+	self.world:getRaycastWorld():updateScene(self)
+
 	self.pipelines:get(DrawPipeline):update()
 	self.pipelines:get(LightPipeline):update()
 	self.pipelines:get(ReflectionProbePipeline):update()

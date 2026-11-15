@@ -10,7 +10,7 @@ local Vector3 = require("rat-scratch-math").Vector3
 local Triangle = require("rat-scratch-math").Geometry3D.Triangle
 
 --- @class RatScratch.Pipeline.Graphics3D.PipelineMesh : RatScratch.Common.BaseObject
---- @field private indexCount integer
+--- @field private meshletIndexCount integer
 --- @field private vertexCount integer
 --- @field private indices love.Data
 --- @field private meshletIndices love.Data
@@ -18,11 +18,11 @@ local Triangle = require("rat-scratch-math").Geometry3D.Triangle
 --- @field private blas RatScratch.Pipeline.Graphics3D.PipelineBLAS
 --- @field private material? RatScratch.Graphics.Graphics3D.Material
 --- @field private cachedVertices table<string, table<integer, RatScratch.Math.Vector3[]>>
---- @overload fun(vertexCount: integer, indexCount: integer, vertices: table<string, love.Data>, indices: love.Data, meshletIndices: love.Data, blas: RatScratch.Pipeline.Graphics3D.PipelineBLAS, lod: RatScratch.Pipeline.Graphics3D.PipelineLOD, material?: RatScratch.Graphics.Graphics3D.Material): RatScratch.Pipeline.Graphics3D.PipelineMesh
+--- @overload fun(vertexCount: integer, meshletIndexCount: integer, vertices: table<string, love.Data>, indices: love.Data, meshletIndices: love.Data, blas: RatScratch.Pipeline.Graphics3D.PipelineBLAS, lod: RatScratch.Pipeline.Graphics3D.PipelineLOD, material?: RatScratch.Graphics.Graphics3D.Material): RatScratch.Pipeline.Graphics3D.PipelineMesh
 local PipelineMesh = Object()
 
 --- @param vertexCount integer
---- @param indexCount integer
+--- @param meshletIndexCount integer
 --- @param vertices table<string, love.Data>
 --- @param indices love.Data
 --- @param meshletIndices love.Data
@@ -31,7 +31,7 @@ local PipelineMesh = Object()
 --- @param material? RatScratch.Graphics.Graphics3D.Material
 function PipelineMesh:new(
 	vertexCount,
-	indexCount,
+	meshletIndexCount,
 	vertices,
 	indices,
 	meshletIndices,
@@ -40,7 +40,8 @@ function PipelineMesh:new(
 	material
 )
 	self.vertexCount = vertexCount
-	self.indexCount = indexCount
+	self.meshletIndexCount = meshletIndexCount
+	self.indexCount = indices:getSize() / ffi.sizeof("uint32_t")
 	self.indices = indices
 	self.meshletIndices = meshletIndices
 	self.vertices = Table.cloneHash(vertices)
@@ -146,6 +147,10 @@ function PipelineMesh:getIndexCount()
 	return self.indexCount
 end
 
+function PipelineMesh:getMeshletIndexCount()
+	return self.meshletIndexCount
+end
+
 function PipelineMesh:getBLAS()
 	return self.blas
 end
@@ -164,6 +169,11 @@ end
 
 --- @return love.Data
 function PipelineMesh:getIndexData()
+	return self.meshletIndices
+end
+
+--- @return love.Data
+function PipelineMesh:getMeshletIndexData()
 	return self.meshletIndices
 end
 

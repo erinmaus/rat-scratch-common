@@ -15,6 +15,7 @@ local PipelineModel = require("rat-scratch-pipeline.Graphics3D.PipelineModel")
 local PipelineModelMeshPointer =
 	require("rat-scratch-pipeline.Resources.PipelineModelMeshPointer")
 local Pipelines = require("rat-scratch-pipeline.Pipelines")
+local RaycastWorld = require("rat-scratch-pipeline.RaycastWorld")
 local ResourceTracker = require("rat-scratch-pipeline.impl.ResourceTracker")
 local ResourceTrackerEvent =
 	require("rat-scratch-pipeline.impl.ResourceTrackerEvent")
@@ -41,6 +42,7 @@ local World = Object()
 function World:new(pipelineRuntime)
 	self.pipelineRuntime = pipelineRuntime
 	self.pipelines = Pipelines(pipelineRuntime)
+	self.raycastWorld = RaycastWorld(self)
 
 	self.objectHandles = {}
 	self.dirtyObjectHandles = {}
@@ -140,6 +142,10 @@ function World:getPipeline(pipelineType)
 	return self.pipelines:get(pipelineType)
 end
 
+function World:getRaycastWorld()
+	return self.raycastWorld
+end
+
 --- @private
 --- @param resource RatScratch.Resource.Resource<RatScratch.Graphics.Graphics3D.Skeleton>
 function World:_tryAddSkeleton(resource)
@@ -194,6 +200,8 @@ function World:_tryAddModel(resource)
 	if not modelPipeline:hasModel(model) then
 		modelPipeline:addModel(model)
 	end
+
+	self.raycastWorld:addModel(model)
 end
 
 --- @private
@@ -207,6 +215,8 @@ function World:_tryRemoveModel(model)
 	if modelPipeline:hasModel(model) then
 		modelPipeline:removeModel(model)
 	end
+
+	self.raycastWorld:removeModel(model)
 end
 
 --- @private
@@ -409,6 +419,8 @@ function World:_newObject(transformType)
 
 	self.pipelines:get(ObjectPipeline):addObject(objectHandle)
 
+	self.raycastWorld:addObjectHandle(objectHandle)
+
 	return objectHandle
 end
 
@@ -486,6 +498,8 @@ function World:freeObject(objectHandle)
 	)
 
 	self.pipelines:get(ObjectPipeline):removeObject(objectHandle)
+
+	self.raycastWorld:removeObjectHandle(objectHandle)
 end
 
 function World:updateObject(objectHandle)
@@ -688,6 +702,7 @@ end
 function World:_updateObjectHandleDraws()
 	for objectHandle in pairs(self.dirtyObjectHandleDraws) do
 		self:_updateObjectHandleDraw(objectHandle)
+		self.raycastWorld:updateObjectHandleModels(objectHandle)
 		self.dirtyObjectHandleDraws[objectHandle] = nil
 	end
 end
@@ -701,6 +716,8 @@ function World:_updateObjectHandles()
 end
 
 function World:flush()
+	self.raycastWorld:flush()
+
 	self.pipelines:get(AnimationPipeline):flush()
 	self.pipelines:get(MaterialPipeline):flush()
 	self.pipelines:get(ModelPipeline):flush()

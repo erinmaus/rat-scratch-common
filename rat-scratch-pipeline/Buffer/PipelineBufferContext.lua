@@ -110,7 +110,7 @@ end
 
 function PipelineBufferContext:compact()
 	if self.isCompacted then
-		return
+		return false
 	end
 
 	local n = 1
@@ -147,6 +147,7 @@ function PipelineBufferContext:compact()
 	table.insert(self.freeInstancesByIndex, freeInstance)
 
 	self.isCompacted = true
+	return true
 end
 
 --- @private

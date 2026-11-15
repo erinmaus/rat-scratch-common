@@ -136,7 +136,7 @@ function PipelineMultiBuffer:_resize(event)
 end
 
 function PipelineMultiBuffer:compact()
-	self.context:compact()
+	return self.context:compact()
 end
 
 --- @private

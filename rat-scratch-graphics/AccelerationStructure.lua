@@ -67,8 +67,16 @@ function AccelerationStructure:extractNodeIndexCount(index)
 	return i, bit.band(count, 0x0FFFFFFF)
 end
 
+function AccelerationStructure:getNodes()
+	return self.nodes:getArray()
+end
+
 function AccelerationStructure:getNodeCount()
 	return self.nodes:getLength()
+end
+
+function AccelerationStructure:getIndices()
+	return self.indices
 end
 
 function AccelerationStructure:getIndexCount()
@@ -125,9 +133,9 @@ end
 --- @param bvh RatScratch.Graphics.BVH
 function AccelerationStructure.fromBVH(as, bvh)
 	if not as then
-		as = AccelerationStructure(bvh:getObjectCount())
+		as = AccelerationStructure(math.max(bvh:getObjectCount(), 1))
 	else
-		as.nodes:resize(bvh:getNodeCount())
+		as.nodes:resize(math.max(bvh:getNodeCount(), 1))
 		Table.clear(as.indices)
 	end
 

@@ -9,6 +9,8 @@ local EventScope = require("rat-scratch-common").EventScope
 --- @field private mesh RatScratch.Resource.Resource<RatScratch.Pipeline.Graphics3D.PipelineMesh>
 --- @field private material RatScratch.Pipeline.Graphics3D.PipelineMaterialInstance
 --- @field private transform love.Transform
+--- @field private scene RatScratch.Pipeline.Scene
+--- @field private previousScene RatScratch.Pipeline.Scene
 --- @overload fun(scope: RatScratch.Common.EventScope): RatScratch.Pipeline.ObjectHandleEvent
 local ObjectHandleEvent = Object(Event)
 
@@ -21,6 +23,7 @@ ObjectHandleEvent.MATERIAL_REMOVED = EventScope.create()
 ObjectHandleEvent.ANIMATOR_ADDED = EventScope.create()
 ObjectHandleEvent.ANIMATOR_REMOVED = EventScope.create()
 ObjectHandleEvent.TRANSFORMED = EventScope.create()
+ObjectHandleEvent.SCENE_UPDATED = EventScope.create()
 
 function ObjectHandleEvent:new(scope)
 	Event.new(self, scope)
@@ -48,6 +51,14 @@ end
 
 function ObjectHandleEvent:getTransform()
 	return self.transform
+end
+
+function ObjectHandleEvent:getScene()
+	return self.scene
+end
+
+function ObjectHandleEvent:getPreviousScene()
+	return self.scene
 end
 
 --- @param resource RatScratch.Resource.Resource
@@ -141,6 +152,17 @@ end
 function ObjectHandleEvent.fromTransformed(transform)
 	local event = Event.get(ObjectHandleEvent, ObjectHandleEvent.TRANSFORMED)
 	event.transform = transform
+
+	return event
+end
+
+--- @param scene RatScratch.Pipeline.Scene
+--- @param previousScene? RatScratch.Pipeline.Scene
+--- @return RatScratch.Pipeline.ObjectHandleEvent
+function ObjectHandleEvent.fromSceneUpdated(scene, previousScene)
+	local event = Event.get(ObjectHandleEvent, ObjectHandleEvent.SCENE_UPDATED)
+	event.scene = scene
+	event.previousScene = previousScene
 
 	return event
 end

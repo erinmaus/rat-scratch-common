@@ -53,6 +53,7 @@ return {
 	),
 	PointLight = require("rat-scratch-pipeline.PointLight"),
 	PostProcess = require("rat-scratch-pipeline.PostProcess"),
+	RaycastWorld = require("rat-scratch-pipeline.RaycastWorld"),
 	ReflectionProbe = require("rat-scratch-pipeline.ReflectionProbe"),
 	ReflectionProbeClusterResult = require(
 		"rat-scratch-pipeline.ReflectionProbeClusterResult"

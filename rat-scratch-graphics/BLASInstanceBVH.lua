@@ -69,13 +69,27 @@ function BLASInstanceBVH:raycastObject(objectIndex, origin, direction)
 	return AABB.raycast(minBounds, maxBounds, origin, direction)
 end
 
-function BLASInstanceBVH.fromBLASInstances(strategy, blasInstances)
+--- comment
+--- @param strategy? RatScratch.Graphics.BVH.BuildStrategy
+--- @param blasInstances RatScratch.Graphics.BLASInstance[]
+--- @param bvh? RatScratch.Graphics.BLASInstanceBVH
+--- @return RatScratch.Graphics.BLASInstanceBVH
+function BLASInstanceBVH.fromBLASInstances(strategy, blasInstances, bvh)
 	local count = #blasInstances
 
-	local bvh = BLASInstanceBVH(2 * count - 1, count)
-	Table.transfer(bvh.blasInstances, blasInstances, #blasInstances)
+	local objectCount = math.max(count, 1)
+	local nodeCount = math.max(2 * count - 1)
 
-	bvh:rebuild(strategy)
+	if bvh then
+		bvh:resize(nodeCount, objectCount)
+	else
+		bvh = BLASInstanceBVH(nodeCount, objectCount)
+	end
+
+	Table.transfer(bvh.blasInstances, blasInstances, #blasInstances)
+	if #blasInstances > 0 then
+		bvh:rebuild(strategy or BVH.DEFAULT_STACKLESS_BUILD_STRATEGY)
+	end
 
 	return bvh
 end

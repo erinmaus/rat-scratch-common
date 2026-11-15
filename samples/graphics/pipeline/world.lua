@@ -353,7 +353,7 @@ local _inverse = love.math.newTransform()
 
 local function hitMesh(index, origin, direction)
 	local blasInstance = demo.blasInstances[index]
-	local mesh = blasInstance:getBLAS()
+	local mesh = blasInstance:getInstance()
 
 	local worldToLocal = _inverse:inverseOf(blasInstance:getTransform())
 
