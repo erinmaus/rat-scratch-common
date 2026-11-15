@@ -112,4 +112,16 @@ function PipelineBufferTableData:toBuffer(buffer, index, count)
 	buffer:setArrayData(self.bufferData, index, index, count)
 end
 
+function PipelineBufferTableData:compact(fromIndex, toIndex, count)
+	local componentCount = self:getFormat():getComponentCount()
+
+	Table.transfer(
+		self.bufferData,
+		self.bufferData,
+		count * componentCount,
+		Table.strideToIndex(toIndex, componentCount),
+		Table.strideToIndex(fromIndex, componentCount)
+	)
+end
+
 return PipelineBufferTableData

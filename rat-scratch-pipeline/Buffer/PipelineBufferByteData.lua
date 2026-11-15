@@ -109,4 +109,15 @@ function PipelineBufferByteData:toBuffer(buffer, index, count)
 	buffer:setArrayData(self.bufferData, index, index, count)
 end
 
+function PipelineBufferByteData:compact(fromIndex, toIndex, count)
+	local stride = self:getFormat():getStride()
+	local pointer = ffi.cast("uint8_t*", self.bufferData:getFFIPointer())
+
+	ffi.copy(
+		pointer + (fromIndex - 1) * stride,
+		pointer + (toIndex - 1) * stride,
+		stride * count
+	)
+end
+
 return PipelineBufferByteData
